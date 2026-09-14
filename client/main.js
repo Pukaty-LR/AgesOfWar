@@ -156,6 +156,9 @@ class App {
     const ms = $('map-style'), mz = $('map-size');
     if (!ms.options.length) { for (const [k, v] of Object.entries(MAP_STYLES)) { const o = document.createElement('option'); o.value = k; o.textContent = v.name; ms.appendChild(o); } for (const [k, v] of Object.entries(MAP_SIZES)) { const o = document.createElement('option'); o.value = k; o.textContent = `${v.name} (${v.size}×${v.size})`; mz.appendChild(o); } ms.onchange = () => this.net.send({ t: 'setMap', style: ms.value }); mz.onchange = () => this.net.send({ t: 'setMap', size: mz.value }); }
     ms.value = l.mapStyle || 'continent'; mz.value = l.mapSize || 'medium'; ms.disabled = !isHost; mz.disabled = !isHost;
+    const mr = $('map-res'), mv = $('map-reveal');
+    if (!mr.dataset.wired) { mr.dataset.wired = '1'; mr.onchange = () => this.net.send({ t: 'setMap', startRes: mr.value }); mv.onchange = () => this.net.send({ t: 'setMap', reveal: mv.checked }); }
+    mr.value = l.startRes || 'normal'; mv.checked = !!l.reveal; mr.disabled = !isHost; mv.disabled = !isHost;
     $('map-desc').textContent = (MAP_STYLES[l.mapStyle] || MAP_STYLES.continent).desc;
     const tb = $('slot-list'); tb.innerHTML = '';
     l.slots.forEach((s, idx) => {

@@ -44,7 +44,7 @@ function broadcastLobbyList() {
   for (const c of clients.values()) if (!c.lobby) send(c.ws, { t: 'lobbies', list });
 }
 function lobbyState(l) {
-  return { id: l.id, name: l.name, hostId: l.hostId, era: l.era, max: l.max, state: l.state, mapStyle: l.mapStyle, mapSize: l.mapSize, slots: l.slots.map(s => ({ id: s.id, name: s.name, faction: s.faction, team: s.team, color: s.color, ready: s.ready, isAI: s.isAI, diff: s.diff, connected: s.isAI || (clients.get(s.id)?.ws.readyState === 1) })) };
+  return { id: l.id, name: l.name, hostId: l.hostId, era: l.era, max: l.max, state: l.state, mapStyle: l.mapStyle, mapSize: l.mapSize, startRes: l.startRes, reveal: !!l.reveal, slots: l.slots.map(s => ({ id: s.id, name: s.name, faction: s.faction, team: s.team, color: s.color, ready: s.ready, isAI: s.isAI, diff: s.diff, connected: s.isAI || (clients.get(s.id)?.ws.readyState === 1) })) };
 }
 function broadcastLobby(l) { const st = { t: 'lobby', lobby: lobbyState(l) }; for (const s of l.slots) if (!s.isAI) { const c = clients.get(s.id); if (c) send(c.ws, st); } }
 function freeColor(l) { const used = new Set(l.slots.map(s => s.color)); for (let i = 0; i < TEAM_COLORS.length; i++) if (!used.has(i)) return i; return 0; }
@@ -81,7 +81,7 @@ function leaveLobby(c, silent = false, explicit = false) {
 function startGame(l) {
   const seed = (Math.random() * 0x7fffffff) | 0;
   const players = l.slots.map(s => ({ name: s.name, faction: s.faction, team: s.team, color: s.color, isAI: s.isAI }));
-  const sim = new Sim({ seed, size: (MAP_SIZES[l.mapSize] || MAP_SIZES.medium).size, eraId: l.era, players, mapStyle: l.mapStyle || 'continent' });
+  const sim = new Sim({ seed, size: (MAP_SIZES[l.mapSize] || MAP_SIZES.medium).size, eraId: l.era, players, mapStyle: l.mapStyle || 'continent', startRes: l.startRes || 'normal' });
   const ais = l.slots.map((s, i) => s.isAI ? new AIPlayer(sim, i, s.diff || 'normal') : null).filter(Boolean);
   const game = { sim, ais, seed, interval: null, acc: 0, last: Date.now(), chat(text) { for (const s of l.slots) if (!s.isAI) { const c = clients.get(s.id); if (c) send(c.ws, { t: 'chat', from: '', text, sys: true }); } } };
   l.game = game; l.state = 'game';
@@ -89,7 +89,7 @@ function startGame(l) {
   l.slots.forEach((s, i) => {
     if (s.isAI) return;
     const c = clients.get(s.id); if (!c) return;
-    send(c.ws, { t: 'start', game: { era: l.era, seed, map, me: i, players: sim.players.map(p => sim.serializePlayer(p)), lobbyName: l.name } });
+    send(c.ws, { t: 'start', game: { era: l.era, seed, map, me: i, players: sim.players.map(p => sim.serializePlayer(p)), lobbyName: l.name, reveal: !!l.reveal } });
     send(c.ws, sim.fullSnapshot());
   });
   const tickMs = 1000 / TICK_RATE;
@@ -149,7 +149,7 @@ wss.on('connection', (ws, req) => {
             for (const other of candidates) if (other !== lobby) for (const s of other.slots) if (s.token === c.token) s.token = null;
             const idx = lobby.slots.indexOf(slot); slot.id = c.id; slot.name = c.name; slot.connected = true; c.lobby = lobby; lobby.emptySince = null;
             const sim = lobby.game.sim;
-            send(ws, { t: 'start', game: { era: lobby.era, seed: lobby.game.seed, map: sim.mapData(), me: idx, players: sim.players.map(p => sim.serializePlayer(p)), lobbyName: lobby.name, rejoin: true } });
+            send(ws, { t: 'start', game: { era: lobby.era, seed: lobby.game.seed, map: sim.mapData(), me: idx, players: sim.players.map(p => sim.serializePlayer(p)), lobbyName: lobby.name, rejoin: true, reveal: !!lobby.reveal } });
             send(ws, sim.fullSnapshot());
             lobby.game.chat(`${c.name} se znovu připojil.`);
             break;
@@ -162,7 +162,7 @@ wss.on('connection', (ws, req) => {
       case 'host': {
         if (l) leaveLobby(c, true, true); abandonRooms(c);
         const era = ERAS[m.era] && ERAS[m.era].available ? m.era : 'antiquity';
-        const lobby = { id: nextLobbyId++, name: String(m.name || `${c.name}ova hra`).slice(0, 28), hostId: c.id, era, max: Math.min(MAX_PLAYERS, Math.max(2, m.max | 0 || 4)), state: 'lobby', slots: [], game: null, mapStyle: 'continent', mapSize: 'medium' };
+        const lobby = { id: nextLobbyId++, name: String(m.name || `${c.name}ova hra`).slice(0, 28), hostId: c.id, era, max: Math.min(MAX_PLAYERS, Math.max(2, m.max | 0 || 4)), state: 'lobby', slots: [], game: null, mapStyle: 'continent', mapSize: 'medium', startRes: 'normal', reveal: false };
         lobby.slots.push({ id: c.id, name: c.name, faction: defaultFaction(era), team: 0, color: 0, ready: false, isAI: false, token: c.token });
         lobbies.set(lobby.id, lobby); c.lobby = lobby;
         broadcastLobby(lobby); broadcastLobbyList();
@@ -212,6 +212,8 @@ wss.on('connection', (ws, req) => {
         if (!l || l.hostId !== c.id || l.state !== 'lobby') return;
         if (m.style && MAP_STYLES[m.style]) l.mapStyle = m.style;
         if (m.size && MAP_SIZES[m.size]) l.mapSize = m.size;
+        if (m.startRes && ['low', 'normal', 'high'].includes(m.startRes)) l.startRes = m.startRes;
+        if (m.reveal !== undefined) l.reveal = !!m.reveal;
         broadcastLobby(l);
         break;
       }

@@ -9,8 +9,9 @@ const PROJ_ARC = { arrow: 0.35, bolt: 0.2, bullet: 0, rock: 0.9, shell: 0.7, fla
 const MAX_TEAMS = 8;
 
 export class Sim {
-  constructor({ seed = 1, size = 96, eraId = 'antiquity', players = [], mapStyle = 'continent' }) {
+  constructor({ seed = 1, size = 96, eraId = 'antiquity', players = [], mapStyle = 'continent', startRes = 'normal' }) {
     this.seed = seed; this.mapStyle = mapStyle;
+    const START = { low: { p: 200, s: 100 }, normal: { p: 450, s: 250 }, high: { p: 1500, s: 1000 } }[startRes] || { p: 450, s: 250 };
     this.rng = mulberry32(seed ^ 0x9E3779B9);
     this.eraId = eraId;
     this.era = ERAS[eraId];
@@ -33,7 +34,7 @@ export class Sim {
       const tech = makeTechTable(eraId, p.faction);
       return {
         id: idx, name: p.name, faction: tech.faction.id, team: p.team ?? idx, color: p.color ?? idx, isAI: !!p.isAI,
-        tech, res: { p: 450, s: 250 }, pop: 0, popCap: 0, alive: true, research: Object.fromEntries(Object.keys(RESEARCH).map(k => [k, 0])),
+        tech, res: { p: START.p, s: START.s }, pop: 0, popCap: 0, alive: true, research: Object.fromEntries(Object.keys(RESEARCH).map(k => [k, 0])),
         stats: { unitsBuilt: 0, unitsLost: 0, unitsKilled: 0, buildingsBuilt: 0, buildingsLost: 0, buildingsRazed: 0, gatheredP: 0, gatheredS: 0 },
         lastAlert: -1000, spawn: this.map.spawns[idx],
       };

@@ -40,6 +40,7 @@ export class Game {
     this.blocked = new Uint8Array(this.map.w * this.map.h); this.wallGrid.clear();
     delete this.renderer.updateFog; // undo the end-of-game map reveal from a previous match
     this.renderer.setMap(this.map, this.era); this.renderer.prebuild();
+    if (g.reveal) this.renderer.updateFog = function () { this.expF.fill(1); this.visF.fill(1); this.explored.fill(1); this.visible.fill(1); this.fogCtx.clearRect(0, 0, this.fw, this.fh); };
     const s = this.map.spawns[this.me]; this.renderer.cam.x = s.x; this.renderer.cam.y = s.y; this.renderer.cam.zoom = 1;
     this.gameOver = null; this.paused = false; this.eliminated = false; this.running = true; this.startedAt = performance.now(); this.tick = 0; this.lastSnapAt = performance.now();
     this.state.mode = null; this.state.placing = null; this.state.drag = null; this.state.mouse = { x: -1, y: -1 }; this.keys = {};

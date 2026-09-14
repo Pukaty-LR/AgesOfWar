@@ -28,6 +28,8 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - **Výzkumy** (styl kovárny z Age of Empires): v kasárnách, stájích a dílně lze zkoumat útok a pancíř pro pěchotu, jezdectvo/vozidla a obléhací stroje (klávesy I / O), každá éra má vlastní názvy.
 - **Domy** (+8 populace) ve všech érách, AI je staví, když se blíží limitu.
 - **Ovládání jako ve Warcraftu 3**: skupina se přesouvá ve formaci (melee vpředu, střelci a obléhání vzadu), hlídkování (P), Tab přepíná podskupinu ve smíšeném výběru, Ctrl+klik vybere všechny stejného typu, Alt+klik označí místo spoluhráčům na minimapě.
+- **Hrdina** má kromě aury i aktivní schopnost (C): Válečný pokřik / Rozkaz k útoku / Přetížení zbraní – 12 s +35 % útok a +2 pancíř pro spojence v okolí, přebití 60 s.
+- Boti nesou jména vůdců frakcí (Caesar, Vercingetorix, Guderian, Žukov, Admirál Vega…), kamera si pamatuje pozice F5–F8 (Ctrl+F5 uloží).
 - **Mapy**: v lobby vybíráš styl (Pevnina s mořem, Řeka, Ostrovy, Pláně, Jezera) a velikost (72, 96, 128). Generátor vždy zaručí pozemní cestu mezi základnami.
 - **Tři éry**: Starověk (Řím, Galové, Řecko, Kartágo), Druhá světová (Německo, Polsko, SSSR, USA, Británie) a Sci-fi (Terranská federace, Marťanská republika, Syntetici, Nomádi Prázdnoty) – každá s vlastními jednotkami, budovami, surovinami, hudbou a barevným tématem HUD.
 - Když ti spadne prohlížeč nebo obnovíš stránku, hra běží dál a po načtení se **automaticky připojíš zpět** do své rozehrané hry (server ji drží 3 minuty).
