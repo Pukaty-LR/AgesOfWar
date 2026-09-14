@@ -40,7 +40,7 @@ export class Game {
     delete this.renderer.updateFog; // undo the end-of-game map reveal from a previous match
     this.renderer.setMap(this.map, this.era); this.renderer.prebuild();
     const s = this.map.spawns[this.me]; this.renderer.cam.x = s.x; this.renderer.cam.y = s.y; this.renderer.cam.zoom = 1;
-    this.gameOver = null; this.running = true; this.startedAt = performance.now(); this.tick = 0; this.lastSnapAt = performance.now();
+    this.gameOver = null; this.paused = false; this.eliminated = false; this.running = true; this.startedAt = performance.now(); this.tick = 0; this.lastSnapAt = performance.now();
     this.state.mode = null; this.state.placing = null; this.state.drag = null; this.state.mouse = { x: -1, y: -1 }; this.keys = {};
     this.ui.onGameStart(this);
     this.audio.era = this.era; this.audio.startMusic(this.eraDef.music);
@@ -49,7 +49,7 @@ export class Game {
     requestAnimationFrame(t => this.loop(t));
   }
   stop() { this.running = false; this.audio.stopMusic(); }
-  tickNow() { return this.tick + (performance.now() - this.lastSnapAt) / (1000 / TICK_RATE); }
+  tickNow() { return this.paused ? this.tick : this.tick + Math.min(20, (performance.now() - this.lastSnapAt) / (1000 / TICK_RATE)); }
   gameTime() { return this.tick / TICK_RATE; }
   unitDef(e) { return this.techs[e.o]?.units[e.t] || this.eraDef.units[e.t]; }
   buildingDef(e) { return this.techs[e.o]?.buildings[e.t] || this.eraDef.buildings[e.t]; }

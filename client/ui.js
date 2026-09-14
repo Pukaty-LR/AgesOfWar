@@ -45,7 +45,7 @@ export class UI {
   }
   onGameStart(game) {
     this.game = game; this.buildMenu = false; this.lastSig = ''; this.dirty = true; this.selectionChanged = true; this.pings = [];
-    $('endscreen').classList.add('hidden'); $('pause-menu').classList.add('hidden'); $('alerts').innerHTML = ''; $('chatlog').innerHTML = '';
+    $('endscreen').classList.add('hidden'); $('pause-menu').classList.add('hidden'); $('help-overlay').classList.add('hidden'); $('pause-banner').classList.add('hidden'); $('alerts').innerHTML = ''; $('chatlog').innerHTML = '';
     this.buildMiniTerrain(game);
     const era = game.eraDef; const p = game.players[game.me];
     $('game-info').textContent = `${era.name} · ${game.tech.faction.name} · ${p.name}`;
@@ -57,7 +57,8 @@ export class UI {
     this.placementHint(null);
   }
   onPlayers(game) { this.dirty = true; }
-  togglePause(force) { const el = $('pause-menu'); const show = force === undefined ? el.classList.contains('hidden') : force; el.classList.toggle('hidden', !show); if (show) { $('vol-music2').value = this.app.settings.music; $('vol-sfx2').value = this.app.settings.sfx; } }
+  togglePause(force) { const el = $('pause-menu'); const show = force === undefined ? el.classList.contains('hidden') : force; el.classList.toggle('hidden', !show); if (show) { $('vol-music2').value = this.app.settings.music; $('vol-sfx2').value = this.app.settings.sfx; } if (this.game && this.game.running) this.app.net.send({ t: 'pause', v: show }); }
+  setPaused(v) { $('pause-banner').classList.toggle('hidden', !v); if (this.game) this.game.paused = v; }
   openChat() { this.game.chatOpen = true; const c = $('chat-input'); c.classList.remove('hidden'); c.value = ''; c.focus(); }
   closeChat() { this.game.chatOpen = false; const c = $('chat-input'); c.classList.add('hidden'); c.blur(); }
   chat(from, text, sys = false, color) {

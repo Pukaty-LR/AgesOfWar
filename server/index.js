@@ -95,6 +95,7 @@ function startGame(l) {
   game.last = Date.now();
   game.interval = setInterval(() => {
     const now = Date.now();
+    if (game.paused) { game.last = now; game.acc = 0; return; }
     game.acc += now - game.last; game.last = now;
     let steps = 0;
     while (game.acc >= tickMs && steps < 5) {
@@ -245,6 +246,13 @@ wss.on('connection', (ws, req) => {
         const text = String(m.text || '').slice(0, 200); if (!text.trim()) return;
         if (!l) return;
         for (const s of l.slots) if (!s.isAI) { const o = clients.get(s.id); if (o) send(o.ws, { t: 'chat', from: c.name, text, color: l.slots.find(x => x.id === c.id)?.color }); }
+        break;
+      }
+      case 'pause': { // single-player only (one human in the room): pause/resume the simulation
+        if (!l || !l.game) return;
+        if (l.slots.filter(s => !s.isAI && s.token).length > 1) return;
+        l.game.paused = !!m.v; l.game.last = Date.now(); l.game.acc = 0;
+        send(ws, { t: 'paused', v: l.game.paused });
         break;
       }
       case 'mping': { // map ping to teammates

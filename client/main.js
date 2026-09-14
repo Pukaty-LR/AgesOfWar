@@ -119,6 +119,7 @@ class App {
     n.on('full', m => this.game.onFull(m));
     n.on('snap', m => this.game.onSnap(m));
     n.on('wallPreview', m => this.game.onWallPreview(m));
+    n.on('paused', m => this.ui.setPaused(!!m.v));
     n.on('mping', m => { if (this.screen !== 'game') return; this.ui.minimapPing(m.x, m.y); this.game.renderer.addEffect({ kind: 'ring', x: m.x, y: m.y, color: 'rgba(255,230,90,0.9)' }); this.game.lastAlert = { x: m.x, y: m.y, t: performance.now() }; this.ui.alert(`${m.from} označil místo na mapě (Space = kamera)`, false); this.audio.sfx('select', 0.6); });
   }
   drawMapPreview(style, sizeKey, era) {
