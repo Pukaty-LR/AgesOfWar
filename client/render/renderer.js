@@ -442,9 +442,10 @@ export class Renderer {
       if (age > 60) return;
       const [sx, sy] = this.worldToScreen(ef.x, ef.y); const rw = ef.w * TW / 2 * z, rh = ef.h * TH / 2 * z;
       ctx.save(); ctx.globalAlpha = age > 45 ? Math.max(0, 1 - (age - 45) / 15) : 1; ctx.translate(sx, sy);
-      ctx.fillStyle = '#3a342c'; ctx.beginPath(); ctx.moveTo(0, -rh); ctx.lineTo(rw, 0); ctx.lineTo(0, rh); ctx.lineTo(-rw, 0); ctx.closePath(); ctx.fill();
+      const RB = { antiquity: ['#3a342c', '#6b625a', '#8a8078'], ww2: ['#2e2c28', '#5a5650', '#7a746c'], scifi: ['#262a36', '#4c5466', '#6f7a90'] }[this.era] || ['#3a342c', '#6b625a', '#8a8078'];
+      ctx.fillStyle = RB[0]; ctx.beginPath(); ctx.moveTo(0, -rh); ctx.lineTo(rw, 0); ctx.lineTo(0, rh); ctx.lineTo(-rw, 0); ctx.closePath(); ctx.fill();
       const rr = this.hash(ef.x * 10, ef.y * 10);
-      for (let i = 0; i < 9; i++) { const a = i * 0.7 + rr * 6, r = (0.2 + ((i * 7) % 5) / 8); const px = Math.cos(a) * r * rw, py = Math.sin(a) * r * rh; ctx.fillStyle = i % 2 ? '#6b625a' : '#8a8078'; ctx.beginPath(); ctx.moveTo(px - 6 * z, py); ctx.lineTo(px - 2 * z, py - 7 * z); ctx.lineTo(px + 5 * z, py - 5 * z); ctx.lineTo(px + 6 * z, py + 2 * z); ctx.lineTo(px, py + 4 * z); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 0.8; ctx.stroke(); }
+      for (let i = 0; i < 9; i++) { const a = i * 0.7 + rr * 6, r = (0.2 + ((i * 7) % 5) / 8); const px = Math.cos(a) * r * rw, py = Math.sin(a) * r * rh; ctx.fillStyle = i % 2 ? RB[1] : RB[2]; ctx.beginPath(); ctx.moveTo(px - 6 * z, py); ctx.lineTo(px - 2 * z, py - 7 * z); ctx.lineTo(px + 5 * z, py - 5 * z); ctx.lineTo(px + 6 * z, py + 2 * z); ctx.lineTo(px, py + 4 * z); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 0.8; ctx.stroke(); }
       ctx.restore();
     } else if (ef.kind === 'stump') {
       if (age > 120) return; const [sx, sy] = this.worldToScreen(ef.x, ef.y); ctx.fillStyle = '#6b4a2a'; ctx.beginPath(); ctx.ellipse(sx, sy - 3 * z, 5 * z, 3 * z, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#b08a5a'; ctx.beginPath(); ctx.ellipse(sx, sy - 5 * z, 4 * z, 2.2 * z, 0, 0, 7); ctx.fill();

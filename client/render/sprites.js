@@ -204,6 +204,10 @@ function tank(ctx, o) {
   const hull = rot(isoRect(-0.5, -0.32, 1.0, 0.64), a);
   const trackL = rot(isoRect(-0.55, -0.4, 1.1, 0.14), a), trackR = rot(isoRect(-0.55, 0.26, 1.1, 0.14), a);
   prism(ctx, trackL, 0, 5, [50, 50, 48], [35, 35, 33]); prism(ctx, trackR, 0, 5, [50, 50, 48], [35, 35, 33]);
+  // track links that scroll while moving
+  const phase = anim === 'walk' ? (frame % 6) / 6 : 0;
+  ctx.fillStyle = 'rgba(120,120,115,0.9)';
+  for (const s of [-0.33, 0.33]) for (let k = 0; k < 6; k++) { const t = -0.5 + ((k + phase) % 6) / 6 * 1.0; const [px, py] = iso(Math.cos(a) * t - Math.sin(a) * s, Math.sin(a) * t + Math.cos(a) * s, 5.5); ctx.fillRect(px - 1.2, py - 0.8, 2.4, 1.6); }
   prism(ctx, hull, 3, 9, hullC, hullD);
   const tur = rot(isoRect(-0.22, -0.2, 0.44, 0.4), a);
   prism(ctx, tur, 12, 7, shade(hullC, 1.1), hullD);
@@ -257,8 +261,9 @@ function shipAntiquity(ctx, o) {
   ellipse(ctx, 0, 0, 28, 13, 'rgba(0,0,0,0.25)');
   const hullPts = rot([[-0.75, -0.22], [0.5, -0.24], [0.9, 0], [0.5, 0.24], [-0.75, 0.22], [-0.95, 0]], a);
   prism(ctx, hullPts, 2 + bobz, 9, [150, 105, 60], [110, 70, 35]);
-  // deck stripe & oars
-  for (let i = -2; i <= 2; i++) for (const s of [-1, 1]) { const [ox, oy] = iso(Math.cos(a) * i * 0.25 - Math.sin(a) * 0.24 * s, Math.sin(a) * i * 0.25 + Math.cos(a) * 0.24 * s, 8 + bobz); const [ex, ey] = iso(Math.cos(a) * i * 0.25 - Math.sin(a) * 0.5 * s, Math.sin(a) * i * 0.25 + Math.cos(a) * 0.5 * s, 1 + bobz); line(ctx, ox, oy, ex, ey, rgb(WOOD), 1.4); }
+  // deck stripe & oars (they row while moving)
+  const stroke = Math.sin(frame / 6 * Math.PI * 2) * 0.12;
+  for (let i = -2; i <= 2; i++) for (const s of [-1, 1]) { const [ox, oy] = iso(Math.cos(a) * i * 0.25 - Math.sin(a) * 0.24 * s, Math.sin(a) * i * 0.25 + Math.cos(a) * 0.24 * s, 8 + bobz); const [ex, ey] = iso(Math.cos(a) * (i * 0.25 + stroke) - Math.sin(a) * 0.5 * s, Math.sin(a) * (i * 0.25 + stroke) + Math.cos(a) * 0.5 * s, 1 + bobz + Math.abs(stroke) * 20); line(ctx, ox, oy, ex, ey, rgb(WOOD), 1.4); if (Math.abs(stroke) < 0.04) ellipse(ctx, ex, ey + 1, 3, 1.2, 'rgba(255,255,255,0.35)'); }
   // mast & sail
   const [mx, my] = iso(-0.05, 0, 11 + bobz);
   line(ctx, mx, my, mx, my - 34, rgb(WOOD_D), 2.5);

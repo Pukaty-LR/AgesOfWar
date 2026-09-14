@@ -55,6 +55,8 @@ export class UI {
     $('res-s').querySelector('.ico').style.backgroundImage = resIcon(era.resources.s.id); $('res-s').querySelector('.lbl').textContent = era.resources.s.name;
     $('res-pop').querySelector('.ico').style.backgroundImage = resIcon('pop');
     this.placementHint(null);
+    setTimeout(() => { if (this.game === game && game.running) { this.alert('Cíl: znič všechny nepřátelské budovy. Pošli dělníky těžit (G / F) a stav domy pro populaci (B → E).', false); } }, 1500);
+    setTimeout(() => { if (this.game === game && game.running) this.alert('Esc = menu a nápověda k ovládání · Tab = podskupina · Alt+klik = označit místo', false); }, 7000);
   }
   onPlayers(game) { this.dirty = true; }
   togglePause(force) { const el = $('pause-menu'); const show = force === undefined ? el.classList.contains('hidden') : force; el.classList.toggle('hidden', !show); if (show) { $('vol-music2').value = this.app.settings.music; $('vol-sfx2').value = this.app.settings.sfx; } if (this.game && this.game.running) this.app.net.send({ t: 'pause', v: show }); }
@@ -84,6 +86,8 @@ export class UI {
     let idle = 0; for (const e of game.ents.values()) if (e.k === 'u' && e.o === game.me && e.o2 === 'idle' && game.unitDef(e).role === 'worker') idle++;
     const badge = $('idle-count'); badge.textContent = idle; badge.classList.toggle('hidden', idle === 0); $('btn-idle-worker').classList.toggle('pulse', idle > 0);
     $('res-p').querySelector('.val').textContent = p.res.p; $('res-s').querySelector('.val').textContent = p.res.s;
+    let gp = 0, gs = 0; for (const e of game.ents.values()) if (e.k === 'u' && e.o === game.me && e.o2 === 'gather') { const t = game.ents.get(e.tg); if (t && t.k === 'm') gp++; else if (e.c === 'p') gp++; else gs++; }
+    $('res-p').title = `${game.eraDef.resources.p.name} · těží ${gp} dělníků`; $('res-s').title = `${game.eraDef.resources.s.name} · těží ${gs} dělníků`;
     const pop = $('res-pop'); pop.querySelector('.val').textContent = `${p.pop}/${p.popCap}`; pop.classList.toggle('low', p.pop >= p.popCap);
     const s = Math.floor(game.gameTime()); $('game-clock').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   }
