@@ -12,6 +12,7 @@ export class AIPlayer {
     this.buildStep = 0;
     this.lastBuildTick = -1000;
     this.plan = ['barracks', 'tower', 'barracks', 'stable', 'tower', 'siege', 'dock', 'hall', 'tower', 'stable'];
+    if (difficulty === 'hard' || difficulty === 'impossible') this.plan.splice(5, 0, 'wall'); // fortify the front after the second tower
     this.rallyPoint = null;
   }
 
@@ -71,7 +72,15 @@ export class AIPlayer {
       const type = this.plan[this.buildStep];
       const def = p.tech.buildings[type];
       const affordable = p.res.p >= def.cost.p && p.res.s >= def.cost.s;
-      if (affordable) {
+      if (type === 'wall') { // a short wall line across the approach from the map center, with a gate in the middle
+        if (p.res.s >= 120) {
+          const f = this.frontOfBase(hall); const c = { x: sim.w / 2, y: sim.h / 2 }; const dx = c.x - hall.x, dy = c.y - hall.y, d = Math.hypot(dx, dy) || 1; const px = -dy / d, py = dx / d;
+          const a = { x: Math.round(f.x + px * 5), y: Math.round(f.y + py * 5) }, b = { x: Math.round(f.x - px * 5), y: Math.round(f.y - py * 5) };
+          const w = this.pickWorker(workers);
+          if (w && sim.inBounds(a.x, a.y) && sim.inBounds(b.x, b.y) && sim.buildable[a.y * sim.w + a.x] && sim.buildable[b.y * sim.w + b.x]) { sim.command(this.pid, { t: 'wall', ids: [w.id], x0: a.x, y0: a.y, x1: b.x, y1: b.y }); this.wallGateAt = tick + 20 * 90; }
+          this.lastBuildTick = tick; this.buildStep++;
+        }
+      } else if (affordable) {
         const spot = this.findSpot(type, hall);
         if (spot) {
           const w = this.pickWorker(workers);
@@ -83,6 +92,12 @@ export class AIPlayer {
       }
     }
 
+    // 2b. Put a gate in the middle of the wall line once it is built
+    if (this.wallGateAt && tick > this.wallGateAt) {
+      this.wallGateAt = 0;
+      const walls = buildings.filter(b => b.type === 'wall' && b.built);
+      if (walls.length >= 3) { walls.sort((a, b) => (a.tx + a.ty) - (b.tx + b.ty)); const mid = walls[Math.floor(walls.length / 2)]; sim.command(this.pid, { t: 'gate', ids: [mid.id] }); }
+    }
     // 3. Army production (uses tier units once unlocked)
     const reserve = this.buildStep < this.plan.length ? 120 : 0;
     for (const b of buildings) {
