@@ -1,5 +1,6 @@
 // App: menus, lobby, connection, and game orchestration.
-import { ERAS, ERA_ORDER, TEAM_COLORS, MAX_PLAYERS } from '../shared/data.js';
+import { ERAS, ERA_ORDER, TEAM_COLORS, MAX_PLAYERS, makeTechTable, RESEARCH } from '../shared/data.js';
+import { unitPortrait, buildingPortrait } from './render/sprites.js';
 import { generateMap, MAP_STYLES, MAP_SIZES } from '../shared/mapgen.js';
 import { Net } from './net.js';
 import { Audio } from './audio.js';
@@ -8,7 +9,7 @@ import { Game } from './game.js';
 import { Renderer } from './render/renderer.js';
 
 const $ = id => document.getElementById(id);
-const screens = ['menu', 'browser', 'host', 'lobby', 'settings', 'game'];
+const screens = ['menu', 'browser', 'host', 'lobby', 'settings', 'game', 'codex'];
 
 class App {
   constructor() {
@@ -65,6 +66,10 @@ class App {
     $('btn-refresh').onclick = () => this.net.send({ t: 'list' });
     $('btn-direct').onclick = () => { const a = $('direct-addr').value.trim(); if (!a) return; this.net.connect((a.startsWith('ws') ? a : 'ws://' + a)); };
     $('btn-settings').onclick = () => this.show('settings');
+    this.codexEra = this.settings.era || 'antiquity'; this.codexTab = 'units';
+    $('btn-codex').onclick = () => { this.show('codex'); this.renderCodex(); };
+    $('btn-codex-back').onclick = () => this.show('menu');
+    for (const b of document.querySelectorAll('.codex-tab')) b.onclick = () => { this.codexTab = b.dataset.tab; this.renderCodex(); };
     $('btn-settings-back').onclick = () => this.show('menu');
     $('btn-lobby-leave').onclick = () => { this.net.send({ t: 'leave' }); this.lobby = null; this.show('menu'); };
     $('btn-add-bot').onclick = () => this.net.send({ t: 'addBot', diff: 'normal' });
@@ -87,6 +92,7 @@ class App {
       oh.onchange = () => { this.settings.hp = oh.checked; this.applySettings(); this.save(); };
     }
     $('opt-mute2').onchange = () => this.setMuted($('opt-mute2').checked);
+    $('game-speed').onchange = () => this.net.send({ t: 'speed', v: +$('game-speed').value });
     $('btn-mute').onclick = () => this.setMuted(!this.settings.muted);
     this.applySettings();
   }
@@ -117,12 +123,37 @@ class App {
     n.on('lobby', m => { this.lobby = m.lobby; if (this.screen !== 'lobby' && this.screen !== 'game') { this.show('lobby'); $('lobby-chat').innerHTML = ''; } this.renderLobby(); if (this.quick && m.lobby.hostId === this.myId) { this.quick = false; if (m.lobby.slots.length < 2) n.send({ t: 'addBot', diff: this.settings.diff || 'normal' }); } });
     n.on('lobbyLeft', () => { this.lobby = null; if (this.screen === 'game') this.leaveGame(true); else this.show('menu'); });
     n.on('chat', m => { if (this.screen === 'game') this.ui.chat(m.from, m.text, m.sys, m.color); else { const c = $('lobby-chat'); const d = document.createElement('div'); if (m.sys) { d.className = 'sys'; d.textContent = m.text; } else { d.innerHTML = `<b style="color:${m.color !== undefined ? TEAM_COLORS[m.color].hex : '#f1d36a'}">${esc(m.from)}:</b> ${esc(m.text)}`; } c.appendChild(d); c.scrollTop = c.scrollHeight; } });
-    n.on('start', m => { this.show('game'); this.game.start(m); });
+    n.on('start', m => { this.show('game'); $('game-speed').value = '1'; this.game.start(m); });
+    n.on('speed', m => { $('game-speed').value = String(m.v); this.ui.alert(`Rychlost hry: ${m.v}×`, false); });
     n.on('full', m => this.game.onFull(m));
     n.on('snap', m => this.game.onSnap(m));
     n.on('wallPreview', m => this.game.onWallPreview(m));
     n.on('paused', m => this.ui.setPaused(!!m.v));
     n.on('mping', m => { if (this.screen !== 'game') return; this.ui.minimapPing(m.x, m.y); this.game.renderer.addEffect({ kind: 'ring', x: m.x, y: m.y, color: 'rgba(255,230,90,0.9)' }); this.game.lastAlert = { x: m.x, y: m.y, t: performance.now() }; this.ui.alert(`${m.from} označil místo na mapě (Space = kamera)`, false); this.audio.sfx('select', 0.6); });
+  }
+  renderCodex() {
+    const era = this.codexEra; const e = ERAS[era]; const tech = makeTechTable(era, e.factions[0].id);
+    this.renderEraCards($('codex-eras'), era, id => { this.codexEra = id; this.renderCodex(); }, true);
+    for (const b of document.querySelectorAll('.codex-tab')) b.classList.toggle('active', b.dataset.tab === this.codexTab);
+    const body = $('codex-body'); body.innerHTML = '';
+    const ROLE = { infantry: 'pěchota', ranged: 'střelci', cavalry: 'jezdectvo/vozidla', siege: 'obléhací', ship: 'lodě', building: 'budovy', wall: 'hradby', worker: 'dělníci' };
+    const card = (canvas, title, sub, rows, desc) => { const d = document.createElement('div'); d.className = 'codex-card'; d.appendChild(canvas); const t = document.createElement('div'); t.className = 'codex-info'; t.innerHTML = `<div class="codex-title">${title}</div><div class="codex-sub">${sub}</div><div class="codex-rows">${rows.map(([k, v]) => `<span>${k} <b>${v}</b></span>`).join('')}</div>${desc ? `<div class="codex-desc">${desc}</div>` : ''}`; d.appendChild(t); body.appendChild(d); };
+    if (this.codexTab === 'units') {
+      for (const [k, u] of Object.entries(tech.units)) {
+        const bon = Object.entries(u.bonus || {}).filter(([, v]) => v > 1).map(([r, v]) => `${ROLE[r] || r} ×${v}`).join(', ');
+        const unlock = k === 'worker' || ['infantry', 'ranged', 'cavalry', 'siege', 'ship'].includes(k) ? `${tech.buildings[u.building]?.name}` : (() => { for (const [bk, b] of Object.entries(tech.buildings)) for (const up of b.upgrades || []) if (up.unlocks.includes(k)) return `${b.name} úroveň ${up.level}`; return '?'; })();
+        card(unitPortrait(u.sprite, 0, 88, { faction: e.factions[0].id }), u.name, `${ROLE[u.role]} · ${unlock}${u.unique ? ' · hrdina' : ''}`, [['HP', u.hp], ['Útok', u.dmg], ['Pancíř', u.armor], ['Dosah', u.range >= 1 ? u.range.toFixed(1) : 'blízko'], ['Rychlost', u.speed.toFixed(1)], ['Cena', `${u.cost.p} ${e.resources.p.short} / ${u.cost.s} ${e.resources.s.short}`], ['Populace', u.pop], ['Výcvik', Math.round(u.trainTime) + ' s']], (u.desc || '') + (bon ? ` Bonus proti: ${bon}.` : '') + (u.aura ? ` Aura +${Math.round((u.aura.dmg - 1) * 100)} % útok v okruhu ${u.aura.range}.` : '') + (u.ability ? ` Schopnost: ${u.ability.name} – ${u.ability.desc}` : ''));
+      }
+    } else if (this.codexTab === 'buildings') {
+      for (const [k, b] of Object.entries(tech.buildings)) {
+        if (k === 'gate') continue;
+        const ups = (b.upgrades || []).map(up => `úroveň ${up.level}: ${up.cost.p}/${up.cost.s}${up.unlocks.length ? ' → ' + up.unlocks.map(u => tech.units[u]?.name).join(', ') : ''}${up.desc ? ' – ' + up.desc : ''}${up.popCap ? ` +${up.popCap} pop` : ''}`).join('; ');
+        card(buildingPortrait(b.sprite, b.w, b.h, 0, 88, era), b.name, `${b.w}×${b.h}${b.trains.length ? ' · cvičí: ' + b.trains.map(u => tech.units[u]?.name).join(', ') : ''}`, [['HP', b.hp], ['Pancíř', b.armor], ['Cena', `${b.cost.p} ${e.resources.p.short} / ${b.cost.s} ${e.resources.s.short}`], ['Stavba', b.buildTime + ' s'], ...(b.attack ? [['Útok', b.attack.dmg], ['Dosah', b.attack.range]] : []), ...(b.popCap ? [['Populace', '+' + b.popCap]] : [])], (b.desc || '') + (ups ? ` Vylepšení – ${ups}.` : ''));
+      }
+    } else {
+      for (const f of e.factions) { const d = document.createElement('div'); d.className = 'codex-card codex-faction'; d.innerHTML = `<div class="codex-info"><div class="codex-title">${f.name}</div><div class="codex-sub">Vůdce: ${f.leader || '–'}</div><div class="codex-desc">${f.desc}</div><div class="codex-desc">Jednotky: ${Object.entries(f.unitNames || {}).map(([, n]) => n).join(', ')}</div></div>`; body.appendChild(d); }
+      for (const [rid, rd] of Object.entries(RESEARCH)) { const d = document.createElement('div'); d.className = 'codex-card codex-faction'; d.innerHTML = `<div class="codex-info"><div class="codex-title">${rd.names[era]}</div><div class="codex-sub">${tech.buildings[rd.building]?.name} · ${rd.maxLevel} úrovně · ${rd.cost.p}/${rd.cost.s} × úroveň · ${rd.time} s</div><div class="codex-desc">${rd.desc}</div></div>`; body.appendChild(d); }
+    }
   }
   drawMapPreview(style, sizeKey, era) {
     const key = style + '|' + sizeKey + '|' + era; if (this.previewKey === key) return; this.previewKey = key;

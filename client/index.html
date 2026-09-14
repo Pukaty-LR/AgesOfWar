@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ages of War</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&display=swap">
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='16,2 30,16 16,30 2,16' fill='%23c9a227'/%3E%3C/svg%3E">
 </head>
@@ -22,6 +24,7 @@
       <button id="btn-quick" class="big primary">Rychlá hra proti AI</button>
       <button id="btn-host" class="big">Hostovat hru</button>
       <button id="btn-join" class="big">Připojit se · seznam serverů</button>
+      <button id="btn-codex" class="big">Encyklopedie</button>
       <button id="btn-settings" class="big">Nastavení</button>
     </div>
     <div class="conn-status" id="conn-status">Připojuji se k serveru…</div>
@@ -75,6 +78,15 @@
         <input id="lobby-chat-input" placeholder="Napiš zprávu a stiskni Enter">
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ===== CODEX ===== -->
+<div id="screen-codex" class="screen hidden">
+  <div class="panel wide codex">
+    <div class="panel-head"><h2>Encyklopedie</h2><div><span class="era-pick small" id="codex-eras"></span><button id="btn-codex-back">← Zpět</button></div></div>
+    <div class="codex-tabs"><button class="codex-tab active" data-tab="units">Jednotky</button><button class="codex-tab" data-tab="buildings">Budovy</button><button class="codex-tab" data-tab="factions">Frakce a výzkumy</button></div>
+    <div id="codex-body"></div>
   </div>
 </div>
 
@@ -133,6 +145,7 @@
     <label class="field"><span>Hudba</span><input type="range" id="vol-music2" min="0" max="100"></label>
     <label class="field check"><input type="checkbox" id="opt-mute2"><span>Ztlumit hudbu</span></label>
     <label class="field"><span>Zvuky</span><input type="range" id="vol-sfx2" min="0" max="100"></label>
+    <label class="field" id="speed-row"><span>Rychlost hry</span><select id="game-speed"><option value="1">Normální</option><option value="1.5">Rychlá (1,5×)</option><option value="2">Velmi rychlá (2×)</option></select></label>
     <label class="field"><span>Rychlost kamery</span><input type="range" id="scroll-speed2" min="20" max="100"></label>
     <label class="field check"><input type="checkbox" id="opt-edge2"><span>Posun kamery okrajem obrazovky</span></label>
     <label class="field check"><input type="checkbox" id="opt-hp2"><span>Zobrazovat životy vždy</span></label>

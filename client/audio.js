@@ -91,7 +91,11 @@ export class Audio {
       case 'buildingDone': this.osc('triangle', 523, t, 0.15, 0.15 * v, dest); this.osc('triangle', 659, t + 0.12, 0.15, 0.14 * v, dest); this.osc('triangle', 784, t + 0.24, 0.3, 0.14 * v, dest); break;
       case 'placed': this.noiseBurst(t, 0.15, 0.25 * v, dest, { f: 300, q: 1, type: 'lowpass' }); this.osc('sine', 110, t, 0.15, 0.25 * v, dest, { slide: 50 }); break;
       case 'collapse': this.noiseBurst(t, 1.1, 0.6 * v, dest, { f: 500, fEnd: 80, q: 0.5, type: 'lowpass', r: 0.9 }); this.noiseBurst(t + 0.2, 0.5, 0.3 * v, dest, { f: 2000, fEnd: 300, q: 1 }); break;
-      case 'death': this.noiseBurst(t, 0.2, 0.2 * v, dest, { f: 600, fEnd: 200, q: 1, type: 'lowpass' }); this.osc('sawtooth', 260, t, 0.25, 0.08 * v, dest, { slide: 90, lp: 700 }); break;
+      case 'death':
+        if (this.era === 'scifi') { this.noiseBurst(t, 0.25, 0.22 * v, dest, { f: 2500, fEnd: 300, q: 1.5 }); this.osc('square', 900, t, 0.3, 0.06 * v, dest, { slide: 60, lp: 2000 }); }
+        else if (this.era === 'ww2') { this.noiseBurst(t, 0.18, 0.2 * v, dest, { f: 500, fEnd: 150, q: 1, type: 'lowpass' }); this.osc('sawtooth', 200, t, 0.2, 0.06 * v, dest, { slide: 70, lp: 600 }); }
+        else { this.noiseBurst(t, 0.2, 0.2 * v, dest, { f: 600, fEnd: 200, q: 1, type: 'lowpass' }); this.osc('sawtooth', 260, t, 0.25, 0.08 * v, dest, { slide: 90, lp: 700 }); }
+        break;
       case 'alarm': for (let i = 0; i < 3; i++) { this.osc('sawtooth', 440, t + i * 0.18, 0.15, 0.16 * v, dest, { lp: 1800 }); this.osc('sawtooth', 554, t + i * 0.18, 0.15, 0.12 * v, dest, { lp: 1800 }); } break;
       case 'horn': this.osc('sawtooth', 220, t, 0.9, 0.2 * v, dest, { lp: 1200, a: 0.05, d: 0.2, s: 0.4, r: 0.3 }); this.osc('sawtooth', 330, t + 0.3, 0.7, 0.16 * v, dest, { lp: 1200, a: 0.05, d: 0.2, s: 0.3, r: 0.3 }); break;
       case 'victory': [523, 659, 784, 1046, 784, 1046, 1318].forEach((f, i) => this.osc('triangle', f, t + i * 0.16, 0.5, 0.18 * v, dest, { a: 0.01, d: 0.1, s: 0.15, r: 0.3 })); break;

@@ -92,15 +92,16 @@ function startGame(l) {
     send(c.ws, { t: 'start', game: { era: l.era, seed, map, me: i, players: sim.players.map(p => sim.serializePlayer(p)), lobbyName: l.name, reveal: !!l.reveal } });
     send(c.ws, sim.fullSnapshot());
   });
-  const tickMs = 1000 / TICK_RATE;
+  game.tickMs = 1000 / TICK_RATE;
   const netEvery = Math.round(TICK_RATE / NET_RATE);
   game.last = Date.now();
   game.interval = setInterval(() => {
     const now = Date.now();
+    const tickMs = game.tickMs;
     if (game.paused) { game.last = now; game.acc = 0; return; }
     game.acc += now - game.last; game.last = now;
     let steps = 0;
-    while (game.acc >= tickMs && steps < 5) {
+    while (game.acc >= tickMs && steps < 8) {
       game.acc -= tickMs; steps++;
       try {
         if (sim.tick % 20 === 0) for (const a of ais) a.update();
@@ -116,7 +117,7 @@ function startGame(l) {
     if (game.acc > tickMs * 10) game.acc = 0; // avoid spiral of death
     if (game.overAt && Date.now() - game.overAt > 5 * 60 * 1000) { stopGame(l); lobbies.delete(l.id); broadcastLobbyList(); return; }
     if (l.emptySince && !connectedHumans(l).length && Date.now() - l.emptySince > 3 * 60 * 1000) { console.log(`[game] "${l.name}" closed: nobody reconnected`); stopGame(l); lobbies.delete(l.id); broadcastLobbyList(); }
-  }, tickMs / 2);
+  }, 1000 / TICK_RATE / 4);
   broadcastLobbyList();
   console.log(`[game] "${l.name}" started: era=${l.era} seed=${seed} players=${players.map(p => p.name + (p.isAI ? '(AI)' : '')).join(', ')}`);
 }
@@ -259,6 +260,13 @@ wss.on('connection', (ws, req) => {
         const text = String(m.text || '').slice(0, 200); if (!text.trim()) return;
         if (!l) return;
         for (const s of l.slots) if (!s.isAI) { const o = clients.get(s.id); if (o) send(o.ws, { t: 'chat', from: c.name, text, color: l.slots.find(x => x.id === c.id)?.color }); }
+        break;
+      }
+      case 'speed': { // single-player only: 1x / 1.5x / 2x simulation speed
+        if (!l || !l.game) return;
+        if (l.slots.filter(s => !s.isAI && s.token).length > 1) return;
+        const sp = [1, 1.5, 2].includes(+m.v) ? +m.v : 1; l.game.speed = sp; l.game.tickMs = 1000 / TICK_RATE / sp;
+        send(ws, { t: 'speed', v: sp });
         break;
       }
       case 'pause': { // single-player only (one human in the room): pause/resume the simulation
