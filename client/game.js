@@ -162,6 +162,7 @@ export class Game {
       case 'alert': if (ev.owner === this.me) { this.lastAlert = { x: ev.x, y: ev.y, t: performance.now() }; this.ui.alert(ev.k === 'building' ? 'Naše budova je pod útokem!' : 'Naše jednotky jsou pod útokem!', true); this.audio.sfx('alarm', 0.6); this.ui.minimapPing(ev.x, ev.y); } break;
       case 'eliminated': { const p = this.players[ev.owner]; this.ui.chat('', `${p?.name} byl vyřazen ze hry.`, true); if (ev.owner !== this.me) this.audio.sfx('horn', 0.6); else if (!this.gameOver) { this.audio.sfx('defeat', 1); this.eliminated = true; setTimeout(() => { if (!this.gameOver) this.ui.showEnd(this, false, true); }, 1200); } break; }
       case 'chat': this.ui.chat(ev.from, ev.text, false, ev.color); break;
+      case 'levelup': { R.addEffect({ kind: 'ring', x: ev.x, y: ev.y, color: 'rgba(255,240,160,0.95)' }); R.addEffect({ kind: 'text', x: ev.x, y: ev.y, text: `Úroveň ${ev.level}!`, color: '#f1d36a' }); R.spawnParticles(20, ev.x, ev.y, 6, { colors: [[255, 240, 160], [255, 200, 80]], speed: 1.5, vz: 40, life: 0.9, size: 2, gravity: 30 }); if (mine) { this.audio.sfx('unitReady', 0.8); this.ui.alert(`${ev.name} dosáhl úrovně ${ev.level}.`, false); this.ui.dirty = true; } break; }
       case 'gameover': break;
     }
   }

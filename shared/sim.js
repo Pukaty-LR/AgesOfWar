@@ -1,5 +1,5 @@
 // Ages of War - authoritative simulation. Runs on the server (and can run headless for tests).
-import { ERAS, T, makeTechTable, TICK_RATE, RESEARCH } from './data.js';
+import { ERAS, T, makeTechTable, TICK_RATE, RESEARCH, HERO_XP } from './data.js';
 import { generateMap, mulberry32 } from './mapgen.js';
 import { astar, smoothPath, nearestTile } from './pathfinding.js';
 
@@ -457,7 +457,7 @@ export class Sim {
       if (e.kind !== 'unit' || e.dead || e.owner === undefined || this.players[e.owner].team !== p.team) continue;
       const d = this.players[e.owner].tech.units[e.type]; if (!d.aura) continue;
       const dist = Math.hypot(e.x - u.x, e.y - u.y);
-      if (dist <= d.aura.range) m = Math.max(m, d.aura.dmg);
+      if (dist <= d.aura.range + ((e.level || 1) - 1) * 0.5) m = Math.max(m, d.aura.dmg + ((e.level || 1) - 1) * 0.03);
       if (d.ability && e.buffUntil > this.tick && dist <= d.ability.range) m = Math.max(m, d.ability.dmg);
     }
     return m;
@@ -680,10 +680,10 @@ export class Sim {
   }
 
   fire(u, def, t) {
-    const dmg = this.unitDmg(this.players[u.owner], def) * this.auraMult(u);
+    const dmg = this.unitDmg(this.players[u.owner], def) * this.auraMult(u) * (def.aura ? this.heroMult(u) : 1);
     if (def.projectile) {
       const speed = PROJ_SPEED[def.projectile] || 12;
-      this.add({ kind: 'proj', type: def.projectile, x: u.x, y: u.y, sx: u.x, sy: u.y, tx: t.x, ty: t.y, targetId: t.id, speed, dmg, owner: u.owner, attackerType: u.type, attackerRole: u.role, bonus: def.bonus || {}, splash: def.splash || 0, arc: PROJ_ARC[def.projectile] || 0, total: Math.hypot(t.x - u.x, t.y - u.y), travelled: 0 });
+      this.add({ kind: 'proj', type: def.projectile, x: u.x, y: u.y, sx: u.x, sy: u.y, tx: t.x, ty: t.y, targetId: t.id, speed, dmg, owner: u.owner, attackerId: u.id, attackerType: u.type, attackerRole: u.role, bonus: def.bonus || {}, splash: def.splash || 0, arc: PROJ_ARC[def.projectile] || 0, total: Math.hypot(t.x - u.x, t.y - u.y), travelled: 0 });
       this.events.push({ t: 'shot', k: def.projectile, x: u.x, y: u.y, o: u.owner });
     } else {
       this.dealDamage(t, dmg, def.bonus || {}, u.owner, u.id, u.role);
@@ -719,11 +719,11 @@ export class Sim {
       for (const e of hit) {
         const dd = this.distToEntity(pr.x, pr.y, e);
         const f = e.id === pr.targetId ? 1 : Math.max(0.35, 1 - dd / pr.splash);
-        this.dealDamage(e, pr.dmg * f, pr.bonus, pr.owner, 0, pr.attackerRole);
+        this.dealDamage(e, pr.dmg * f, pr.bonus, pr.owner, pr.attackerId || 0, pr.attackerRole);
       }
       this.events.push({ t: 'explode', x: pr.x, y: pr.y, r: pr.splash, k: pr.type });
     } else if (t && !t.dead) {
-      this.dealDamage(t, pr.dmg, pr.bonus, pr.owner, 0, pr.attackerRole);
+      this.dealDamage(t, pr.dmg, pr.bonus, pr.owner, pr.attackerId || 0, pr.attackerRole);
       this.events.push({ t: 'hit', k: pr.type, x: pr.x, y: pr.y, o: pr.owner });
     } else {
       this.events.push({ t: 'miss', k: pr.type, x: pr.x, y: pr.y });
@@ -737,7 +737,7 @@ export class Sim {
     if (t.kind === 'unit') { const d = p.tech.units[t.type]; armor = this.unitArmor(p, d) + this.buffArmor(t); mult = bonus[t.role] || 1; }
     else if (t.kind === 'building') { armor = t.built ? this.buildingArmor(p, t) : 0; mult = (t.type === 'wall' || t.type === 'gate') ? (bonus.wall || bonus.building || 0.5) : (bonus.building || 1); }
     const final = Math.max(1, dmg * mult - armor);
-    t.hp -= final; t.dirty = true; t.lastDamageTick = this.tick;
+    t.hp -= final; t.dirty = true; t.lastDamageTick = this.tick; if (attackerId) t.lastAttackerId = attackerId;
     // retaliation / alerts
     if (t.kind === 'unit' && attackerId && t.role !== 'worker' && (t.order.type === 'idle' || t.order.type === 'hold') && !t.engage) { t.engage = attackerId; if (!t.home) t.home = { x: t.x, y: t.y }; }
     if (t.kind === 'unit' && t.role === 'worker' && t.order.type === 'idle' && attackerId) {
@@ -751,11 +751,24 @@ export class Sim {
     }
   }
 
+  /** Hero experience (WC3 style): kills grant XP, levels raise HP and damage and widen the aura. */
+  grantXp(attackerId, amount) {
+    const h = attackerId ? this.ents.get(attackerId) : null; if (!h || h.kind !== 'unit' || h.dead) return;
+    const def = this.players[h.owner].tech.units[h.type]; if (!def.aura) return;
+    h.xp = (h.xp || 0) + amount; h.level = h.level || 1; h.dirty = true;
+    const need = HERO_XP[h.level - 1];
+    if (need !== undefined && h.xp >= need && h.level < HERO_XP.length + 1) {
+      h.level++; const grow = 1.15; h.maxHp = Math.round(h.maxHp * grow); h.hp = Math.min(h.maxHp, h.hp + Math.round(h.maxHp * 0.3));
+      this.events.push({ t: 'levelup', x: h.x, y: h.y, o: h.owner, level: h.level, name: def.name });
+    }
+  }
+  heroMult(u) { return 1 + 0.1 * ((u.level || 1) - 1); }
   killUnit(u, killerOwner) {
     u.dead = true;
     const p = this.players[u.owner];
     p.stats.unitsLost++;
     if (killerOwner !== null && killerOwner !== undefined && this.players[killerOwner]) this.players[killerOwner].stats.unitsKilled++;
+    if (u.lastAttackerId) this.grantXp(u.lastAttackerId, 20 + Math.round(u.maxHp / 10));
     this.events.push({ t: 'death', x: u.x, y: u.y, o: u.owner, k: 'unit', ty: u.type, f: u.facing });
     // release building it was constructing
     this.remove(u);
@@ -768,6 +781,7 @@ export class Sim {
     if (!cancelled) {
       p.stats.buildingsLost++;
       if (killerOwner !== null && killerOwner !== undefined && this.players[killerOwner]) this.players[killerOwner].stats.buildingsRazed++;
+      if (b.lastAttackerId) this.grantXp(b.lastAttackerId, 60 + Math.round(b.maxHp / 20));
       this.events.push({ t: 'death', x: b.x, y: b.y, o: b.owner, k: 'building', ty: b.type, w: b.w, h: b.h });
     }
     // refund queued units / upgrades
@@ -997,7 +1011,7 @@ export class Sim {
   // ---------- serialization ----------
   serializeEntity(e) {
     switch (e.kind) {
-      case 'unit': return { i: e.id, k: 'u', t: e.type, o: e.owner, x: +e.x.toFixed(2), y: +e.y.toFixed(2), hp: Math.ceil(e.hp), m: e.maxHp, f: +e.facing.toFixed(2), a: e.anim, at: e.lastAttackTick, hd: e.hidden ? 1 : 0, c: e.carry ? e.carry.res : '', o2: e.order.type, tg: e.order.targetId || e.engage || 0, dx: e.order.x, dy: e.order.y, ab: e.abilityReady || 0, bf: e.buffUntil || 0 };
+      case 'unit': return { i: e.id, k: 'u', t: e.type, o: e.owner, x: +e.x.toFixed(2), y: +e.y.toFixed(2), hp: Math.ceil(e.hp), m: e.maxHp, f: +e.facing.toFixed(2), a: e.anim, at: e.lastAttackTick, hd: e.hidden ? 1 : 0, c: e.carry ? e.carry.res : '', o2: e.order.type, tg: e.order.targetId || e.engage || 0, dx: e.order.x, dy: e.order.y, ab: e.abilityReady || 0, bf: e.buffUntil || 0, lv: e.level || 1, xp: e.xp || 0 };
       case 'building': return { i: e.id, k: 'b', t: e.type, o: e.owner, x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: e.w, h: e.h, hp: Math.ceil(e.hp), m: e.maxHp, bl: e.built ? 1 : 0, pr: +e.progress.toFixed(3), q: e.queue.map(q => ({ t: q.type, p: +q.progress.toFixed(3), rid: q.rid })), r: e.rally, at: e.lastAttackTick, lv: e.level || 1 };
       case 'tree': return { i: e.id, k: 't', x: e.x, y: e.y, tx: e.tx, ty: e.ty, a: e.amount, v: e.v };
       case 'mine': return { i: e.id, k: 'm', x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: 2, h: 2, a: e.amount };

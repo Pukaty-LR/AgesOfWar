@@ -242,6 +242,8 @@ export const ERAS = {
 
 export const ERA_ORDER = ['antiquity', 'ww2', 'scifi'];
 
+export const HERO_XP = [120, 300, 560, 900]; // xp needed to reach hero level 2..5
+
 // Research (AoE blacksmith style). Cost scales with level. Names differ per era.
 export const RESEARCH = {
   atk_inf:   { building: 'barracks', maxLevel: 3, cost: { p: 100, s: 60 }, time: 35, roles: ['infantry', 'ranged'], dmgAdd: 2, hotkey: 'I',

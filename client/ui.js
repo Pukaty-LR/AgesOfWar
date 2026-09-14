@@ -1,5 +1,5 @@
 // In-game HUD: resources, minimap, selection panel, command card, alerts, chat, end screen.
-import { TEAM_COLORS, T, ERAS, RESEARCH } from '../shared/data.js';
+import { TEAM_COLORS, T, ERAS, RESEARCH, HERO_XP } from '../shared/data.js';
 import { unitPortrait, buildingPortrait, actionIcon, TW, TH } from './render/sprites.js';
 
 const $ = id => document.getElementById(id);
@@ -161,6 +161,7 @@ export class UI {
       else { hpWrap.style.display = 'none'; }
       const st = $('sel-stats'); st.innerHTML = '';
       const stat = (icon, l, v) => { const s = document.createElement('span'); s.title = l; s.innerHTML = `${STAT_SVG[icon] || ''}${l} <b>${v}</b>`; st.appendChild(s); };
+      if (e.k === 'u' && game.unitDef(e).aura) { const lv = e.lv || 1; const need = HERO_XP[lv - 1]; stat('pop', 'Úroveň', lv + (need ? ` · ${e.xp || 0}/${need} XP` : ' (max)')); }
       if (e.k === 'u') { const d = game.unitDef(e); stat('attack', 'Útok', d.dmg); stat('armor', 'Pancíř', d.armor); stat('range', 'Dosah', d.range >= 1 ? d.range.toFixed(1) : 'blízko'); stat('speed', 'Rychlost', d.speed.toFixed(1)); if (e.c) stat('carry', 'Nese', e.c === 'p' ? game.eraDef.resources.p.name : game.eraDef.resources.s.name); }
       else if (e.k === 'b') { const d = game.buildingDef(e); stat('armor', 'Pancíř', d.armor); if (d.attack) { stat('attack', 'Útok', d.attack.dmg); stat('range', 'Dosah', d.attack.range); } if (d.popCap) stat('pop', 'Populace', '+' + d.popCap); if (!e.bl) stat('build', 'Stavba', Math.round(e.pr * 100) + ' %'); }
       else if (e.k === 't' || e.k === 'm') stat('left', 'Zbývá', e.a);
