@@ -184,4 +184,5 @@ class App {
 }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
+window.addEventListener('error', e => { console.error(e.error || e.message); if (window.app) window.app.toast('Chyba: ' + (e.message || 'neznámá').slice(0, 120)); });
 window.app = new App();

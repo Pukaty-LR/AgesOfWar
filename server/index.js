@@ -134,6 +134,10 @@ wss.on('connection', (ws, req) => {
 
   ws.on('message', raw => {
     let m; try { m = JSON.parse(raw); } catch { return; }
+    if (!m || typeof m.t !== 'string') return;
+    try { handle(m); } catch (err) { console.error('message error', m.t, err); }
+  });
+  function handle(m) {
     const l = c.lobby;
     switch (m.t) {
       case 'hello': {
@@ -278,11 +282,13 @@ wss.on('connection', (ws, req) => {
         break;
       }
     }
-  });
+  }
   ws.on('close', () => { leaveLobby(c, true); clients.delete(c.id); broadcastLobbyList(); });
   ws.on('error', () => {});
 });
 
+process.on('uncaughtException', err => console.error('uncaught', err));
+process.on('unhandledRejection', err => console.error('unhandled', err));
 server.listen(PORT, () => {
   const ips = [];
   for (const [name, ifs] of Object.entries(os.networkInterfaces())) for (const i of ifs) if (i.family === 'IPv4' && !i.internal) ips.push(i.address);
