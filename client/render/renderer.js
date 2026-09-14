@@ -103,6 +103,7 @@ export class Renderer {
       const k = Math.max(0.55, Math.min(1.4, 1 + slope + hv + (this.hash(x, y) - 0.5) * 0.08));
       let c = shade(this.tileColor(t, i), k);
       if (t === T.WATER) { const d = Math.max(0, SEA - map.height[i]); c = mix(pal.water, pal.deep, Math.min(1, d * 6)); }
+      if (t === T.ROCK) c = shade(c, 0.78);
       tiles.push({ x, y, t, q, c, k });
       ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]); ctx.lineTo(q[1][0], q[1][1]); ctx.lineTo(q[2][0], q[2][1]); ctx.lineTo(q[3][0], q[3][1]); ctx.closePath();
       ctx.fillStyle = rgb(c); ctx.fill();
@@ -129,8 +130,14 @@ export class Renderer {
       } else if (tl.t === T.SAND) {
         ctx.fillStyle = rgb(shade(tl.c, 1.15)); for (let k = 0; k < 5; k++) { const rx = this.hash(tl.x * 11 + k, tl.y * 13), ry = this.hash(tl.x * 17, tl.y * 19 + k); ctx.fillRect(cxp + (rx - 0.5) * TW * 0.7, cyp + (ry - 0.5) * TH * 0.7, 1.5, 1); }
       } else if (tl.t === T.ROCK) {
-        ctx.strokeStyle = rgb(shade(tl.c, 0.6)); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cxp - 10, cyp + 2); ctx.lineTo(cxp - 2, cyp - 3); ctx.lineTo(cxp + 6, cyp + 1); ctx.stroke();
-        ctx.fillStyle = rgb(shade(tl.c, 1.25), 0.6); ctx.beginPath(); ctx.moveTo(cxp - 6, cyp - 2); ctx.lineTo(cxp + 2, cyp - 6); ctx.lineTo(cxp + 8, cyp - 3); ctx.lineTo(cxp, cyp); ctx.fill();
+        // boulders: a few faceted lumps per tile, snow on the highest
+        const hgt = map.height[tl.y * w + tl.x]; const n = 2 + (r * 3) | 0;
+        for (let k = 0; k < n; k++) {
+          const rx = this.hash(tl.x * 13 + k, tl.y * 17), ry = this.hash(tl.x * 19, tl.y * 23 + k); const px = cxp + (rx - 0.5) * TW * 0.6, py = cyp + (ry - 0.5) * TH * 0.6; const s = 5 + rx * 7;
+          ctx.fillStyle = rgb(shade(tl.c, 0.55)); ctx.beginPath(); ctx.moveTo(px - s, py + 1); ctx.lineTo(px - s * 0.5, py - s * 0.9); ctx.lineTo(px + s * 0.4, py - s * 1.1); ctx.lineTo(px + s, py - s * 0.2); ctx.lineTo(px + s * 0.6, py + s * 0.4); ctx.lineTo(px - s * 0.5, py + s * 0.4); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = rgb(shade(tl.c, hgt > 0.93 ? 1.9 : 1.2)); ctx.beginPath(); ctx.moveTo(px - s * 0.5, py - s * 0.9); ctx.lineTo(px + s * 0.4, py - s * 1.1); ctx.lineTo(px + s * 0.2, py - s * 0.3); ctx.lineTo(px - s * 0.3, py - s * 0.2); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = rgb(shade(tl.c, 0.85)); ctx.beginPath(); ctx.moveTo(px + s * 0.4, py - s * 1.1); ctx.lineTo(px + s, py - s * 0.2); ctx.lineTo(px + s * 0.6, py + s * 0.4); ctx.lineTo(px + s * 0.2, py - s * 0.3); ctx.closePath(); ctx.fill();
+        }
       } else if (tl.t === T.SHALLOW) {
         // foam edge toward land neighbors
         const nb = [[0, -1, 0, 1], [1, 0, 1, 2], [0, 1, 2, 3], [-1, 0, 3, 0]];
