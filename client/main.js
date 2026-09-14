@@ -60,6 +60,7 @@ class App {
     $('btn-settings-back').onclick = () => this.show('menu');
     $('btn-lobby-leave').onclick = () => { this.net.send({ t: 'leave' }); this.lobby = null; this.show('menu'); };
     $('btn-add-bot').onclick = () => this.net.send({ t: 'addBot', diff: 'normal' });
+    $('btn-add-bot-easy').onclick = () => this.net.send({ t: 'addBot', diff: 'easy' });
     $('btn-add-bot-hard').onclick = () => this.net.send({ t: 'addBot', diff: 'hard' });
     $('btn-ready').onclick = () => { const me = this.lobby && this.lobby.slots.find(s => s.id === this.myId); if (me) this.net.send({ t: 'set', ready: !me.ready }); };
     $('btn-start').onclick = () => this.net.send({ t: 'start' });
@@ -118,7 +119,7 @@ class App {
     const tb = $('slot-list'); tb.innerHTML = '';
     l.slots.forEach((s, idx) => {
       const tr = document.createElement('tr'); const mine = s.id === this.myId; const editable = mine || (isHost && s.isAI);
-      const tdName = document.createElement('td'); tdName.innerHTML = `${esc(s.name)}${s.id === l.hostId ? '<span class="host-tag">HOST</span>' : ''}${s.isAI ? ` <span class="host-tag" style="color:#9b8a6a">AI ${s.diff === 'hard' ? 'těžká' : 'normální'}</span>` : ''}`; tr.appendChild(tdName);
+      const tdName = document.createElement('td'); tdName.innerHTML = `${esc(s.name)}${s.id === l.hostId ? '<span class="host-tag">HOST</span>' : ''}${s.isAI ? ` <span class="host-tag" style="color:#9b8a6a">AI ${{ easy: 'lehká', hard: 'těžká' }[s.diff] || 'normální'}</span>` : ''}`; tr.appendChild(tdName);
       const tdF = document.createElement('td'); const sel = document.createElement('select'); for (const f of era.factions) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; if (f.id === s.faction) o.selected = true; sel.appendChild(o); } sel.disabled = !editable; sel.onchange = () => this.net.send(mine ? { t: 'set', faction: sel.value } : { t: 'setSlot', slot: idx, faction: sel.value }); tdF.appendChild(sel); tr.appendChild(tdF);
       const tdT = document.createElement('td'); const selT = document.createElement('select'); for (let i = 0; i < MAX_PLAYERS; i++) { const o = document.createElement('option'); o.value = i; o.textContent = 'Tým ' + (i + 1); if (i === s.team) o.selected = true; selT.appendChild(o); } selT.disabled = !editable; selT.onchange = () => this.net.send(mine ? { t: 'set', team: +selT.value } : { t: 'setSlot', slot: idx, team: +selT.value }); tdT.appendChild(selT); tr.appendChild(tdT);
       const tdC = document.createElement('td'); const dot = document.createElement('span'); dot.className = 'color-dot'; dot.style.background = TEAM_COLORS[s.color].hex; dot.title = TEAM_COLORS[s.color].name + (editable ? ' – klik změní' : ''); if (editable) dot.onclick = () => { let c = (s.color + 1) % TEAM_COLORS.length; while (l.slots.some(o => o !== s && o.color === c)) c = (c + 1) % TEAM_COLORS.length; this.net.send(mine ? { t: 'set', color: c } : { t: 'setSlot', slot: idx, color: c }); }; tdC.appendChild(dot); tr.appendChild(tdC);
@@ -128,7 +129,7 @@ class App {
     });
     const me = l.slots.find(s => s.id === this.myId);
     $('btn-start').classList.toggle('hidden', !isHost); $('btn-ready').classList.toggle('hidden', isHost); $('btn-ready').textContent = me && me.ready ? 'Zrušit připravenost' : 'Připraven';
-    $('btn-add-bot').classList.toggle('hidden', !isHost); $('btn-add-bot-hard').classList.toggle('hidden', !isHost);
+    $('btn-add-bot').classList.toggle('hidden', !isHost); $('btn-add-bot-hard').classList.toggle('hidden', !isHost); $('btn-add-bot-easy').classList.toggle('hidden', !isHost);
     const f = me && era.factions.find(x => x.id === me.faction); $('faction-desc').textContent = f ? `${f.name}: ${f.desc}` : '';
   }
   leaveGame(silent = false) {

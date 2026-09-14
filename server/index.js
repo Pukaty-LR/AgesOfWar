@@ -49,6 +49,7 @@ function broadcastLobby(l) { const st = { t: 'lobby', lobby: lobbyState(l) }; fo
 function freeColor(l) { const used = new Set(l.slots.map(s => s.color)); for (let i = 0; i < TEAM_COLORS.length; i++) if (!used.has(i)) return i; return 0; }
 function freeTeam(l) { const used = new Set(l.slots.map(s => s.team)); for (let i = 0; i < MAX_PLAYERS; i++) if (!used.has(i)) return i; return 0; }
 function defaultFaction(era) { return ERAS[era].factions[0].id; }
+function validDiff(d) { return ['easy', 'normal', 'hard'].includes(d) ? d : 'normal'; }
 
 function leaveLobby(c, silent = false) {
   const l = c.lobby; if (!l) return;
@@ -165,7 +166,7 @@ wss.on('connection', (ws, req) => {
         if (m.faction && ERAS[l.era].factions.some(f => f.id === m.faction)) s.faction = m.faction;
         if (m.team !== undefined) s.team = Math.max(0, Math.min(MAX_PLAYERS - 1, m.team | 0));
         if (m.color !== undefined) { const col = Math.max(0, Math.min(TEAM_COLORS.length - 1, m.color | 0)); if (!l.slots.some(o => o !== s && o.color === col)) s.color = col; }
-        if (m.diff) s.diff = m.diff === 'hard' ? 'hard' : 'normal';
+        if (m.diff) s.diff = validDiff(m.diff);
         broadcastLobby(l);
         break;
       }
@@ -180,7 +181,7 @@ wss.on('connection', (ws, req) => {
         if (!l || l.hostId !== c.id || l.state !== 'lobby' || l.slots.length >= l.max) return;
         const n = l.slots.filter(s => s.isAI).length + 1;
         const fs = ERAS[l.era].factions;
-        l.slots.push({ id: -n - Math.random(), name: `Počítač ${n}`, faction: fs[n % fs.length].id, team: freeTeam(l), color: freeColor(l), ready: true, isAI: true, diff: m.diff === 'hard' ? 'hard' : 'normal' });
+        l.slots.push({ id: -n - Math.random(), name: `Počítač ${n}`, faction: fs[n % fs.length].id, team: freeTeam(l), color: freeColor(l), ready: true, isAI: true, diff: validDiff(m.diff) });
         broadcastLobby(l); broadcastLobbyList();
         break;
       }

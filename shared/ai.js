@@ -28,8 +28,9 @@ export class AIPlayer {
     const halls = buildings.filter(b => b.type === 'hall' && b.built);
     const hall = halls[0] || buildings.find(b => b.built) || buildings[0];
     if (!hall) return;
-    const hard = this.diff === 'hard';
-    const targetWorkers = hard ? 18 : 14;
+    const hard = this.diff === 'hard', easy = this.diff === 'easy';
+    const targetWorkers = hard ? 18 : (easy ? 9 : 14);
+    if (easy && tick % 40 !== 0) return; // easy AI thinks half as often
 
     // 1. Economy: keep workers gathering
     const mineNode = sim.nearestNode({ x: hall.x, y: hall.y, owner: this.pid }, 'mine', 16);
@@ -102,9 +103,9 @@ export class AIPlayer {
     }
 
     // 5. Attack waves
-    const threshold = (hard ? 6 : 10) + this.wave * 3;
+    const threshold = (hard ? 6 : (easy ? 14 : 10)) + this.wave * 3;
     const idleArmy = army.filter(u => u.order.type === 'idle');
-    const minTick = hard ? 20 * 60 * 2.5 : 20 * 60 * 5;
+    const minTick = hard ? 20 * 60 * 2.5 : (easy ? 20 * 60 * 9 : 20 * 60 * 5);
     if (!threat && idleArmy.length >= threshold && tick - this.lastAttackTick > 20 * 45 && tick > minTick) {
       const target = this.pickEnemyTarget(hall);
       if (target) {
