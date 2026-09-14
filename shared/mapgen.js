@@ -235,6 +235,22 @@ export function generateMap(seed, size, numPlayers, style = 'continent') {
     let ok = true; for (const s of spawns) if (Math.hypot(s.x - tx, s.y - ty) < 9) ok = false;
     if (ok) { occupy(tx, ty, 1, 1); trees.push({ tx, ty, v: Math.floor(rng() * 4) }); }
   }
+  // Guarantee: every spawn reachable by land once trees/mines are placed. Cut a lane through forests if needed.
+  {
+    const mineOcc = new Uint8Array(w * h); for (const m of mines) for (let y = m.ty - 1; y < m.ty + 1; y++) for (let x = m.tx - 1; x < m.tx + 1; x++) if (x >= 0 && y >= 0 && x < w && y < h) mineOcc[y * w + x] = 1;
+    const treeAt = new Map(); trees.forEach((t, i) => treeAt.set(t.ty * w + t.tx, i));
+    const startOf = s => { for (let r = 3; r < 8; r++) for (let oy = -r; oy <= r; oy++) for (let ox = -r; ox <= r; ox++) { const x = s.x + ox, y = s.y + oy; if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (isLand(tiles[i]) && !occupied[i]) return i; } return s.y * w + s.x; };
+    const bfs = (from, to, passFn) => { const prev = new Int32Array(w * h).fill(-1); const q = [from]; prev[from] = from; let qi = 0; while (qi < q.length) { const i = q[qi++]; if (i === to) break; const x = i % w, y = (i / w) | 0; for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + ox, ny = y + oy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue; const j = ny * w + nx; if (prev[j] >= 0 || !passFn(j)) continue; prev[j] = i; q.push(j); } } return prev[to] >= 0 ? prev : null; };
+    const a = startOf(spawns[0]);
+    for (let si = 1; si < spawns.length; si++) {
+      const b = startOf(spawns[si]);
+      if (bfs(a, b, j => isLand(tiles[j]) && !occupied[j])) continue;
+      const prev = bfs(a, b, j => isLand(tiles[j]) && !mineOcc[j]); if (!prev) continue;
+      const removed = new Set();
+      for (let i = b; i !== a; i = prev[i]) { const x = i % w, y = (i / w) | 0; for (const [ox, oy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = (y + oy) * w + x + ox; if (treeAt.has(j)) { removed.add(treeAt.get(j)); occupied[j] = 0; } } }
+      if (removed.size) { const keep = trees.filter((t, i) => !removed.has(i)); trees.length = 0; trees.push(...keep); treeAt.clear(); trees.forEach((t, i) => treeAt.set(t.ty * w + t.tx, i)); }
+    }
+  }
   // Decoration: rocks/bushes (non-blocking) for the client
   const deco = [];
   for (let i = 0; i < w * h * 0.012; i++) {
