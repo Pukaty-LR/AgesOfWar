@@ -30,7 +30,7 @@ export class Game {
     this.techs = this.players.map(p => makeTechTable(this.era, p.faction));
     this.ents.clear(); this.selection.clear(); this.groups = {};
     this.blocked = new Uint8Array(this.map.w * this.map.h); this.wallGrid.clear();
-    this.renderer.setMap(this.map, this.era);
+    this.renderer.setMap(this.map, this.era); this.renderer.prebuild();
     const s = this.map.spawns[this.me]; this.renderer.cam.x = s.x; this.renderer.cam.y = s.y; this.renderer.cam.zoom = 1;
     this.gameOver = null; this.running = true; this.startedAt = performance.now(); this.tick = 0; this.lastSnapAt = performance.now();
     this.state.mode = null; this.state.placing = null; this.state.drag = null; this.state.mouse = { x: -1, y: -1 }; this.keys = {};

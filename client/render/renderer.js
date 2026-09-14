@@ -147,6 +147,7 @@ export class Renderer {
     return { canvas, left, top, cw, ch };
   }
   getChunk(cx, cy) { const k = cy * 1000 + cx; let c = this.chunks.get(k); if (!c) { c = this.buildChunk(cx, cy); this.chunks.set(k, c); } return c; }
+  prebuild() { const nx = Math.ceil(this.map.w / CHUNK), ny = Math.ceil(this.map.h / CHUNK); for (let cy = 0; cy < ny; cy++) for (let cx = 0; cx < nx; cx++) this.getChunk(cx, cy); }
 
   // ---------- fog ----------
   updateFog(ents, myTeam, players) {
@@ -249,6 +250,10 @@ export class Renderer {
     this.drawParticles(ctx, z);
     // fog
     this.drawFog(ctx, ox, oy, z);
+    // slow day/night tint (10-minute cycle, subtle)
+    { const ph = (this.time / 600) * Math.PI * 2; const night = Math.max(0, -Math.cos(ph)); const dusk = Math.max(0, Math.sin(ph)) * Math.max(0, Math.cos(ph)) * 2;
+      if (night > 0.02) { ctx.fillStyle = `rgba(20,30,70,${night * 0.22})`; ctx.fillRect(0, 0, this.W, this.H); }
+      if (dusk > 0.02) { ctx.fillStyle = `rgba(255,140,60,${dusk * 0.08})`; ctx.fillRect(0, 0, this.W, this.H); } }
     // overlays: health bars, selection markers above fog
     this.drawOverlays(ctx, state, ox, oy, z, list);
   }
@@ -367,6 +372,8 @@ export class Renderer {
     }
     const spr = buildingSprite(def.sprite, e.w, e.h, g.players[e.o].color, !!e.bl, e.pr, mask, this.era, e.lv || 1);
     const visible = this.isVisibleTile(e.x, e.y);
+    // soft drop shadow under the footprint
+    if (e.bl) { const [cx, cy] = this.worldToScreen(e.x + e.w * 0.08, e.y + e.h * 0.08); ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(cx, cy, e.w * TW / 2 * 0.62 * z, e.h * TH / 2 * 0.62 * z, 0, 0, Math.PI * 2); ctx.fill(); }
     if (e.hover || g.selection.has(e.i)) { ctx.filter = e.hover && !g.selection.has(e.i) ? 'brightness(1.15)' : 'none'; }
     if (!visible) ctx.filter = 'brightness(0.7)';
     if (e.hitAt && this.time - e.hitAt < 0.1) ctx.filter = 'brightness(1.6)';
