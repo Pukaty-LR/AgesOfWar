@@ -387,6 +387,12 @@ export class Sim {
     for (const up of def.upgrades || []) if (up.level <= (b.level || 1)) out.push(...up.unlocks);
     return out;
   }
+  buildingAttack(p, b) {
+    const def = p.tech.buildings[b.type]; let dmg = def.attack.dmg, range = def.attack.range, armor = def.armor;
+    for (const up of def.upgrades || []) if (up.level <= (b.level || 1)) { if (up.dmgMul) dmg *= up.dmgMul; if (up.rangeAdd) range += up.rangeAdd; if (up.armorAdd) armor += up.armorAdd; }
+    return { dmg, range, armor };
+  }
+  buildingArmor(p, b) { const def = p.tech.buildings[b.type]; let armor = def.armor; for (const up of def.upgrades || []) if (up.level <= (b.level || 1) && up.armorAdd) armor += up.armorAdd; return armor; }
   nextUpgrade(p, b) { const def = p.tech.buildings[b.type]; return (def.upgrades || []).find(u => u.level === (b.level || 1) + 1) || null; }
   hallLevel(pid) { let lv = 0; for (const e of this.ents.values()) if (e.kind === 'building' && e.owner === pid && e.type === 'hall' && e.built && !e.dead) lv = Math.max(lv, e.level || 1); return lv; }
   queueCost(p, b, q) { if (q.type === '__up') { const up = this.nextUpgrade(p, b); return up ? up.cost : { p: 0, s: 0 }; } const ud = p.tech.units[q.type]; return ud ? ud.cost : { p: 0, s: 0 }; }
@@ -650,7 +656,7 @@ export class Sim {
     const p = this.players[t.owner];
     let armor = 0, mult = 1;
     if (t.kind === 'unit') { const d = p.tech.units[t.type]; armor = d.armor; mult = bonus[t.role] || 1; }
-    else if (t.kind === 'building') { const d = p.tech.buildings[t.type]; armor = t.built ? d.armor : 0; mult = t.type === 'wall' ? (bonus.wall || bonus.building || 0.5) : (bonus.building || 1); }
+    else if (t.kind === 'building') { armor = t.built ? this.buildingArmor(p, t) : 0; mult = (t.type === 'wall' || t.type === 'gate') ? (bonus.wall || bonus.building || 0.5) : (bonus.building || 1); }
     const final = Math.max(1, dmg * mult - armor);
     t.hp -= final; t.dirty = true; t.lastDamageTick = this.tick;
     // retaliation / alerts
@@ -862,21 +868,22 @@ export class Sim {
         } else { q.progress = 1; }
       }
     }
-    // tower attack
+    // tower attack (scaled by upgrade level)
     if (def.attack) {
       if (b.cooldown > 0) b.cooldown -= DT;
+      const st = this.buildingAttack(p, b);
       if ((this.tick + b.id) % 4 === 0 || b.target) {
         let t = b.target ? this.ents.get(b.target) : null;
-        if (!t || t.dead || this.distToEntity(b.x, b.y, t) > def.attack.range + 0.5) { t = null; b.target = 0; }
+        if (!t || t.dead || this.distToEntity(b.x, b.y, t) > st.range + 0.5) { t = null; b.target = 0; }
         if (!t && (this.tick + b.id) % 4 === 0) {
           const fake = { x: b.x, y: b.y, owner: b.owner };
-          t = this.nearestEnemy(fake, def.attack.range, false);
+          t = this.nearestEnemy(fake, st.range, false);
           if (t) b.target = t.id;
         }
         if (t && b.cooldown <= 0) {
           b.cooldown = def.attack.cooldown; b.lastAttackTick = this.tick; b.dirty = true;
           const speed = PROJ_SPEED[def.attack.projectile] || 12;
-          this.add({ kind: 'proj', type: def.attack.projectile, x: b.x, y: b.y - 0.6, sx: b.x, sy: b.y - 0.6, tx: t.x, ty: t.y, targetId: t.id, speed, dmg: def.attack.dmg, owner: b.owner, attackerType: b.type, attackerRole: 'tower', bonus: {}, splash: 0, arc: PROJ_ARC[def.attack.projectile] || 0, total: Math.hypot(t.x - b.x, t.y - b.y), travelled: 0 });
+          this.add({ kind: 'proj', type: def.attack.projectile, x: b.x, y: b.y - 0.6, sx: b.x, sy: b.y - 0.6, tx: t.x, ty: t.y, targetId: t.id, speed, dmg: st.dmg, owner: b.owner, attackerType: b.type, attackerRole: 'tower', bonus: {}, splash: 0, arc: PROJ_ARC[def.attack.projectile] || 0, total: Math.hypot(t.x - b.x, t.y - b.y), travelled: 0 });
           this.events.push({ t: 'shot', k: def.attack.projectile, x: b.x, y: b.y, o: b.owner });
         }
       }

@@ -508,7 +508,17 @@ const BUILDING_DRAW = {
     for (const p of [[0.1, 0.1], [0.5, 0.05], [0.9, 0.1], [0.95, 0.5], [0.9, 0.9], [0.5, 0.95], [0.1, 0.9], [0.05, 0.5]]) prism(ctx, isoRect(p[0] - 0.08, p[1] - 0.08, 0.16, 0.16), 53, 6, STONE, STONE_D);
     // arrow slits
     for (const z of [18, 32]) { const [sx, sy] = iso(0.85, 0.5, z); ctx.fillStyle = '#2a1a10'; ctx.fillRect(sx - 1, sy - 6, 2, 7); const [sx2, sy2] = iso(0.5, 0.85, z); ctx.fillRect(sx2 - 1, sy2 - 6, 2, 7); }
-    flag(ctx, 0.5, 0.5, 59, o.team, 16);
+    const lv = o.level || 1;
+    if (lv >= 2) { // wooden hoarding + second tier
+      prism(ctx, isoRect(0.22, 0.22, 0.56, 0.56), 59, 14, shade(STONE, 1.08), STONE_D);
+      for (const p of [[0.22, 0.22], [0.78, 0.22], [0.78, 0.78], [0.22, 0.78]]) prism(ctx, isoRect(p[0] - 0.06, p[1] - 0.06, 0.12, 0.12), 73, 5, STONE, STONE_D);
+      for (const z of [64]) { const [sx, sy] = iso(0.78, 0.5, z); ctx.fillStyle = '#2a1a10'; ctx.fillRect(sx - 1, sy - 5, 2, 6); const [sx2, sy2] = iso(0.5, 0.78, z); ctx.fillRect(sx2 - 1, sy2 - 5, 2, 6); }
+    }
+    if (lv >= 3) { // brazier fire on top and iron bands
+      const [bx, by] = iso(0.5, 0.5, 78); ellipse(ctx, bx, by - 2, 4, 2, rgb([60, 55, 50]), OUT, 0.6); ellipse(ctx, bx, by - 7, 3.5, 5, 'rgba(255,140,40,0.9)'); ellipse(ctx, bx, by - 9, 2, 3, 'rgba(255,230,150,0.95)');
+      ctx.strokeStyle = 'rgba(40,40,45,0.7)'; ctx.lineWidth = 1.5; for (const z of [12, 40]) { const pts = [[0.15, 0.15], [0.85, 0.15], [0.85, 0.85], [0.15, 0.85]].map(p => iso(p[0], p[1], z)); ctx.beginPath(); ctx.moveTo(pts[3][0], pts[3][1]); ctx.lineTo(pts[2][0], pts[2][1]); ctx.lineTo(pts[1][0], pts[1][1]); ctx.stroke(); }
+    }
+    flag(ctx, 0.5, 0.5, lv >= 2 ? 78 : 59, o.team, 16);
   },
   ant_wall: (ctx, o) => {
     const M = o.mask; const m = M & 15; // bit 1: N (y-1), 2: E (x+1), 4: S (y+1), 8: W (x-1); 16 NE, 32 SE, 64 SW, 128 NW
@@ -614,7 +624,17 @@ const BUILDING_DRAW = {
     for (const s of [[0.93, 0.5], [0.5, 0.93]]) { const [sx, sy] = iso(s[0], s[1], 12); ctx.fillStyle = '#1a1a1a'; ctx.fillRect(sx - 5, sy - 2, 10, 2.4); }
     const [mx, my] = iso(0.9, 0.6, 12); line(ctx, mx, my, mx + 7, my + 3, '#222', 2);
     sandbags(ctx, [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], 0);
-    flag(ctx, 0.5, 0.5, 24, o.team, 14);
+    const lv = o.level || 1;
+    if (lv >= 2) { // steel cupola with a second MG
+      prism(ctx, [[0.35, 0.3], [0.65, 0.3], [0.7, 0.5], [0.65, 0.7], [0.35, 0.7], [0.3, 0.5]], 24, 9, [90, 96, 100], [60, 64, 68]);
+      const [gx, gy] = iso(0.68, 0.55, 29); line(ctx, gx, gy, gx + 9, gy + 3, '#222', 2.2);
+    }
+    if (lv >= 3) { // AT gun barrel + camo net + extra sandbag ring
+      const [gx, gy] = iso(0.5, 0.72, 30); line(ctx, gx, gy, gx + 4, gy + 14, OUT, 4); line(ctx, gx, gy, gx + 4, gy + 14, '#4a4e48', 2.6);
+      poly(ctx, [iso(0.05, 0.05, 36), iso(0.95, 0.05, 36), iso(0.95, 0.95, 36), iso(0.05, 0.95, 36)], 'rgba(90,110,60,0.45)', 'rgba(50,60,30,0.7)', 0.8);
+      sandbags(ctx, [[0.15, 0.15], [0.85, 0.15], [0.85, 0.85], [0.15, 0.85]], 18);
+    }
+    flag(ctx, 0.5, 0.5, lv >= 2 ? 33 : 24, o.team, 14);
   },
   ww2_wall: (ctx, o) => {
     const M = o.mask; const m = M & 15; const h = 16; const cw = 0.4;
@@ -646,14 +666,14 @@ function constructionSite(ctx, w, h, progress, era) {
 
 const BUILDING_BOX = { 3: [230, 250, 115, 130], 1: [96, 140, 48, 100] };
 /** Returns cached building sprite. mask: wall neighbor mask. stage: 'done' | construction progress bucket */
-export function buildingSprite(sprite, w, h, colorIdx, built, progress, mask = 0, era = 'antiquity') {
+export function buildingSprite(sprite, w, h, colorIdx, built, progress, mask = 0, era = 'antiquity', level = 1) {
   const bucket = built ? 'done' : Math.floor(progress * 10);
-  const key = `b|${sprite}|${colorIdx}|${bucket}|${mask}`;
+  const key = `b|${sprite}|${colorIdx}|${bucket}|${mask}|${level}`;
   const box = BUILDING_BOX[w] || BUILDING_BOX[3];
   return cached(key, box[0], box[1], box[2], box[3], ctx => {
     ctx.translate(0, 0);
     if (!built) constructionSite(ctx, w, h, progress, era);
-    else { const fn = BUILDING_DRAW[sprite]; if (fn) fn(ctx, { team: teamRgb(colorIdx), mask }); else prism(ctx, isoRect(0.1, 0.1, w - 0.2, h - 0.2), 0, 30, [200, 0, 200], [100, 0, 100]); }
+    else { const fn = BUILDING_DRAW[sprite]; if (fn) fn(ctx, { team: teamRgb(colorIdx), mask, level }); else prism(ctx, isoRect(0.1, 0.1, w - 0.2, h - 0.2), 0, 30, [200, 0, 200], [100, 0, 100]); }
   });
 }
 

@@ -51,7 +51,8 @@ function freeTeam(l) { const used = new Set(l.slots.map(s => s.team)); for (let 
 function defaultFaction(era) { return ERAS[era].factions[0].id; }
 function validDiff(d) { return ['easy', 'normal', 'hard', 'impossible'].includes(d) ? d : 'normal'; }
 
-function leaveLobby(c, silent = false) {
+function connectedHumans(l) { return l.slots.filter(s => !s.isAI && clients.get(s.id)?.lobby === l && clients.get(s.id)?.ws.readyState === 1); }
+function leaveLobby(c, silent = false, explicit = false) {
   const l = c.lobby; if (!l) return;
   c.lobby = null;
   const idx = l.slots.findIndex(s => s.id === c.id);
@@ -61,11 +62,13 @@ function leaveLobby(c, silent = false) {
     if (!humans.length) { lobbies.delete(l.id); }
     else { if (l.hostId === c.id) l.hostId = humans[0].id; broadcastLobby(l); }
   } else if (l.game) {
-    // in game: keep slot, mark disconnected
-    if (idx >= 0) { l.slots[idx].connected = false; }
-    l.game.chat(`${c.name} opustil hru.`);
-    const humans = l.slots.filter(s => !s.isAI && clients.get(s.id)?.lobby === l);
-    if (!humans.length) { stopGame(l); lobbies.delete(l.id); }
+    // in game: keep the slot so the player can rejoin (unless they left on purpose)
+    if (idx >= 0) { l.slots[idx].connected = false; if (explicit) l.slots[idx].token = null; }
+    l.game.chat(explicit ? `${c.name} opustil hru.` : `${c.name} ztratil spojení.`);
+    if (!connectedHumans(l).length) {
+      if (explicit || l.slots.every(s => s.isAI || !s.token)) { stopGame(l); lobbies.delete(l.id); }
+      else l.emptySince = Date.now(); // keep the room for a while for reconnects
+    }
   }
   if (!silent) send(c.ws, { t: 'lobbyLeft' });
   broadcastLobbyList();
@@ -106,7 +109,8 @@ function startGame(l) {
       if (sim.gameOver && !game.overAt) { game.overAt = Date.now(); l.state = 'over'; broadcastLobbyList(); }
     }
     if (game.acc > tickMs * 10) game.acc = 0; // avoid spiral of death
-    if (game.overAt && Date.now() - game.overAt > 5 * 60 * 1000) { stopGame(l); lobbies.delete(l.id); broadcastLobbyList(); }
+    if (game.overAt && Date.now() - game.overAt > 5 * 60 * 1000) { stopGame(l); lobbies.delete(l.id); broadcastLobbyList(); return; }
+    if (l.emptySince && !connectedHumans(l).length && Date.now() - l.emptySince > 3 * 60 * 1000) { console.log(`[game] "${l.name}" closed: nobody reconnected`); stopGame(l); lobbies.delete(l.id); broadcastLobbyList(); }
   }, tickMs / 2);
   broadcastLobbyList();
   console.log(`[game] "${l.name}" started: era=${l.era} seed=${seed} players=${players.map(p => p.name + (p.isAI ? '(AI)' : '')).join(', ')}`);
@@ -127,14 +131,32 @@ wss.on('connection', (ws, req) => {
     let m; try { m = JSON.parse(raw); } catch { return; }
     const l = c.lobby;
     switch (m.t) {
-      case 'hello': c.name = String(m.name || 'Hráč').slice(0, 18).trim() || 'Hráč'; break;
+      case 'hello': {
+        c.name = String(m.name || 'Hráč').slice(0, 18).trim() || 'Hráč';
+        c.token = typeof m.token === 'string' ? m.token.slice(0, 40) : null;
+        // rejoin a running game after a page refresh / connection drop
+        if (c.token && !c.lobby) {
+          for (const lobby of lobbies.values()) {
+            if (!lobby.game) continue;
+            const slot = lobby.slots.find(s => !s.isAI && s.token === c.token && clients.get(s.id)?.lobby !== lobby);
+            if (!slot) continue;
+            const idx = lobby.slots.indexOf(slot); slot.id = c.id; slot.name = c.name; slot.connected = true; c.lobby = lobby; lobby.emptySince = null;
+            const sim = lobby.game.sim;
+            send(ws, { t: 'start', game: { era: lobby.era, seed: lobby.game.seed, map: sim.mapData(), me: idx, players: sim.players.map(p => sim.serializePlayer(p)), lobbyName: lobby.name, rejoin: true } });
+            send(ws, sim.fullSnapshot());
+            lobby.game.chat(`${c.name} se znovu připojil.`);
+            break;
+          }
+        }
+        break;
+      }
       case 'ping': send(ws, { t: 'pong', ts: m.ts }); break;
       case 'list': send(ws, { t: 'lobbies', list: [...lobbies.values()].map(lobbySummary) }); break;
       case 'host': {
         if (l) leaveLobby(c, true);
         const era = ERAS[m.era] && ERAS[m.era].available ? m.era : 'antiquity';
         const lobby = { id: nextLobbyId++, name: String(m.name || `${c.name}ova hra`).slice(0, 28), hostId: c.id, era, max: Math.min(MAX_PLAYERS, Math.max(2, m.max | 0 || 4)), state: 'lobby', slots: [], game: null };
-        lobby.slots.push({ id: c.id, name: c.name, faction: defaultFaction(era), team: 0, color: 0, ready: false, isAI: false });
+        lobby.slots.push({ id: c.id, name: c.name, faction: defaultFaction(era), team: 0, color: 0, ready: false, isAI: false, token: c.token });
         lobbies.set(lobby.id, lobby); c.lobby = lobby;
         broadcastLobby(lobby); broadcastLobbyList();
         break;
@@ -145,11 +167,11 @@ wss.on('connection', (ws, req) => {
         if (lobby.state !== 'lobby') return send(ws, { t: 'error', msg: 'Hra už probíhá.' });
         if (lobby.slots.length >= lobby.max) return send(ws, { t: 'error', msg: 'Server je plný.' });
         if (l) leaveLobby(c, true);
-        lobby.slots.push({ id: c.id, name: c.name, faction: defaultFaction(lobby.era), team: freeTeam(lobby), color: freeColor(lobby), ready: false, isAI: false });
+        lobby.slots.push({ id: c.id, name: c.name, faction: defaultFaction(lobby.era), team: freeTeam(lobby), color: freeColor(lobby), ready: false, isAI: false, token: c.token });
         c.lobby = lobby; broadcastLobby(lobby); broadcastLobbyList();
         break;
       }
-      case 'leave': leaveLobby(c); break;
+      case 'leave': leaveLobby(c, false, true); break;
       case 'set': {
         if (!l || l.state !== 'lobby') return;
         const s = l.slots.find(s => s.id === c.id); if (!s) return;

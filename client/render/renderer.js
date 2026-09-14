@@ -109,10 +109,10 @@ export class Renderer {
     }
     // pass 2: splat blending on land (soft transitions)
     for (const tl of tiles) {
-      if (tl.t === T.WATER) continue;
       const cxp = (tl.q[0][0] + tl.q[2][0]) / 2, cyp = (tl.q[0][1] + tl.q[2][1]) / 2;
-      const g = ctx.createRadialGradient(cxp, cyp, 0, cxp, cyp, TW * 0.66);
-      g.addColorStop(0, rgb(tl.c, 0.75)); g.addColorStop(1, rgb(tl.c, 0));
+      const isW = tl.t === T.WATER || tl.t === T.SHALLOW;
+      const g = ctx.createRadialGradient(cxp, cyp, 0, cxp, cyp, TW * (isW ? 0.72 : 0.66));
+      g.addColorStop(0, rgb(tl.c, isW ? 0.85 : 0.75)); g.addColorStop(1, rgb(tl.c, 0));
       ctx.fillStyle = g; ctx.save(); ctx.translate(cxp, cyp); ctx.scale(1, 0.5); ctx.beginPath(); ctx.arc(0, 0, TW * 0.66, 0, Math.PI * 2); ctx.restore(); ctx.fill();
     }
     // pass 3: details
@@ -212,6 +212,8 @@ export class Renderer {
     }
     // water animation
     this.drawWater(ctx, minX, maxX, minY, maxY, ox, oy, z);
+    // drifting cloud shadows
+    this.drawClouds(ctx, ox, oy, z);
     // ground layer: effects on ground, selection circles, rally, placement
     this.drawGround(ctx, state, ox, oy, z);
     // sortable drawables
@@ -251,6 +253,19 @@ export class Renderer {
     this.drawOverlays(ctx, state, ox, oy, z, list);
   }
 
+  drawClouds(ctx, ox, oy, z) {
+    // a few large soft shadows drifting across the world (world-space, iso-projected)
+    if (!this.clouds) { this.clouds = []; for (let i = 0; i < 7; i++) this.clouds.push({ x: Math.random() * this.map.w, y: Math.random() * this.map.h, r: 7 + Math.random() * 9, s: 0.25 + Math.random() * 0.3, a: 0.10 + Math.random() * 0.08 }); }
+    ctx.save(); ctx.translate(ox, oy); ctx.scale(z, z);
+    for (const c of this.clouds) {
+      c.x += c.s * 0.016; c.y += c.s * 0.010; if (c.x > this.map.w + c.r) c.x = -c.r; if (c.y > this.map.h + c.r) c.y = -c.r;
+      const [cx, cy] = iso(c.x, c.y, 0); const rx = c.r * TW / 2, ry = c.r * TH / 2;
+      if (cx * z + ox < -rx * z || cx * z + ox > this.W + rx * z || cy * z + oy < -ry * z || cy * z + oy > this.H + ry * z) continue;
+      const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx); grd.addColorStop(0, `rgba(10,14,30,${c.a})`); grd.addColorStop(0.6, `rgba(10,14,30,${c.a * 0.6})`); grd.addColorStop(1, 'rgba(10,14,30,0)');
+      ctx.fillStyle = grd; ctx.save(); ctx.translate(cx, cy); ctx.scale(1, ry / rx); ctx.translate(-cx, -cy); ctx.beginPath(); ctx.arc(cx, cy, rx, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+    ctx.restore();
+  }
   drawWater(ctx, minX, maxX, minY, maxY, ox, oy, z) {
     const map = this.map, w = map.w, h = map.h; const t = this.time;
     ctx.save(); ctx.translate(ox, oy); ctx.scale(z, z);
@@ -332,7 +347,8 @@ export class Renderer {
     if (def.role === 'ship') { anim = anim === 'attack' ? 'attack' : 'walk'; if (anim === 'walk') frame = Math.floor(this.time * 3 + e.i) % 6; }
     const extra = { carry: e.c || '', faction: g.players[e.o].faction, workKind: e.o2 === 'gather' ? (g.ents.get(e.tg)?.k === 'm' ? 'mine' : 'tree') : '' };
     const spr = unitSprite(def.sprite, g.players[e.o].color, dir, anim, frame, extra);
-    // hit flash
+    // hover highlight / hit flash
+    if (e.hover && !g.selection.has(e.i)) ctx.filter = 'brightness(1.25)';
     if (e.hitAt && this.time - e.hitAt < 0.12) { ctx.filter = 'brightness(1.8)'; }
     blit(ctx, spr, sx, sy, z);
     ctx.filter = 'none';
@@ -349,8 +365,9 @@ export class Renderer {
       // diagonal connectors only where no orthogonal link exists between the two
       if (!n && !ea && nb(1, -1)) mask |= 16; if (!ea && !s && nb(1, 1)) mask |= 32; if (!s && !w && nb(-1, 1)) mask |= 64; if (!w && !n && nb(-1, -1)) mask |= 128;
     }
-    const spr = buildingSprite(def.sprite, e.w, e.h, g.players[e.o].color, !!e.bl, e.pr, mask, this.era);
+    const spr = buildingSprite(def.sprite, e.w, e.h, g.players[e.o].color, !!e.bl, e.pr, mask, this.era, e.lv || 1);
     const visible = this.isVisibleTile(e.x, e.y);
+    if (e.hover || g.selection.has(e.i)) { ctx.filter = e.hover && !g.selection.has(e.i) ? 'brightness(1.15)' : 'none'; }
     if (!visible) ctx.filter = 'brightness(0.7)';
     if (e.hitAt && this.time - e.hitAt < 0.1) ctx.filter = 'brightness(1.6)';
     blit(ctx, spr, sx, sy, z);

@@ -25,7 +25,8 @@ class App {
   save() { localStorage.setItem('aow-settings', JSON.stringify(this.settings)); }
   show(name) { for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); $('bg').style.display = name === 'game' ? 'none' : 'block'; this.screen = name; if (name === 'game') this.game.renderer.resize(); }
   toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(this.toastT); this.toastT = setTimeout(() => t.classList.add('hidden'), 3500); }
-  name() { const n = $('name').value.trim(); if (!n) { $('name').focus(); this.toast('Zadej svoje jméno.'); return null; } this.settings.name = n; this.save(); this.net.send({ t: 'hello', name: n }); return n; }
+  token() { if (!this.settings.token) { this.settings.token = Math.random().toString(36).slice(2) + Date.now().toString(36); this.save(); } return this.settings.token; }
+  name() { const n = $('name').value.trim(); if (!n) { $('name').focus(); this.toast('Zadej svoje jméno.'); return null; } this.settings.name = n; this.save(); this.net.send({ t: 'hello', name: n, token: this.token() }); return n; }
 
   // ---------- menu background ----------
   startBackground() {
@@ -69,15 +70,26 @@ class App {
     const chat = $('lobby-chat-input'); chat.addEventListener('keydown', e => { if (e.key === 'Enter' && chat.value.trim()) { this.net.send({ t: 'chat', text: chat.value.trim() }); chat.value = ''; } });
     // settings
     const bindVol = (id, key, fn) => { const el = $(id); el.value = this.settings[key]; el.oninput = () => { this.settings[key] = +el.value; fn(+el.value / 100); this.save(); const other = $(id.endsWith('2') ? id.slice(0, -1) : id + '2'); if (other) other.value = el.value; }; };
-    bindVol('vol-music', 'music', v => this.audio.setMusicVol(v)); bindVol('vol-music2', 'music', v => this.audio.setMusicVol(v));
+    bindVol('vol-music', 'music', () => this.applySettings()); bindVol('vol-music2', 'music', () => this.applySettings());
     bindVol('vol-sfx', 'sfx', v => this.audio.setSfxVol(v)); bindVol('vol-sfx2', 'sfx', v => this.audio.setSfxVol(v));
     this.audio.musicVol = this.settings.music / 100; this.audio.sfxVol = this.settings.sfx / 100;
-    $('scroll-speed').value = this.settings.scroll; $('scroll-speed').oninput = () => { this.settings.scroll = +$('scroll-speed').value; this.applySettings(); this.save(); };
-    $('opt-edge').checked = this.settings.edge; $('opt-edge').onchange = () => { this.settings.edge = $('opt-edge').checked; this.applySettings(); this.save(); };
-    $('opt-hp').checked = this.settings.hp; $('opt-hp').onchange = () => { this.settings.hp = $('opt-hp').checked; this.applySettings(); this.save(); };
+    for (const suf of ['', '2']) {
+      const ss = $('scroll-speed' + suf), oe = $('opt-edge' + suf), oh = $('opt-hp' + suf);
+      ss.oninput = () => { this.settings.scroll = +ss.value; this.applySettings(); this.save(); };
+      oe.onchange = () => { this.settings.edge = oe.checked; this.applySettings(); this.save(); };
+      oh.onchange = () => { this.settings.hp = oh.checked; this.applySettings(); this.save(); };
+    }
+    $('opt-mute2').onchange = () => this.setMuted($('opt-mute2').checked);
+    $('btn-mute').onclick = () => this.setMuted(!this.settings.muted);
     this.applySettings();
   }
-  applySettings() { this.game.settings.scrollSpeed = this.settings.scroll; this.game.settings.edgeScroll = this.settings.edge; this.game.settings.showHp = this.settings.hp; }
+  setMuted(m) { this.settings.muted = m; this.save(); this.applySettings(); this.audio.sfx('click'); }
+  applySettings() {
+    this.game.settings.scrollSpeed = this.settings.scroll; this.game.settings.edgeScroll = this.settings.edge; this.game.settings.showHp = this.settings.hp;
+    for (const suf of ['', '2']) { $('scroll-speed' + suf).value = this.settings.scroll; $('opt-edge' + suf).checked = this.settings.edge; $('opt-hp' + suf).checked = this.settings.hp; }
+    $('opt-mute2').checked = !!this.settings.muted; $('mute-x').classList.toggle('hidden', !this.settings.muted); $('btn-mute').classList.toggle('muted', !!this.settings.muted);
+    this.audio.setMusicVol(this.settings.muted ? 0 : this.settings.music / 100);
+  }
   renderEraCards(container, selected, onPick, small = false) {
     container.innerHTML = '';
     for (const id of ERA_ORDER) {
@@ -91,7 +103,7 @@ class App {
   // ---------- net ----------
   bindNet() {
     const n = this.net;
-    n.on('status', s => { const el = $('conn-status'); if (s.state === 'open') { el.textContent = 'Připojeno k serveru ' + s.url.replace(/^ws:\/\//, ''); el.className = 'conn-status ok'; if (this.settings.name) n.send({ t: 'hello', name: this.settings.name }); } else if (s.state === 'closed' || s.state === 'error') { el.textContent = 'Server nedostupný – zkouším znovu…'; el.className = 'conn-status err'; if (this.screen === 'lobby' || this.screen === 'browser') { this.show('menu'); this.lobby = null; } if (this.screen === 'game') this.toast('Spojení se serverem bylo přerušeno.'); } else { el.textContent = 'Připojuji se…'; el.className = 'conn-status'; } });
+    n.on('status', s => { const el = $('conn-status'); if (s.state === 'open') { el.textContent = 'Připojeno k serveru ' + s.url.replace(/^ws:\/\//, ''); el.className = 'conn-status ok'; n.send({ t: 'hello', name: this.settings.name || 'Hráč', token: this.token() }); } else if (s.state === 'closed' || s.state === 'error') { el.textContent = 'Server nedostupný – zkouším znovu…'; el.className = 'conn-status err'; if (this.screen === 'lobby' || this.screen === 'browser') { this.show('menu'); this.lobby = null; } if (this.screen === 'game') this.toast('Spojení se serverem bylo přerušeno.'); } else { el.textContent = 'Připojuji se…'; el.className = 'conn-status'; } });
     n.on('welcome', m => { this.myId = m.id; });
     n.on('error', m => this.toast(m.msg));
     n.on('lobbies', m => this.renderServerList(m.list));
@@ -121,7 +133,9 @@ class App {
     const tb = $('slot-list'); tb.innerHTML = '';
     l.slots.forEach((s, idx) => {
       const tr = document.createElement('tr'); const mine = s.id === this.myId; const editable = mine || (isHost && s.isAI);
-      const tdName = document.createElement('td'); tdName.innerHTML = `${esc(s.name)}${s.id === l.hostId ? '<span class="host-tag">HOST</span>' : ''}${s.isAI ? ` <span class="host-tag" style="color:#9b8a6a">AI ${{ easy: 'lehká', hard: 'těžká', impossible: 'nemožná' }[s.diff] || 'střední'}</span>` : ''}`; tr.appendChild(tdName);
+      const tdName = document.createElement('td'); tdName.innerHTML = `${esc(s.name)}${s.id === l.hostId ? '<span class="host-tag">HOST</span>' : ''}`;
+      if (s.isAI) { const sd = document.createElement('select'); sd.className = 'diff-sel'; for (const [v, t] of [['easy', 'AI lehká'], ['normal', 'AI střední'], ['hard', 'AI těžká'], ['impossible', 'AI nemožná']]) { const o = document.createElement('option'); o.value = v; o.textContent = t; if ((s.diff || 'normal') === v) o.selected = true; sd.appendChild(o); } sd.disabled = !isHost; sd.onchange = () => this.net.send({ t: 'setSlot', slot: idx, diff: sd.value }); tdName.appendChild(sd); }
+      tr.appendChild(tdName);
       const tdF = document.createElement('td'); const sel = document.createElement('select'); for (const f of era.factions) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; if (f.id === s.faction) o.selected = true; sel.appendChild(o); } sel.disabled = !editable; sel.onchange = () => this.net.send(mine ? { t: 'set', faction: sel.value } : { t: 'setSlot', slot: idx, faction: sel.value }); tdF.appendChild(sel); tr.appendChild(tdF);
       const tdT = document.createElement('td'); const selT = document.createElement('select'); for (let i = 0; i < MAX_PLAYERS; i++) { const o = document.createElement('option'); o.value = i; o.textContent = 'Tým ' + (i + 1); if (i === s.team) o.selected = true; selT.appendChild(o); } selT.disabled = !editable; selT.onchange = () => this.net.send(mine ? { t: 'set', team: +selT.value } : { t: 'setSlot', slot: idx, team: +selT.value }); tdT.appendChild(selT); tr.appendChild(tdT);
       const tdC = document.createElement('td'); const dot = document.createElement('span'); dot.className = 'color-dot'; dot.style.background = TEAM_COLORS[s.color].hex; dot.title = TEAM_COLORS[s.color].name + (editable ? ' – klik změní' : ''); if (editable) dot.onclick = () => { let c = (s.color + 1) % TEAM_COLORS.length; while (l.slots.some(o => o !== s && o.color === c)) c = (c + 1) % TEAM_COLORS.length; this.net.send(mine ? { t: 'set', color: c } : { t: 'setSlot', slot: idx, color: c }); }; tdC.appendChild(dot); tr.appendChild(tdC);

@@ -63,7 +63,8 @@ const commonBuildings = {
               upgrades: [ { level: 2, cost: { p: 240, s: 200 }, time: 50, unlocks: ['ballista'], hall: 2 } ] },
   dock:     { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 110, s: 140 }, buildTime: 32, trains: ['ship'], shore: true, hotkey: 'D',
               upgrades: [ { level: 2, cost: { p: 220, s: 240 }, time: 50, unlocks: ['heavyship'], hall: 2 } ] },
-  tower:    { hp: 550,  armor: 6, w: 1, h: 1, cost: { p: 70,  s: 90 },  buildTime: 26, trains: [], attack: { dmg: 15, range: 6.5, cooldown: 1.0, projectile: 'arrow' }, hotkey: 'T' },
+  tower:    { hp: 550,  armor: 6, w: 1, h: 1, cost: { p: 70,  s: 90 },  buildTime: 26, trains: [], attack: { dmg: 15, range: 6.5, cooldown: 1.0, projectile: 'arrow' }, hotkey: 'T',
+              upgrades: [ { level: 2, cost: { p: 90, s: 110 }, time: 30, unlocks: [], hp: 1.3, dmgMul: 1.4, rangeAdd: 0.5, armorAdd: 2, desc: 'Zesílená věž: +40 % útok, +0,5 dosah, +2 pancíř.' }, { level: 3, cost: { p: 160, s: 180 }, time: 40, unlocks: [], hp: 1.3, dmgMul: 1.5, rangeAdd: 0.5, armorAdd: 2, hall: 2, desc: 'Pevnost: dvojitá střelba (+50 % útok), +0,5 dosah, +2 pancíř.' } ] },
   wall:     { hp: 320,  armor: 12, w: 1, h: 1, cost: { p: 0,   s: 8 },   buildTime: 4,  trains: [], isWall: true, hotkey: 'L' },
   gate:     { hp: 420,  armor: 9,  w: 1, h: 1, cost: { p: 0,   s: 25 },  buildTime: 6,  trains: [], isWall: true, isGate: true, hotkey: 'G', noBuildMenu: true },
 };

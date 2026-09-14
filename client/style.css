@@ -20,7 +20,15 @@ button { font-family: inherit; cursor: pointer; }
 .frame > * { position: relative; z-index: 1; }
 
 /* ---------- menu ---------- */
-.menu-box { background: var(--panel); border: 2px solid var(--line); border-radius: 10px; padding: 34px 44px; width: min(560px, 94vw); box-shadow: 0 20px 60px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(255,220,150,0.08); text-align: center; backdrop-filter: blur(3px); }
+.menu-box { position: relative; background: linear-gradient(180deg, rgba(74,64,56,0.96) 0%, rgba(44,37,31,0.96) 10%, rgba(24,18,12,0.96) 100%); border: 1px solid #0c0906; border-radius: 10px; padding: 34px 44px; width: min(560px, 94vw); box-shadow: 0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,235,190,0.18), inset 0 0 0 2px rgba(0,0,0,0.35), inset 0 0 30px rgba(0,0,0,0.5); text-align: center; backdrop-filter: blur(3px); }
+.menu-box::before { content: ''; position: absolute; inset: 5px; border: 1px solid var(--line); border-radius: 7px; pointer-events: none; opacity: 0.8; }
+.menu-box::after { content: ''; position: absolute; inset: 0; background: var(--noise); border-radius: 10px; pointer-events: none; opacity: 0.45; mix-blend-mode: overlay; }
+.menu-box > * { position: relative; z-index: 1; }
+.panel { position: relative; }
+#btn-mute { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 34px; padding: 6px 0 !important; }
+#btn-mute.muted { color: #ff8a7a; }
+#btn-mute #mute-x { position: absolute; font-size: 20px; font-weight: 700; transform: rotate(20deg); line-height: 1; }
+.diff-sel { margin-left: 8px; padding: 2px 6px; font-size: 12px; width: auto; }
 .title { margin: 0; font-size: 64px; letter-spacing: 6px; font-weight: 900; line-height: 1; font-family: Georgia, "Times New Roman", serif; }
 .title .t1 { background: linear-gradient(#fff2b0, #c9a227 55%, #8a6414); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 3px 0 #2b1d0b) drop-shadow(0 6px 12px rgba(0,0,0,0.6)); }
 .title .t2 { font-size: 26px; margin: 0 14px; color: var(--parch); font-style: italic; vertical-align: middle; font-weight: 400; letter-spacing: 1px; }
