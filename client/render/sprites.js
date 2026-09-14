@@ -134,6 +134,8 @@ function helmet(ctx, type, hy, tc, fx, fy) {
     case 'stahlhelm': ellipse(ctx, 0, hy - 1.5, 5.2, 4, rgb([88, 96, 80]), OUT, 0.8); ellipse(ctx, 0, hy + 0.5, 5.4, 1.6, rgb([70, 76, 62]), OUT, 0.6); ctx.fillStyle = rgb(tc); ctx.fillRect(-4.5, hy - 1.5, 9, 1.4); break;
     case 'garrison': ellipse(ctx, 0, hy - 1.5, 4.6, 3.6, rgb([96, 92, 70]), OUT, 0.8); ctx.fillStyle = rgb(tc); ctx.fillRect(-4.2, hy - 1.2, 8.4, 1.3); break;
     case 'hardhat': ellipse(ctx, 0, hy - 1.5, 4.8, 3.8, rgb([220, 180, 50]), OUT, 0.8); ellipse(ctx, 0, hy + 0.3, 5.2, 1.4, rgb([190, 150, 40]), OUT, 0.6); break;
+    case 'visor': ellipse(ctx, 0, hy - 0.8, 5, 4.8, rgb([200, 205, 215]), OUT, 0.8); ctx.fillStyle = 'rgba(80,220,255,0.95)'; ctx.beginPath(); ctx.ellipse(fx * 1.2, hy + 0.2, 3.6, 1.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = rgb(tc); ctx.fillRect(-1, hy - 6, 2, 3); break;
+    case 'android': ellipse(ctx, 0, hy - 0.8, 4.6, 4.6, rgb([120, 128, 140]), OUT, 0.8); ctx.fillStyle = 'rgba(255,80,80,0.95)'; ctx.fillRect(fx * 1.5 - 1.2, hy - 0.5, 2.4, 1.4); ctx.fillStyle = rgb(tc); ctx.fillRect(-2.5, hy - 5, 5, 1.5); break;
     default: break;
   }
 }
@@ -141,6 +143,7 @@ function shield(ctx, x, y, tc, type, dir) {
   if (type === 'scutum') { rrect(ctx, x - 4, y - 7, 8, 14, 2.5, rgb(tc), OUT, 0.9); ellipse(ctx, x, y, 1.8, 1.8, rgb(METAL), OUT, 0.5); line(ctx, x, y - 6, x, y + 6, rgb(shade(tc, 1.4)), 0.8); }
   else if (type === 'round') { ellipse(ctx, x, y, 6, 6, rgb(tc), OUT, 0.9); ellipse(ctx, x, y, 2, 2, rgb(METAL), OUT, 0.5); ellipse(ctx, x, y, 4.5, 4.5, null, rgb(shade(tc, 1.4)), 0.8); }
   else if (type === 'oval') { ellipse(ctx, x, y, 4.5, 7, rgb(tc), OUT, 0.9); line(ctx, x, y - 6, x, y + 6, rgb(shade(tc, 1.4)), 1); }
+  else if (type === 'energy') { ellipse(ctx, x, y, 5.5, 8, 'rgba(90,225,255,0.35)', 'rgba(140,240,255,0.9)', 1.2); ellipse(ctx, x, y, 3, 5, 'rgba(160,240,255,0.25)'); }
 }
 function weapon(ctx, o, fx, fy, y0, swing, tc) {
   const hx = fx * 6, hy = y0 - 8 + fy * 2; // hand position
@@ -155,6 +158,9 @@ function weapon(ctx, o, fx, fy, y0, swing, tc) {
     case 'sling': ctx.rotate(ang + swing * 2); line(ctx, 0, 0, 0, -9, '#c9b28a', 0.9); ellipse(ctx, 0, -9, 1.6, 1.6, '#777', OUT, 0.4); break;
     case 'rifle': ctx.rotate(ang); line(ctx, -6, 0, 12, 0, rgb(WOOD_D), 2.4); line(ctx, 2, -0.3, 14, -0.3, rgb(METAL_D), 1.4); if (o.anim === 'attack' && o.frame % 4 === 1) { ellipse(ctx, 15.5, -0.3, 2.5, 1.8, 'rgba(255,220,120,0.9)'); } break;
     case 'mg': ctx.rotate(ang); line(ctx, -7, 0, 15, 0, rgb(METAL_D), 3); line(ctx, 4, 0, 16, 0, rgb([60, 60, 60]), 1.6); line(ctx, 8, 0, 6, 5, rgb(METAL_D), 1); line(ctx, 8, 0, 10, 5, rgb(METAL_D), 1); rrect(ctx, -2, -3, 5, 3, 0.5, rgb([70, 60, 40]), OUT, 0.5); if (o.anim === 'attack' && o.frame % 2 === 1) ellipse(ctx, 17, 0, 2.5, 1.8, 'rgba(255,220,120,0.9)'); break;
+    case 'plasmaRifle': ctx.rotate(ang); rrect(ctx, -6, -1.5, 16, 3, 1.2, rgb([90, 96, 110]), OUT, 0.6); ctx.fillStyle = rgb(tc); ctx.fillRect(-2, -1, 5, 2); ctx.fillStyle = 'rgba(80,220,255,0.95)'; ctx.fillRect(6, -0.8, 4, 1.6); if (o.anim === 'attack' && o.frame % 4 === 1) { ellipse(ctx, 12, 0, 3.5, 2.2, 'rgba(120,230,255,0.9)'); } break;
+    case 'rail': ctx.rotate(ang); line(ctx, -8, 0, 16, 0, rgb([70, 74, 86]), 2.8); line(ctx, 2, 0, 16, 0, 'rgba(120,200,255,0.9)', 1); rrect(ctx, -4, -3, 6, 4, 1, rgb([110, 116, 130]), OUT, 0.5); for (let i = 0; i < 3; i++) { ctx.fillStyle = 'rgba(80,220,255,0.9)'; ctx.fillRect(4 + i * 3.5, -2.2, 1.2, 4.4); } if (o.anim === 'attack' && o.frame % 4 === 1) line(ctx, 16, 0, 40, 0, 'rgba(160,240,255,0.8)', 1.6); break;
+    case 'rocket': ctx.rotate(ang); rrect(ctx, -8, -3, 18, 6, 2, rgb([80, 86, 100]), OUT, 0.6); ctx.fillStyle = rgb(tc); ctx.fillRect(-4, -2, 6, 4); ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.moveTo(10, -3); ctx.lineTo(14, 0); ctx.lineTo(10, 3); ctx.fill(); break;
     case 'flamer': ctx.rotate(ang); rrect(ctx, -9, -4, 6, 9, 2, rgb([80, 80, 76]), OUT, 0.6); line(ctx, -4, 0, 10, 0, rgb(METAL_D), 2.4); if (o.anim === 'attack') { const k = o.frame % 4; ellipse(ctx, 14 + k * 3, 0, 5 + k * 2, 3 + k, `rgba(255,${150 + k * 20},40,0.85)`); ellipse(ctx, 12 + k * 2, 0, 3, 2, 'rgba(255,240,180,0.9)'); } break;
     case 'wrench': ctx.rotate(swing * 1.4 - 0.4 + ang * 0.3); line(ctx, 0, 2, 0, -9, rgb(METAL_D), 2); ellipse(ctx, 0, -9.5, 2.5, 2, rgb(METAL), OUT, 0.5); break;
     case 'shovel': ctx.rotate(swing * 1.5 - 0.5 + ang * 0.3); line(ctx, 0, 4, 0, -10, rgb(WOOD), 1.6); poly(ctx, [[-2.5, -10], [2.5, -10], [2, -15], [-2, -15]], rgb(METAL_D), OUT, 0.5); break;
@@ -316,10 +322,27 @@ const UNIT_DRAW = {
   ww2_rockets: (ctx, o) => rocketTruck(ctx, o),
   ww2_cruiser: (ctx, o) => { ctx.save(); ctx.scale(1.3, 1.3); destroyer(ctx, o); ctx.restore(); },
   ww2_hero: (ctx, o) => commandCar(ctx, o),
+  // ---- sci-fi ----
+  sf_worker: (ctx, o) => drone(ctx, o, 'worker'),
+  sf_infantry: (ctx, o) => humanoid(ctx, { ...o, torso: mix([120, 128, 140], o.team, 0.5), helmet: o.faction === 'synth' ? 'android' : 'visor', weapon: 'plasmaRifle', legs: [70, 74, 86], sleeves: mix([120, 128, 140], o.team, 0.35), belt: [50, 60, 80], emblem: [80, 220, 255] }),
+  sf_ranged: (ctx, o) => humanoid(ctx, { ...o, torso: mix([90, 96, 110], o.team, 0.45), helmet: o.faction === 'synth' ? 'android' : 'visor', weapon: 'rail', legs: [60, 64, 76], sleeves: mix([90, 96, 110], o.team, 0.3), emblem: [80, 220, 255] }),
+  sf_tank: (ctx, o) => hoverTank(ctx, o, 1),
+  sf_walker: (ctx, o) => walker(ctx, o),
+  sf_boat: (ctx, o) => hoverBoat(ctx, o, 1),
+  sf_shield: (ctx, o) => humanoid(ctx, { ...o, torso: mix([120, 128, 140], o.team, 0.5), helmet: 'visor', weapon: 'rocket', shield: 'energy', legs: [70, 74, 86], sleeves: mix([120, 128, 140], o.team, 0.35), emblem: [80, 220, 255] }),
+  sf_jet: (ctx, o) => { const bob = -4 - Math.abs(Math.sin(o.frame * 1.1)) * 3; ctx.save(); ctx.translate(0, bob); humanoid(ctx, { ...o, torso: mix([120, 128, 140], o.team, 0.5), helmet: 'visor', weapon: 'plasmaRifle', legs: [70, 74, 86], sleeves: mix([120, 128, 140], o.team, 0.35), anim: o.anim === 'walk' ? 'idle' : o.anim }); ctx.restore(); ellipse(ctx, -3, -6 + bob, 2, 4, 'rgba(120,220,255,0.7)'); ellipse(ctx, 3, -6 + bob, 2, 4, 'rgba(120,220,255,0.7)'); },
+  sf_exo: (ctx, o) => humanoid(ctx, { ...o, scale: 1.18, torso: mix([150, 156, 170], o.team, 0.45), helmet: 'visor', weapon: 'plasmaRifle', legs: [90, 96, 110], sleeves: [140, 146, 160], belt: [50, 60, 80], emblem: [80, 220, 255] }),
+  sf_snipedrone: (ctx, o) => drone(ctx, o, 'sniper'),
+  sf_heavytank: (ctx, o) => hoverTank(ctx, o, 1.28),
+  sf_mech: (ctx, o) => mech(ctx, o, 1),
+  sf_laser: (ctx, o) => laserPlatform(ctx, o),
+  sf_cruiser: (ctx, o) => hoverBoat(ctx, o, 1.35),
+  sf_hero: (ctx, o) => mech(ctx, o, 1.3, true),
 };
 const UNIT_BOX = { default: [24, 44, 12, 40], ant_cavalry: [44, 56, 22, 50], ant_siege: [56, 70, 28, 62], ant_ship: [80, 80, 40, 70], ww2_tank: [64, 56, 32, 48], ww2_artillery: [56, 52, 28, 44], ww2_destroyer: [90, 80, 45, 70],
   ant_veteran: [30, 52, 15, 46], ant_heavycav: [44, 56, 22, 50], ant_chariot: [64, 60, 32, 52], ant_ballista: [56, 60, 28, 52], ant_heavyship: [100, 100, 50, 88], ant_hero: [46, 58, 23, 52],
-  ww2_atgun: [48, 44, 24, 38], ww2_heavytank: [80, 70, 40, 60], ww2_td: [64, 56, 32, 48], ww2_rockets: [66, 66, 33, 56], ww2_cruiser: [118, 104, 59, 90], ww2_hero: [56, 50, 28, 42] };
+  ww2_atgun: [48, 44, 24, 38], ww2_heavytank: [80, 70, 40, 60], ww2_td: [64, 56, 32, 48], ww2_rockets: [66, 66, 33, 56], ww2_cruiser: [118, 104, 59, 90], ww2_hero: [56, 50, 28, 42],
+  sf_worker: [30, 40, 15, 34], sf_snipedrone: [70, 44, 35, 36], sf_tank: [64, 62, 32, 54], sf_heavytank: [82, 78, 41, 68], sf_walker: [56, 66, 28, 58], sf_boat: [80, 70, 40, 60], sf_cruiser: [108, 92, 54, 80], sf_mech: [44, 66, 22, 60], sf_hero: [58, 90, 29, 82], sf_laser: [60, 60, 30, 52], sf_exo: [30, 54, 15, 48], sf_jet: [28, 56, 14, 50] };
 
 function chariot(ctx, o) {
   const { dir, team } = o; const a = worldAngleForDir(dir);
@@ -371,6 +394,114 @@ function rocketTruck(ctx, o) {
   const t = anim === 'attack' ? frame % 4 : -1;
   for (let i = 0; i < 4; i++) { const off = (i - 1.5) * 0.11; const [r0x, r0y] = iso(-Math.cos(a) * 0.45 - Math.sin(a) * off, -Math.sin(a) * 0.45 + Math.cos(a) * off, 12), [r1x, r1y] = iso(Math.cos(a) * 0.15 - Math.sin(a) * off, Math.sin(a) * 0.15 + Math.cos(a) * off, 30); line(ctx, r0x, r0y, r1x, r1y, rgb([60, 62, 58]), 2.6); if (t < 0 || i > t) { ctx.fillStyle = '#b04030'; ellipse(ctx, r1x, r1y, 1.8, 1.8, '#b04030'); } else ellipse(ctx, r1x, r1y, 4, 3, 'rgba(255,200,100,0.8)'); }
   const [sx, sy] = iso(0.4, 0, 21); ctx.fillStyle = rgb(team); ctx.fillRect(sx - 3, sy - 1.5, 6, 3);
+}
+// ---------- sci-fi vehicles ----------
+const HULL_SF = [150, 158, 172], HULL_SF_D = [88, 94, 108], GLOW = 'rgba(90,225,255,0.9)', GLOW_SOFT = 'rgba(90,225,255,0.35)';
+function hoverGlow(ctx, rx, ry, k = 1) { const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx); g.addColorStop(0, `rgba(90,225,255,${0.45 * k})`); g.addColorStop(1, 'rgba(90,225,255,0)'); ctx.fillStyle = g; ctx.save(); ctx.scale(1, ry / rx); ctx.beginPath(); ctx.arc(0, 0, rx, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+function drone(ctx, o, kind) {
+  const { dir, team, anim, frame } = o; const sa = DIR_ANGLE(dir); const fx = Math.cos(sa), fy = Math.sin(sa);
+  const hover = -10 - Math.sin(frame * 1.05 + (anim === 'walk' ? 0 : 1)) * 1.5;
+  ellipse(ctx, 0, 0, 7, 3.5, 'rgba(0,0,0,0.3)'); ctx.save(); ctx.translate(0, 0); hoverGlow(ctx, 8, 4, 0.8); ctx.restore();
+  ctx.save(); ctx.translate(0, hover);
+  ellipse(ctx, 0, 0, 7, 4, rgb(HULL_SF), OUT, 0.8); ellipse(ctx, 0, -2, 4.5, 3, rgb(shade(HULL_SF, 1.15)), OUT, 0.6);
+  ctx.fillStyle = rgb(team); ctx.fillRect(-4, -0.5, 8, 1.6);
+  ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(fx * 4, -2 + fy * 1.5, 1.4, 0, 7); ctx.fill();
+  // rotors / fins
+  for (const s of [-1, 1]) { line(ctx, s * 6, -1, s * 10, -3, rgb(HULL_SF_D), 1.5); ellipse(ctx, s * 10, -3.5, 3, 1, 'rgba(200,220,240,0.35)'); }
+  if (kind === 'worker') { // tool arm
+    const swing = anim === 'work' || anim === 'attack' ? [0, 0.4, 0.8, 0.4][frame % 4] : 0;
+    line(ctx, fx * 4, 2, fx * 8, 6 + swing * 4, rgb(HULL_SF_D), 1.6); ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(fx * 8, 6 + swing * 4, 1.5, 0, 7); ctx.fill();
+    if (o.carry === 'p') { ellipse(ctx, -fx * 4, 4, 3.5, 3, 'rgba(120,230,255,0.9)', OUT, 0.6); } else if (o.carry === 's') { ellipse(ctx, -fx * 4, 4, 4, 3, 'rgba(197,106,255,0.9)', OUT, 0.6); }
+  } else { // sniper drone: long barrel
+    line(ctx, fx * 3, 0, fx * 14, fy * 3, rgb([70, 74, 86]), 2.2); line(ctx, fx * 6, 0, fx * 14, fy * 3, 'rgba(120,200,255,0.9)', 0.8);
+    if (anim === 'attack' && frame % 4 === 1) line(ctx, fx * 14, fy * 3, fx * 34, fy * 8, 'rgba(160,240,255,0.8)', 1.5);
+  }
+  ctx.restore();
+}
+function hoverTank(ctx, o, sc) {
+  const { dir, team, anim, frame } = o; const a = worldAngleForDir(dir);
+  ctx.save(); ctx.scale(sc, sc);
+  const hullC = mix(HULL_SF, team, 0.4), hullD = shade(hullC, 0.65);
+  ellipse(ctx, 0, 0, 22, 11, 'rgba(0,0,0,0.3)'); hoverGlow(ctx, 22, 11, 0.9);
+  const hover = 6 + Math.sin(frame * 1.05) * 0.8;
+  prism(ctx, rot([[-0.55, -0.3], [0.45, -0.3], [0.62, 0], [0.45, 0.3], [-0.55, 0.3], [-0.62, 0]], a), hover, 8, hullC, hullD);
+  // glowing side rails
+  for (const s of [-1, 1]) { const [x0, y0] = iso(-Math.cos(a) * 0.5 - Math.sin(a) * 0.3 * s, -Math.sin(a) * 0.5 + Math.cos(a) * 0.3 * s, hover + 1), [x1, y1] = iso(Math.cos(a) * 0.45 - Math.sin(a) * 0.3 * s, Math.sin(a) * 0.45 + Math.cos(a) * 0.3 * s, hover + 1); line(ctx, x0, y0, x1, y1, GLOW, 1.2); }
+  prism(ctx, rot(isoRect(-0.2, -0.18, 0.4, 0.36), a), hover + 8, 6, shade(hullC, 1.1), hullD);
+  const recoil = anim === 'attack' && frame % 4 === 1 ? 0.08 : 0;
+  const barrels = sc > 1.2 ? [-0.08, 0.08] : [0];
+  for (const off of barrels) { const [bx0, by0] = iso(Math.cos(a) * (0.1 - recoil) - Math.sin(a) * off, Math.sin(a) * (0.1 - recoil) + Math.cos(a) * off, hover + 11), [bx1, by1] = iso(Math.cos(a) * (0.8 - recoil) - Math.sin(a) * off, Math.sin(a) * (0.8 - recoil) + Math.cos(a) * off, hover + 11); line(ctx, bx0, by0, bx1, by1, OUT, 4); line(ctx, bx0, by0, bx1, by1, rgb([80, 86, 100]), 2.4); line(ctx, bx0, by0, bx1, by1, 'rgba(120,200,255,0.7)', 0.8); if (anim === 'attack' && frame % 4 === 1) ellipse(ctx, bx1, by1, 5, 3.5, 'rgba(120,230,255,0.9)'); }
+  const [sx, sy] = iso(0, 0, hover + 16); ctx.fillStyle = rgb(team); ctx.fillRect(sx - 3, sy - 1.5, 6, 3);
+  ctx.restore();
+}
+function walker(ctx, o) {
+  const { dir, team, anim, frame } = o; const a = worldAngleForDir(dir);
+  ellipse(ctx, 0, 0, 16, 8, 'rgba(0,0,0,0.32)');
+  const ph = anim === 'walk' ? (frame / 6) * Math.PI * 2 : 0;
+  const hullC = mix(HULL_SF, team, 0.4), hullD = shade(hullC, 0.65);
+  // four legs
+  for (let i = 0; i < 4; i++) { const s = i < 2 ? -1 : 1, f = i % 2 ? 1 : -1; const lift = anim === 'walk' ? Math.max(0, Math.sin(ph + i * Math.PI / 2)) * 5 : 0; const [hx, hy] = iso(Math.cos(a) * 0.2 * f - Math.sin(a) * 0.22 * s, Math.sin(a) * 0.2 * f + Math.cos(a) * 0.22 * s, 14); const [kx, ky] = iso(Math.cos(a) * 0.3 * f - Math.sin(a) * 0.45 * s, Math.sin(a) * 0.3 * f + Math.cos(a) * 0.45 * s, 18); const [fx2, fy2] = iso(Math.cos(a) * 0.32 * f - Math.sin(a) * 0.5 * s, Math.sin(a) * 0.32 * f + Math.cos(a) * 0.5 * s, lift); line(ctx, hx, hy, kx, ky, rgb(hullD), 3); line(ctx, kx, ky, fx2, fy2, rgb(hullD), 2.4); ellipse(ctx, fx2, fy2, 2, 1.2, rgb([60, 64, 76]), OUT, 0.5); }
+  prism(ctx, rot([[-0.3, -0.22], [0.3, -0.22], [0.38, 0], [0.3, 0.22], [-0.3, 0.22], [-0.38, 0]], a), 12, 9, hullC, hullD);
+  // mortar tube angled up
+  const t = anim === 'attack' ? [0, 1, 0.6, 0.2][frame % 4] : 0;
+  const [m0x, m0y] = iso(0, 0, 20), [m1x, m1y] = iso(Math.cos(a) * 0.35, Math.sin(a) * 0.35, 38 - t * 4);
+  line(ctx, m0x, m0y, m1x, m1y, OUT, 6); line(ctx, m0x, m0y, m1x, m1y, rgb([80, 86, 100]), 4.2); if (t > 0.5) ellipse(ctx, m1x, m1y, 6, 4, 'rgba(120,230,255,0.9)');
+  const [sx, sy] = iso(-0.2, 0, 22); ctx.fillStyle = rgb(team); ctx.fillRect(sx - 3, sy - 2, 6, 3); ctx.fillStyle = GLOW; ctx.fillRect(sx + 4, sy - 2, 2, 2);
+}
+function hoverBoat(ctx, o, sc) {
+  const { dir, team, anim, frame } = o; const a = worldAngleForDir(dir);
+  ctx.save(); ctx.scale(sc, sc);
+  const hullC = mix([170, 178, 192], team, 0.35), hullD = shade(hullC, 0.62);
+  ellipse(ctx, 0, 0, 28, 13, 'rgba(0,0,0,0.25)'); hoverGlow(ctx, 30, 14, 1);
+  const hover = 5 + Math.sin(frame * 1.05) * 1.2;
+  prism(ctx, rot([[-0.85, -0.22], [0.5, -0.24], [1.0, 0], [0.5, 0.24], [-0.85, 0.22], [-0.95, 0]], a), hover, 7, hullC, hullD);
+  prism(ctx, rot(isoRect(-0.4, -0.13, 0.5, 0.26), a), hover + 7, 8, shade(hullC, 1.08), hullD);
+  // fins
+  for (const s of [-1, 1]) prism(ctx, rot([[-0.9, 0.2 * s], [-0.5, 0.2 * s], [-0.7, 0.42 * s]], a), hover + 2, 5, shade(hullC, 0.9), hullD);
+  // turret
+  prism(ctx, rot(isoRect(0.2, -0.1, 0.2, 0.2), a), hover + 7, 5, shade(hullC, 1.1), hullD);
+  const [bx0, by0] = iso(Math.cos(a) * 0.3, Math.sin(a) * 0.3, hover + 11), [bx1, by1] = iso(Math.cos(a) * 0.75, Math.sin(a) * 0.75, hover + 12); line(ctx, bx0, by0, bx1, by1, rgb([80, 86, 100]), 2.2); line(ctx, bx0, by0, bx1, by1, 'rgba(120,200,255,0.7)', 0.8);
+  if (anim === 'attack' && frame % 4 === 1) ellipse(ctx, bx1, by1, 5, 3.5, 'rgba(120,230,255,0.9)');
+  const [fx, fy] = iso(-0.3, 0, hover + 15); line(ctx, fx, fy, fx, fy - 10, '#333', 1); ctx.fillStyle = rgb(team); ctx.fillRect(fx, fy - 10, 7, 4);
+  ctx.restore();
+}
+function mech(ctx, o, sc, hero = false) {
+  const { dir, team, anim, frame } = o; const sa = DIR_ANGLE(dir); const fx = Math.cos(sa), fy = Math.sin(sa);
+  ctx.save(); ctx.scale(sc, sc);
+  const hullC = mix(hero ? [220, 200, 120] : HULL_SF, team, hero ? 0.35 : 0.45), hullD = shade(hullC, 0.62);
+  ellipse(ctx, 0, 0, 12, 6, 'rgba(0,0,0,0.35)');
+  const ph = anim === 'walk' ? (frame / 6) * Math.PI * 2 : 0; const legA = anim === 'walk' ? Math.sin(ph) * 4 : 0; const bob = anim === 'walk' ? Math.abs(Math.sin(ph)) * 1.5 : 0;
+  const lx = -fy * 4.5, ly = fx * 2.2;
+  // legs (thick, jointed)
+  for (const s of [-1, 1]) { const kx = s * lx + fx * legA * s * 0.4, ky = s * ly - 12; line(ctx, s * lx, -20 + bob, kx, ky, rgb(hullD), 4.5); line(ctx, kx, ky, s * lx + fx * legA * s * 0.8, -2, rgb(shade(hullC, 0.9)), 4); ellipse(ctx, s * lx + fx * legA * s * 0.8, 0, 4, 2, rgb([60, 64, 76]), OUT, 0.6); }
+  // torso
+  const y0 = -20 - bob;
+  rrect(ctx, -9, y0 - 12, 18, 14, 4, rgb(hullC), OUT, 0.9); rrect(ctx, -7, y0 - 11, 6, 8, 2, rgb(shade(hullC, 1.15), 0.9));
+  ctx.fillStyle = rgb(team); ctx.fillRect(-5, y0 - 4, 10, 2.5);
+  ctx.fillStyle = hero ? 'rgba(255,200,80,0.95)' : GLOW; ctx.beginPath(); ctx.arc(fx * 2, y0 - 7, 2.2, 0, 7); ctx.fill();
+  // head / cockpit
+  rrect(ctx, -4.5, y0 - 19, 9, 7, 3, rgb(shade(hullC, 1.05)), OUT, 0.8); ctx.fillStyle = 'rgba(80,220,255,0.95)'; ctx.fillRect(-3 + fx * 1.5, y0 - 16.5, 6, 2);
+  // arm cannons
+  const rec = anim === 'attack' ? [0, 3, 1, 0][frame % 4] : 0;
+  for (const s of [-1, 1]) { const ax = s * lx * 2.2, ay = y0 - 8; rrect(ctx, ax - 3, ay - 3, 6, 9, 2, rgb(hullD), OUT, 0.7); const gx = ax + fx * (8 - rec), gy = ay + 2 + fy * 3; line(ctx, ax, ay + 2, gx, gy, rgb([70, 74, 86]), 3.2); line(ctx, ax, ay + 2, gx, gy, 'rgba(120,200,255,0.6)', 1); if (anim === 'attack' && frame % 4 === 1) ellipse(ctx, gx, gy, 4, 3, 'rgba(120,230,255,0.9)'); }
+  if (hero) { line(ctx, 0, y0 - 19, 0, y0 - 32, '#3a2a1a', 1.2); poly(ctx, [[0, y0 - 32], [10, y0 - 29], [0, y0 - 26]], rgb(team), OUT, 0.5); }
+  ctx.restore();
+}
+function laserPlatform(ctx, o) {
+  const { dir, team, anim, frame } = o; const a = worldAngleForDir(dir);
+  ellipse(ctx, 0, 0, 18, 9, 'rgba(0,0,0,0.3)'); hoverGlow(ctx, 18, 9, 0.9);
+  const hover = 6 + Math.sin(frame * 1.05) * 0.8;
+  const hullC = mix(HULL_SF, team, 0.35), hullD = shade(hullC, 0.65);
+  const oct = []; for (let i = 0; i < 8; i++) { const t = i / 8 * Math.PI * 2; oct.push([Math.cos(t) * 0.45, Math.sin(t) * 0.45]); }
+  prism(ctx, oct, hover, 6, hullC, hullD);
+  prism(ctx, oct.map(p => [p[0] * 0.45, p[1] * 0.45]), hover + 6, 8, shade(hullC, 1.1), hullD);
+  // emitter
+  const [e0x, e0y] = iso(0, 0, hover + 16), [e1x, e1y] = iso(Math.cos(a) * 0.9, Math.sin(a) * 0.9, hover + 18);
+  line(ctx, e0x, e0y, e1x, e1y, OUT, 5); line(ctx, e0x, e0y, e1x, e1y, rgb([80, 86, 100]), 3.2); line(ctx, e0x, e0y, e1x, e1y, 'rgba(120,200,255,0.8)', 1.2);
+  const charge = anim === 'attack' ? [0.3, 1, 0.5, 0.2][frame % 4] : 0.25;
+  ctx.fillStyle = `rgba(120,230,255,${charge})`; ctx.beginPath(); ctx.arc(e1x, e1y, 2 + charge * 3, 0, 7); ctx.fill();
+  if (anim === 'attack' && frame % 4 === 1) { const [e2x, e2y] = iso(Math.cos(a) * 2.2, Math.sin(a) * 2.2, hover + 18); line(ctx, e1x, e1y, e2x, e2y, 'rgba(160,240,255,0.85)', 2); }
+  const [sx, sy] = iso(0, 0, hover + 15); ctx.fillStyle = rgb(team); ctx.fillRect(sx - 2.5, sy - 1, 5, 2.5);
 }
 function commandCar(ctx, o) {
   const { dir, team, anim, frame } = o; const a = worldAngleForDir(dir);
@@ -533,6 +664,87 @@ const BUILDING_DRAW = {
     // stone lines
     ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 0.6; for (let z = 5; z < h; z += 5) { const [ax, ay] = iso(0, 1, z), [bx, by] = iso(1, 1, z); if (m & 4 || m & 8) { ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); } }
   },
+  // ---- sci-fi buildings ----
+  sf_hall: (ctx, o) => {
+    const hex = [[0.5, 0.05], [1.4, 0.05], [2.95, 1.5], [2.5, 2.95], [0.5, 2.95], [0.05, 1.5]];
+    prism(ctx, hex, 0, 4, shade(HULL_SF, 0.8), HULL_SF_D);
+    prism(ctx, hex.map(p => [1.5 + (p[0] - 1.5) * 0.78, 1.5 + (p[1] - 1.5) * 0.78]), 4, 26, HULL_SF, HULL_SF_D);
+    prism(ctx, hex.map(p => [1.5 + (p[0] - 1.5) * 0.45, 1.5 + (p[1] - 1.5) * 0.45]), 30, 16, shade(HULL_SF, 1.1), HULL_SF_D);
+    // glowing ring + antenna
+    const [cx, cy] = iso(1.5, 1.5, 47); ctx.strokeStyle = GLOW; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(cx, cy, 30, 15, 0, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = GLOW_SOFT; ctx.lineWidth = 6; ctx.stroke();
+    line(ctx, cx, cy, cx, cy - 36, rgb([80, 86, 100]), 2.5); ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(cx, cy - 38, 3.5, 0, 7); ctx.fill();
+    for (const z of [12, 22]) { for (const p of [[2.9, 1.5], [1.5, 2.9]]) { const [sx, sy] = iso(p[0], p[1], z); ctx.fillStyle = GLOW; ctx.fillRect(sx - 6, sy - 1, 12, 2); } }
+    doorAt(ctx, 1.5, 2.6, 4, [40, 44, 56]); flag(ctx, 0.6, 0.6, 30, o.team, 22);
+  },
+  sf_barracks: (ctx, o) => {
+    prism(ctx, isoRect(0.1, 0.1, 2.8, 2.8), 0, 3, shade(HULL_SF, 0.8), HULL_SF_D);
+    prism(ctx, isoRect(0.3, 0.3, 2.4, 2.4), 3, 18, HULL_SF, HULL_SF_D);
+    // dome
+    const [cx, cy] = iso(1.5, 1.5, 21); for (let i = 6; i >= 0; i--) { const k = i / 6; ellipse(ctx, cx, cy - (1 - k) * 22, 34 * k + 2, 17 * k + 1, rgb(shade(HULL_SF, 1 + (1 - k) * 0.25)), i === 6 ? OUT : null, 0.8); }
+    ctx.fillStyle = 'rgba(90,225,255,0.5)'; ctx.beginPath(); ctx.ellipse(cx, cy - 22, 5, 2.5, 0, 0, 7); ctx.fill();
+    // capsule pods along the front
+    for (const x of [0.6, 1.5, 2.4]) { const [px, py] = iso(x, 2.85, 3); rrect(ctx, px - 5, py - 14, 10, 14, 4, rgb(shade(HULL_SF, 1.05)), OUT, 0.7); ctx.fillStyle = GLOW; ctx.fillRect(px - 3, py - 10, 6, 5); }
+    flag(ctx, 2.8, 0.2, 3, o.team, 30);
+  },
+  sf_factory: (ctx, o) => {
+    prism(ctx, isoRect(0.05, 0.05, 2.9, 2.9), 0, 2, shade(HULL_SF, 0.75), HULL_SF_D);
+    prism(ctx, isoRect(0.2, 0.2, 2.6, 2.6), 2, 24, shade(HULL_SF, 0.95), HULL_SF_D);
+    // gantry rails + open hangar door with glow
+    const [dx, dy] = iso(1.5, 2.82, 2); rrect(ctx, dx - 12, dy - 18, 24, 18, 2, rgb([30, 34, 44]), OUT, 0.8); ctx.fillStyle = 'rgba(90,225,255,0.25)'; ctx.fillRect(dx - 11, dy - 17, 22, 16); for (let i = 0; i < 4; i++) { ctx.fillStyle = GLOW; ctx.fillRect(dx - 11 + i * 6, dy - 3, 4, 1.5); }
+    for (const p of [[0.3, 0.3], [2.7, 0.3], [2.7, 2.7], [0.3, 2.7]]) { const [px, py] = iso(p[0], p[1], 26); line(ctx, px, py, px, py - 16, rgb([80, 86, 100]), 2.5); }
+    const [g0x, g0y] = iso(0.3, 0.3, 42), [g1x, g1y] = iso(2.7, 0.3, 42), [g2x, g2y] = iso(2.7, 2.7, 42), [g3x, g3y] = iso(0.3, 2.7, 42); line(ctx, g0x, g0y, g1x, g1y, rgb([90, 96, 110]), 3); line(ctx, g3x, g3y, g2x, g2y, rgb([90, 96, 110]), 3); line(ctx, g0x, g0y, g3x, g3y, rgb([90, 96, 110]), 2); line(ctx, g1x, g1y, g2x, g2y, rgb([90, 96, 110]), 2);
+    ctx.fillStyle = GLOW; for (const z of [10, 18]) { const [sx, sy] = iso(2.82, 1.0, z); ctx.fillRect(sx - 4, sy - 1, 8, 2); const [sx2, sy2] = iso(2.82, 2.0, z); ctx.fillRect(sx2 - 4, sy2 - 1, 8, 2); }
+    flag(ctx, 0.4, 2.6, 26, o.team, 22);
+  },
+  sf_lab: (ctx, o) => {
+    prism(ctx, isoRect(0.1, 0.1, 2.8, 2.8), 0, 3, shade(HULL_SF, 0.8), HULL_SF_D);
+    const oct = [[0.7, 0.2], [2.3, 0.2], [2.8, 0.7], [2.8, 2.3], [2.3, 2.8], [0.7, 2.8], [0.2, 2.3], [0.2, 0.7]];
+    prism(ctx, oct, 3, 14, HULL_SF, HULL_SF_D);
+    // glass dome with a floating core
+    const [cx, cy] = iso(1.5, 1.5, 17); for (let i = 6; i >= 0; i--) { const k = i / 6; ellipse(ctx, cx, cy - (1 - k) * 24, 30 * k + 2, 15 * k + 1, `rgba(120,200,255,${0.12 + (1 - k) * 0.1})`, i === 6 ? 'rgba(160,220,255,0.6)' : null, 0.8); }
+    ctx.fillStyle = 'rgba(197,106,255,0.95)'; ctx.beginPath(); ctx.arc(cx, cy - 12, 5, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(197,106,255,0.5)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(cx, cy - 12, 12, 5, 0.4, 0, 7); ctx.stroke();
+    // test walker on a pad
+    ctx.save(); const [wx, wy] = iso(2.5, 2.5, 3); ctx.translate(wx, wy); ctx.scale(0.6, 0.6); walker(ctx, { dir: 2, team: o.team, anim: 'idle', frame: 0 }); ctx.restore();
+    flag(ctx, 0.3, 0.3, 17, o.team, 26);
+  },
+  sf_dock: (ctx, o) => {
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { const [px, py] = iso(0.4 + i * 1.1, 0.4 + j * 1.1, 0); line(ctx, px, py + 3, px, py - 8, rgb([70, 76, 90]), 2.5); ctx.fillStyle = GLOW; ctx.fillRect(px - 1, py - 9, 2, 2); }
+    prism(ctx, isoRect(0.05, 0.05, 2.9, 2.9), 8, 3, shade(HULL_SF, 0.95), HULL_SF_D);
+    ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5; const [a0x, a0y] = iso(0.15, 0.15, 11.5), [a1x, a1y] = iso(2.85, 0.15, 11.5), [a2x, a2y] = iso(2.85, 2.85, 11.5), [a3x, a3y] = iso(0.15, 2.85, 11.5); ctx.beginPath(); ctx.moveTo(a0x, a0y); ctx.lineTo(a1x, a1y); ctx.lineTo(a2x, a2y); ctx.lineTo(a3x, a3y); ctx.closePath(); ctx.stroke();
+    prism(ctx, isoRect(0.3, 0.3, 1.4, 1.4), 11, 16, HULL_SF, HULL_SF_D);
+    const [cx, cy] = iso(1.0, 1.0, 27); ellipse(ctx, cx, cy, 18, 9, rgb(shade(HULL_SF, 1.1)), OUT, 0.8); line(ctx, cx, cy, cx, cy - 22, rgb([80, 86, 100]), 2); ctx.fillStyle = 'rgba(255,90,90,0.95)'; ctx.beginPath(); ctx.arc(cx, cy - 24, 2.5, 0, 7); ctx.fill();
+    ctx.save(); const [bx, by] = iso(2.2, 2.2, 11); ctx.translate(bx, by); ctx.scale(0.7, 0.7); hoverBoat(ctx, { dir: 1, team: o.team, anim: 'idle', frame: 0 }, 1); ctx.restore();
+    flag(ctx, 0.3, 0.3, 27, o.team, 18);
+  },
+  sf_tower: (ctx, o) => {
+    const lv = o.level || 1;
+    prism(ctx, isoRect(0.05, 0.05, 0.9, 0.9), 0, 3, shade(HULL_SF, 0.8), HULL_SF_D);
+    prism(ctx, [[0.3, 0.15], [0.7, 0.15], [0.85, 0.5], [0.7, 0.85], [0.3, 0.85], [0.15, 0.5]], 3, 36 + (lv - 1) * 10, HULL_SF, HULL_SF_D);
+    const top = 39 + (lv - 1) * 10;
+    for (let z = 8; z < top - 4; z += 9) { const [sx, sy] = iso(0.85, 0.5, z); ctx.fillStyle = GLOW; ctx.fillRect(sx - 3, sy - 1, 6, 1.5); const [sx2, sy2] = iso(0.5, 0.85, z); ctx.fillRect(sx2 - 3, sy2 - 1, 6, 1.5); }
+    const [cx, cy] = iso(0.5, 0.5, top); ellipse(ctx, cx, cy, 12, 6, rgb(shade(HULL_SF, 1.1)), OUT, 0.8);
+    for (let i = 0; i < (lv >= 3 ? 3 : 1); i++) { const ang = i * Math.PI * 2 / 3; const ox = Math.cos(ang) * (lv >= 3 ? 7 : 0), oy = Math.sin(ang) * (lv >= 3 ? 3.5 : 0); line(ctx, cx + ox, cy + oy, cx + ox, cy + oy - 10, rgb([80, 86, 100]), 2.5); ctx.fillStyle = GLOW_SOFT; ctx.beginPath(); ctx.arc(cx + ox, cy + oy - 12, 7, 0, 7); ctx.fill(); ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(cx + ox, cy + oy - 12, 4, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx + ox - 1, cy + oy - 13, 1.4, 0, 7); ctx.fill(); }
+    if (lv >= 2) { ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(cx, cy - 2, 16, 8, 0, 0, 7); ctx.stroke(); }
+    ctx.fillStyle = rgb(o.team); const [tx, ty] = iso(0.5, 0.5, 20); ctx.fillRect(tx - 4, ty - 2, 8, 3);
+  },
+  sf_wall: (ctx, o) => {
+    const M = o.mask; const h = 18; const cw = 0.3;
+    const segs = wallSegs(M, cw);
+    // pylon base + translucent energy panels
+    for (const s of segs) prism(ctx, s, 0, 3, HULL_SF, HULL_SF_D);
+    for (const s of segs) { const top = s.map(p => iso(p[0], p[1], h)), bot = s.map(p => iso(p[0], p[1], 3)); ctx.fillStyle = 'rgba(90,225,255,0.28)'; ctx.beginPath(); ctx.moveTo(bot[0][0], bot[0][1]); ctx.lineTo(bot[1][0], bot[1][1]); ctx.lineTo(top[1][0], top[1][1]); ctx.lineTo(top[0][0], top[0][1]); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(bot[3][0], bot[3][1]); ctx.lineTo(bot[2][0], bot[2][1]); ctx.lineTo(top[2][0], top[2][1]); ctx.lineTo(top[3][0], top[3][1]); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(160,240,255,0.7)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(top[0][0], top[0][1]); ctx.lineTo(top[1][0], top[1][1]); ctx.lineTo(top[2][0], top[2][1]); ctx.lineTo(top[3][0], top[3][1]); ctx.closePath(); ctx.stroke(); }
+    prism(ctx, isoRect(0.5 - 0.14, 0.5 - 0.14, 0.28, 0.28), 0, h + 5, shade(HULL_SF, 1.05), HULL_SF_D);
+    const [px, py] = iso(0.5, 0.5, h + 5); ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(px, py - 1, 2.2, 0, 7); ctx.fill();
+  },
+  sf_gate: (ctx, o) => {
+    const M = o.mask; const h = 18; const cw = 0.3;
+    const horiz = (M & 2) || (M & 8) || !((M & 1) || (M & 4));
+    const segs = wallSegs(M & (horiz ? 10 : 5), cw); for (const s of segs) prism(ctx, s, 0, 3, HULL_SF, HULL_SF_D);
+    const p = horiz ? [[0.5 - 0.42, 0.5], [0.5 + 0.42, 0.5]] : [[0.5, 0.5 - 0.42], [0.5, 0.5 + 0.42]];
+    for (const [px, py] of p) { prism(ctx, isoRect(px - 0.12, py - 0.12, 0.24, 0.24), 0, h + 8, shade(HULL_SF, 1.05), HULL_SF_D); const [gx, gy] = iso(px, py, h + 8); ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(gx, gy - 1, 2.4, 0, 7); ctx.fill(); }
+    // open passage: faint dotted field
+    const [a0x, a0y] = iso(p[0][0], p[0][1], 6), [a1x, a1y] = iso(p[1][0], p[1][1], 6); ctx.setLineDash([2, 4]); line(ctx, a0x, a0y, a1x, a1y, 'rgba(120,230,255,0.6)', 1); ctx.setLineDash([]);
+  },
   ant_gate: (ctx, o) => {
     const M = o.mask; const h = 20; const cw = 0.5;
     const horiz = (M & 2) || (M & 8) || !((M & 1) || (M & 4)); // opening runs along the wall direction
@@ -693,6 +905,19 @@ export function treeSprite(variant, era, sway = 0) {
     }
     const sx = Math.sin(sway) * 2;
     const trunk = [110, 75, 40];
+    if (era === 'scifi') { // alien fungus: pale stalk, glowing cap
+      const capC = variant % 2 ? [190, 90, 240] : [90, 200, 230], stalk = [210, 200, 220];
+      const hgt = 26 + variant * 5, cw = 14 + variant * 2;
+      line(ctx, 0, 0, sx, -hgt, rgb(stalk), 5); line(ctx, 0, 0, sx, -hgt, rgb(shade(stalk, 0.8)), 1.5);
+      for (let i = 0; i < 3; i++) { const y = -8 - i * 6; ellipse(ctx, sx * (i / 3) + (i % 2 ? 3 : -3), y, 2.2, 1.2, rgb(shade(stalk, 0.85)), OUT, 0.4); }
+      ellipse(ctx, sx, -hgt, cw, cw * 0.55, rgb(shade(capC, 0.75)), OUT, 0.9);
+      ellipse(ctx, sx, -hgt - 3, cw * 0.9, cw * 0.45, rgb(capC), OUT, 0.8);
+      ellipse(ctx, sx - cw * 0.3, -hgt - 5, cw * 0.35, cw * 0.15, rgb(shade(capC, 1.5), 0.7));
+      ctx.fillStyle = rgb(shade(capC, 1.7), 0.9); for (let i = 0; i < 5; i++) { const a = i * 1.3 + variant; ctx.beginPath(); ctx.arc(sx + Math.cos(a) * cw * 0.55, -hgt - 2 + Math.sin(a) * cw * 0.22, 1.3, 0, 7); ctx.fill(); }
+      // small glowing sprouts
+      for (const dx of [-9, 8]) { line(ctx, dx, 0, dx + 1, -7, rgb(stalk), 2); ellipse(ctx, dx + 1, -8, 3, 1.8, rgb(capC), OUT, 0.5); }
+      return;
+    }
     if (variant === 1 || variant === 3) { // conifer
       line(ctx, 0, 0, sx, -20, rgb(trunk), 4);
       const g = era === 'ww2' ? [46, 82, 46] : [40, 100, 50];
@@ -713,6 +938,15 @@ export function mineSprite(era, depleted = 0) {
   return cached(key, 160, 160, 80, 115, ctx => {
     // 2x2 footprint, anchored at center (x=1,y=1 in tile units -> iso(0,0))
     ctx.translate(...iso(-1, -1, 0).map(v => v));
+    if (era === 'scifi') { // glowing plasma crystal cluster
+      prism(ctx, isoRect(0.1, 0.1, 1.8, 1.8), 0, 3, [80, 74, 100], [50, 46, 66]);
+      const crystals = [[1.0, 1.0, 46, 9], [0.55, 0.75, 28, 6], [1.45, 0.7, 32, 7], [0.7, 1.45, 24, 6], [1.4, 1.4, 30, 6], [1.0, 0.45, 20, 5], [0.4, 1.1, 18, 4]];
+      crystals.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
+      for (const [cx, cy, h, w] of crystals) { const [bx, by] = iso(cx, cy, 3); const tilt = (cx - 1) * 6; poly(ctx, [[bx - w, by], [bx - w * 0.6 + tilt, by - h], [bx + w * 0.2 + tilt, by - h - w * 0.4], [bx + w, by - 2]], 'rgba(120,220,255,0.85)', 'rgba(30,90,130,0.9)', 0.8); poly(ctx, [[bx - w * 0.6 + tilt, by - h], [bx + w * 0.2 + tilt, by - h - w * 0.4], [bx + w * 0.1 + tilt, by - h * 0.55], [bx - w * 0.3 + tilt * 0.5, by - h * 0.5]], 'rgba(220,250,255,0.75)'); }
+      const g = ctx.createRadialGradient(...iso(1, 1, 8), 0, ...iso(1, 1, 8), 40); g.addColorStop(0, 'rgba(90,225,255,0.35)'); g.addColorStop(1, 'rgba(90,225,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(...iso(1, 1, 8), 40, 0, 7); ctx.fill();
+      const [ex, ey] = iso(1.6, 1.6, 3); rrect(ctx, ex - 6, ey - 8, 12, 8, 2, rgb([90, 96, 110]), OUT, 0.6); ctx.fillStyle = GLOW; ctx.fillRect(ex - 3, ey - 6, 6, 2);
+      return;
+    }
     if (era === 'ww2') {
       prism(ctx, isoRect(0.1, 0.1, 1.8, 1.8), 0, 2, [60, 55, 50], [40, 36, 32]);
       // oil pool
@@ -745,6 +979,14 @@ export function mineSprite(era, depleted = 0) {
 export function decoSprite(kind, v, era) {
   const key = `deco|${era}|${kind}|${Math.floor(v * 4)}`;
   return cached(key, 30, 24, 15, 20, ctx => {
+    if (era === 'scifi' && kind === 0) { // alien tendrils
+      ellipse(ctx, 0, 0, 7, 3.5, 'rgba(0,0,0,0.2)'); for (let i = 0; i < 4; i++) { const a = -1.2 + i * 0.8 + v; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(Math.cos(a) * 6, -8, Math.cos(a) * 8, -14); ctx.strokeStyle = rgb([120, 90, 170]); ctx.lineWidth = 1.6; ctx.stroke(); ctx.fillStyle = 'rgba(197,106,255,0.9)'; ctx.beginPath(); ctx.arc(Math.cos(a) * 8, -14, 1.6, 0, 7); ctx.fill(); }
+      return;
+    }
+    if (era === 'scifi' && kind === 1) { // glowing mineral shard
+      ellipse(ctx, 0, 0, 7, 3.5, 'rgba(0,0,0,0.25)'); poly(ctx, [[-5, 0], [-2, -9], [3, -11], [6, -2], [3, 2]], rgb([100, 92, 130]), OUT, 0.8); poly(ctx, [[-2, -9], [3, -11], [2, -4]], 'rgba(120,220,255,0.7)');
+      return;
+    }
     if (kind === 0) { // bush
       const g = era === 'ww2' ? [70, 100, 50] : [80, 140, 60];
       ellipse(ctx, 0, 0, 8, 4, 'rgba(0,0,0,0.2)'); ellipse(ctx, -3, -4, 6, 5, rgb(shade(g, 0.9)), OUT, 0.6); ellipse(ctx, 3, -5, 6, 5, rgb(g), OUT, 0.6); ellipse(ctx, 0, -8, 5, 4, rgb(shade(g, 1.2)), OUT, 0.6);

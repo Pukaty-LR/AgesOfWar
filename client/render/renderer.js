@@ -408,11 +408,15 @@ export class Renderer {
       case 'bullet': ctx.strokeStyle = 'rgba(255,230,150,0.9)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(3, 0); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.fillRect(1, -1, 3, 2); break;
       case 'rock': ctx.fillStyle = '#7a7268'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, 7); ctx.fill(); ctx.fillStyle = '#a49a8e'; ctx.beginPath(); ctx.arc(-1.5, -1.5, 2, 0, 7); ctx.fill(); if (k < 0.9) { ctx.fillStyle = 'rgba(255,200,120,0.5)'; ctx.beginPath(); ctx.arc(-6, 0, 3, 0, 7); ctx.fill(); } break;
       case 'shell': ctx.fillStyle = '#4a4a44'; ctx.beginPath(); ctx.ellipse(0, 0, 5, 2.5, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,200,120,0.6)'; ctx.beginPath(); ctx.ellipse(-7, 0, 4, 2, 0, 0, 7); ctx.fill(); break;
+      case 'plasma': { ctx.fillStyle = 'rgba(90,225,255,0.35)'; ctx.beginPath(); ctx.ellipse(-2, 0, 9, 4, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(120,235,255,0.95)'; ctx.beginPath(); ctx.ellipse(0, 0, 5, 2.4, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(1, 0, 2.2, 1.2, 0, 0, 7); ctx.fill(); break; }
+      case 'rail': { ctx.strokeStyle = 'rgba(90,200,255,0.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(4, 0); ctx.stroke(); ctx.strokeStyle = 'rgba(220,250,255,0.95)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(4, 0); ctx.stroke(); break; }
+      case 'plasmaShell': { ctx.fillStyle = 'rgba(197,106,255,0.4)'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(220,150,255,0.95)'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-1, -1, 1.8, 0, 7); ctx.fill(); break; }
       case 'flame': { const k2 = Math.random(); ctx.fillStyle = `rgba(255,${120 + k2 * 100 | 0},30,0.75)`; ctx.beginPath(); ctx.ellipse(0, 0, 6 + k2 * 3, 4, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,240,170,0.8)'; ctx.beginPath(); ctx.ellipse(-2, 0, 3, 2, 0, 0, 7); ctx.fill(); break; }
     }
     ctx.restore();
     if (e.t === 'flame' && Math.random() < 0.8) this.particles.push({ x: x + (Math.random() - 0.5) * 0.3, y: y + (Math.random() - 0.5) * 0.3, z: 12, vx: 0, vy: 0, vz: 14, life: 0, max: 0.4, color: [255, 140 + Math.random() * 80, 40], size: 3, g: -10, drag: 0.9, grow: -3, alpha: 0.8 });
     if (e.t === 'shell' || e.t === 'rock') { if (Math.random() < 0.6) this.particles.push({ x, y, z: 14 + arcH, vx: 0, vy: 0, vz: 5, life: 0, max: 0.35, color: [120, 120, 120], size: 2.5, g: 0, drag: 0.9, grow: 3, alpha: 0.5 }); }
+    if (e.t === 'plasmaShell' || e.t === 'plasma') { if (Math.random() < 0.7) this.particles.push({ x, y, z: 14 + arcH, vx: 0, vy: 0, vz: 2, life: 0, max: 0.3, color: e.t === 'plasma' ? [120, 230, 255] : [197, 106, 255], size: 2.2, g: 0, drag: 0.9, grow: -3, alpha: 0.7 }); }
   }
   drawGroundEffect(ctx, ef, z) {
     const age = this.time - ef.t0; const g = this.game;

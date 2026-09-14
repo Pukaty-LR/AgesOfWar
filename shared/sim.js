@@ -4,8 +4,8 @@ import { generateMap, mulberry32 } from './mapgen.js';
 import { astar, smoothPath, nearestTile } from './pathfinding.js';
 
 const DT = 1 / TICK_RATE;
-const PROJ_SPEED = { arrow: 14, bolt: 16, bullet: 30, rock: 8, shell: 11, flame: 9 };
-const PROJ_ARC = { arrow: 0.35, bolt: 0.2, bullet: 0, rock: 0.9, shell: 0.7, flame: 0.05 };
+const PROJ_SPEED = { arrow: 14, bolt: 16, bullet: 30, rock: 8, shell: 11, flame: 9, plasma: 16, rail: 45, plasmaShell: 10 };
+const PROJ_ARC = { arrow: 0.35, bolt: 0.2, bullet: 0, rock: 0.9, shell: 0.7, flame: 0.05, plasma: 0, rail: 0, plasmaShell: 0.6 };
 const MAX_TEAMS = 8;
 
 export class Sim {

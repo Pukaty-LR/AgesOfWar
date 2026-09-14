@@ -89,6 +89,10 @@ export class Audio {
       case 'victory': [523, 659, 784, 1046, 784, 1046, 1318].forEach((f, i) => this.osc('triangle', f, t + i * 0.16, 0.5, 0.18 * v, dest, { a: 0.01, d: 0.1, s: 0.15, r: 0.3 })); break;
       case 'defeat': [392, 370, 349, 330, 262].forEach((f, i) => this.osc('sawtooth', f, t + i * 0.32, 0.7, 0.14 * v, dest, { lp: 900, a: 0.02, d: 0.2, s: 0.2, r: 0.4 })); break;
       case 'splash': this.noiseBurst(t, 0.3, 0.2 * v, dest, { f: 1500, fEnd: 400, q: 1 }); break;
+      case 'plasmaShot': this.osc('sine', 900, t, 0.12, 0.16 * v, dest, { slide: 300 }); this.osc('square', 1800, t, 0.06, 0.05 * v, dest, { slide: 600, lp: 3000 }); break;
+      case 'railShot': this.noiseBurst(t, 0.08, 0.25 * v, dest, { f: 6000, fEnd: 1500, q: 1.5 }); this.osc('sawtooth', 2400, t, 0.18, 0.1 * v, dest, { slide: 200, lp: 4000 }); break;
+      case 'plasmaShellShot': this.osc('sine', 300, t, 0.3, 0.3 * v, dest, { slide: 80 }); this.noiseBurst(t, 0.25, 0.2 * v, dest, { f: 1200, fEnd: 200, q: 0.8, type: 'lowpass' }); break;
+      case 'flameShot': this.noiseBurst(t, 0.25, 0.22 * v, dest, { f: 700, fEnd: 400, q: 0.6, type: 'lowpass', a: 0.02 }); break;
     }
   }
 
@@ -142,6 +146,18 @@ export class Audio {
       }
       // distant flute every 4 bars
       if (bar % 4 === 2 && (e === 0 || e === 4)) { const f = this.scaleFreq([0, 2, 4, 5, 7][Math.floor(this.rand(bar * 3 + e) * 5)], 2); this.osc('sine', f, t, beatLen * 2.2, 0.035, this.delay, { a: 0.3, d: 0.3, s: 0.6, r: 0.8, sus: 0.7 }); }
+    } else if (st.style === 'synth') { // ambient electronic: pads, soft kick, arpeggio
+      if (e === 0 && bar % 2 === 0) {
+        const root = [0, 3, 5, 4][Math.floor(bar / 2) % 4];
+        for (const d of [0, 2, 4]) { const f = this.scaleFreq(root + d, 0); this.osc('sawtooth', f, t, beatLen * 8.5, 0.028, this.delay, { a: 1.6, d: 0.5, s: beatLen * 5.5, r: 2.0, sus: 0.9, lp: 700 + I * 500 }); this.osc('sawtooth', f * 1.005, t, beatLen * 8.5, 0.022, g, { a: 1.6, d: 0.5, s: beatLen * 5.5, r: 2.0, sus: 0.9, lp: 600 }); }
+        this.osc('sine', this.scaleFreq(root, -2), t, beatLen * 8.5, 0.07, g, { a: 0.8, d: 0.5, s: beatLen * 6, r: 1.5, sus: 0.9 });
+      }
+      if (e === 0 || (I > 0.3 && e === 4)) this.osc('sine', 60, t, 0.35, 0.16 + I * 0.15, g, { slide: 30, a: 0.003, d: 0.12, r: 0.25 });
+      if (I > 0.45 && e % 2 === 1) this.noiseBurst(t, 0.04, 0.05 + I * 0.05, g, { f: 8000, q: 2 });
+      // arpeggio
+      const density = 0.35 + I * 0.4; const r = this.rand(bar * 8 + e);
+      if (r < density) { const deg = [0, 2, 4, 7, 4, 2][e % 6]; const f = this.scaleFreq(deg + (bar % 4 === 3 ? 2 : 0), 1); this.osc('square', f, t, 0.3, 0.035, this.delay, { a: 0.005, d: 0.1, s: 0.05, r: 0.2, sus: 0.4, lp: 1800 }); this.osc('sine', f * 2, t, 0.2, 0.025, this.delay, { a: 0.005, d: 0.08, r: 0.12 }); }
+      if (bar % 4 === 2 && e === 0) { const f = this.scaleFreq([0, 4, 7][Math.floor(this.rand(bar) * 3)], 2); this.osc('triangle', f, t, beatLen * 3, 0.045, this.delay, { a: 0.5, d: 0.5, s: 0.8, r: 1.0, sus: 0.7, lp: 2200 }); }
     } else { // march, softened: brushed snare, warm low strings, muted horn
       const bd = e === 0 || (I > 0.4 && e === 4); const sn = e === 4 || (I > 0.5 && e === 6);
       if (bd) this.osc('sine', 80, t, 0.3, 0.18 + I * 0.12, g, { slide: 35, a: 0.003, d: 0.1, r: 0.2 });

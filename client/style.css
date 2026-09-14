@@ -4,6 +4,7 @@
   --stone: #4a4038; --stone2: #2c251f; --stone3: #6a5c50; --hud-bg: #1b1610; --hud-text: #e9dcc0; --hud-dim: #b09a6e;
   --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
 }
+body.era-scifi { --gold: #5ad8ff; --gold2: #b6efff; --gold3: #2a7a99; --parch: #e4f2f8; --line: #3f7f99; --panel: rgba(12, 22, 34, 0.93); --panel2: rgba(20, 36, 54, 0.95); --stone: #23364a; --stone2: #101b28; --stone3: #35516b; --hud-bg: #0e1721; --hud-text: #e4f2f8; --hud-dim: #8fb8cc; --wood: #1d3244; --wood2: #2c4a63; --red: #ff5c7a; }
 body.era-ww2 { --gold: #b9c6cf; --gold2: #e3ecf2; --gold3: #6f7f8a; --parch: #e6e9e4; --line: #6b7a84; --panel: rgba(20, 24, 28, 0.93); --panel2: rgba(34, 40, 46, 0.95); --stone: #3f4a52; --stone2: #232a30; --stone3: #5b6a74; --hud-bg: #161a1e; --hud-text: #e6e9e4; --hud-dim: #9fb0bb; --wood: #2d3a44; --wood2: #3e4f5b; }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0906; color: var(--parch); font-family: "Segoe UI", "Trebuchet MS", system-ui, sans-serif; user-select: none; }

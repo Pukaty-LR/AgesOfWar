@@ -114,7 +114,7 @@ export class Game {
     const R = this.renderer; const near = (x, y) => Math.hypot(x - R.cam.x, y - R.cam.y) < 30;
     const mine = ev.o === this.me || ev.owner === this.me;
     switch (ev.t) {
-      case 'shot': this.soundAt({ arrow: 'arrowShot', bolt: 'arrowShot', bullet: 'bulletShot', shell: 'shellShot', rock: 'rockShot' }[ev.k] || 'arrowShot', ev.x, ev.y, 0.7); if (ev.k === 'bullet' || ev.k === 'shell') R.addEffect({ kind: 'flash', x: ev.x, y: ev.y, color: 'rgba(255,220,140,0.8)' }); this.heat(ev.x, ev.y); break;
+      case 'shot': this.soundAt({ arrow: 'arrowShot', bolt: 'arrowShot', bullet: 'bulletShot', shell: 'shellShot', rock: 'rockShot', flame: 'flameShot', plasma: 'plasmaShot', rail: 'railShot', plasmaShell: 'plasmaShellShot' }[ev.k] || 'arrowShot', ev.x, ev.y, 0.7); if (ev.k === 'bullet' || ev.k === 'shell') R.addEffect({ kind: 'flash', x: ev.x, y: ev.y, color: 'rgba(255,220,140,0.8)' }); if (ev.k === 'plasma' || ev.k === 'rail' || ev.k === 'plasmaShell') R.addEffect({ kind: 'flash', x: ev.x, y: ev.y, color: 'rgba(120,230,255,0.7)' }); this.heat(ev.x, ev.y); break;
       case 'hit': {
         this.soundAt(ev.k === 'melee' ? 'swordHit' : (ev.k === 'bullet' ? 'hit' : 'arrowHit'), ev.x, ev.y, 0.8);
         if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(ev.k === 'melee' ? 5 : 4, ev.x, ev.y, 10, { colors: ev.k === 'melee' ? [[255, 240, 200], [255, 200, 80]] : [[140, 30, 30], [180, 40, 40]], speed: 1.5, vz: 30, life: 0.4, size: 1.6, gravity: 120 });
