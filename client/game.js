@@ -87,6 +87,7 @@ export class Game {
   nextUpgrade(b) { const def = this.tech.buildings[b.t]; return (def.upgrades || []).find(u => u.level === (b.lv || 1) + 1) || null; }
   hallLevel() { let lv = 0; for (const e of this.ents.values()) if (e.k === 'b' && e.o === this.me && e.t === 'hall' && e.bl) lv = Math.max(lv, e.lv || 1); return lv; }
   upgrade(bid) { const b = this.ents.get(bid); if (!b) return; const up = this.nextUpgrade(b); if (!up) return; const p = this.players[this.me]; if (up.hall && this.hallLevel() < up.hall) { this.ui.alert(`Vyžaduje ${this.eraDef.hallNames[up.hall - 1]} (radnice úrovně ${up.hall}).`, true); this.audio.sfx('error'); return; } if (p.res.p < up.cost.p || p.res.s < up.cost.s) { this.ui.alert('Nedostatek surovin.', true); this.audio.sfx('error'); return; } this.send({ t: 'upgrade', id: bid }); this.audio.sfx('click'); }
+  useAbility() { const ids = this.selectedIds(e => e.k === 'u' && e.o === this.me && this.unitDef(e).ability); if (!ids.length) return; this.send({ t: 'ability', ids }); }
   research(bid, rid) { this.send({ t: 'research', id: bid, rid }); this.audio.sfx('click'); }
   pingMap(wx, wy) { this.net.send({ t: 'mping', x: wx, y: wy }); }
   toggleGate() { const ids = this.selectedIds(e => e.k === 'b' && e.o === this.me && (e.t === 'wall' || e.t === 'gate')); if (!ids.length) return; this.send({ t: 'gate', ids }); this.audio.sfx('placed', 0.5); }
@@ -152,6 +153,7 @@ export class Game {
       case 'hammer': this.soundAt('hammer', ev.x, ev.y, 0.5); if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(2, ev.x + (Math.random() - 0.5), ev.y + (Math.random() - 0.5), 14, { colors: [[255, 230, 150]], speed: 0.8, vz: 25, life: 0.3, size: 1.2 }); break;
       case 'built': if (mine && ev.ty !== 'wall') { this.audio.sfx('buildingDone', 0.8); this.ui.alert(`${this.tech.buildings[ev.ty]?.name}: stavba dokončena`, false); } break;
       case 'spawn': if (mine) this.audio.sfx('unitReady', 0.5); break;
+      case 'ability': { R.addEffect({ kind: 'ring', x: ev.x, y: ev.y, color: 'rgba(255,220,90,0.95)' }); R.spawnParticles(24, ev.x, ev.y, 8, { colors: [[255, 230, 120], [255, 180, 60]], speed: ev.r * 1.2, vz: 10, life: 0.7, size: 2, gravity: 0, drag: 0.96 }); this.soundAt('horn', ev.x, ev.y, 1); if (mine) this.ui.alert(`${ev.name}!`, false); this.heat(ev.x, ev.y); break; }
       case 'researched': if (mine) { this.audio.sfx('buildingDone', 0.8); const rd = RESEARCH[ev.rid]; this.ui.alert(`Výzkum dokončen: ${rd ? rd.names[this.era] : ev.rid} ${['I', 'II', 'III'][ev.level - 1] || ev.level}`, false); this.ui.lastSig = ''; this.ui.dirty = true; } break;
       case 'upgraded': if (mine) { this.audio.sfx('buildingDone', 0.8); const b = this.ents.get(ev.id); if (b) b.lv = ev.level; this.ui.alert(`${this.tech.buildings[ev.ty]?.name}: vylepšeno na úroveň ${ev.level}`, false); this.ui.lastSig = ''; this.ui.dirty = true; } break;
       case 'place': if (mine) this.audio.sfx('placed', 0.6); break;

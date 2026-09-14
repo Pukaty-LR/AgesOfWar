@@ -136,6 +136,9 @@ export class AIPlayer {
     if (!this.rallyPoint) this.rallyPoint = this.frontOfBase(hall);
     if (tick % 200 === 0) for (const b of buildings) if (b.built && !b.rally && b.type !== 'hall' && b.type !== 'dock' && b.type !== 'tower' && b.type !== 'wall') sim.command(this.pid, { t: 'rally', ids: [b.id], x: this.rallyPoint.x, y: this.rallyPoint.y });
 
+    // 3c. Hero uses the war cry when fighting
+    const hero = units.find(u => p.tech.units[u.type].ability);
+    if (hero && (!hero.abilityReady || tick >= hero.abilityReady)) { let near = 0; sim.unitsNear(hero.x, hero.y, 7, e => { if (e.owner !== undefined && sim.players[e.owner].team !== p.team) near++; }); if (near >= 3) sim.command(this.pid, { t: 'ability', ids: [hero.id] }); }
     // 4. Defense
     let threat = null;
     for (const e of sim.ents.values()) {

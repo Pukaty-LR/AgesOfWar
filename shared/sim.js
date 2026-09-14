@@ -339,6 +339,15 @@ export class Sim {
         b.queue.push({ type: '__up', progress: 0 }); b.dirty = true;
         break;
       }
+      case 'ability': { // hero active ability (war cry): timed buff for allies around the hero
+        for (const u of myUnits) {
+          const def = p.tech.units[u.type]; const ab = def.ability; if (!ab) continue;
+          if (u.abilityReady && this.tick < u.abilityReady) { this.events.push({ t: 'msg', owner: pid, text: `${ab.name}: ještě ${Math.ceil((u.abilityReady - this.tick) / 20)} s.` }); continue; }
+          u.abilityReady = this.tick + ab.cooldown * 20; u.buffUntil = this.tick + ab.duration * 20; u.dirty = true;
+          this.events.push({ t: 'ability', x: u.x, y: u.y, r: ab.range, o: pid, name: ab.name });
+        }
+        break;
+      }
       case 'research': {
         const b = this.ents.get(c.id); if (!b || b.kind !== 'building' || b.owner !== pid || !b.built) break;
         const rd = RESEARCH[c.rid]; if (!rd || rd.building !== b.type) break;
@@ -446,9 +455,20 @@ export class Sim {
     for (const e of this.ents.values()) {
       if (e.kind !== 'unit' || e.dead || e.owner === undefined || this.players[e.owner].team !== p.team) continue;
       const d = this.players[e.owner].tech.units[e.type]; if (!d.aura) continue;
-      if (Math.hypot(e.x - u.x, e.y - u.y) <= d.aura.range) m = Math.max(m, d.aura.dmg);
+      const dist = Math.hypot(e.x - u.x, e.y - u.y);
+      if (dist <= d.aura.range) m = Math.max(m, d.aura.dmg);
+      if (d.ability && e.buffUntil > this.tick && dist <= d.ability.range) m = Math.max(m, d.ability.dmg);
     }
     return m;
+  }
+  buffArmor(u) {
+    const p = this.players[u.owner]; let a = 0;
+    for (const e of this.ents.values()) {
+      if (e.kind !== 'unit' || e.dead || e.owner === undefined || this.players[e.owner].team !== p.team) continue;
+      const d = this.players[e.owner].tech.units[e.type]; if (!d.ability || !(e.buffUntil > this.tick)) continue;
+      if (Math.hypot(e.x - u.x, e.y - u.y) <= d.ability.range) a = Math.max(a, d.ability.armor || 0);
+    }
+    return a;
   }
 
   setOrder(u, order, queue = false) {
@@ -713,7 +733,7 @@ export class Sim {
     if (t.dead || t.hp <= 0) return;
     const p = this.players[t.owner];
     let armor = 0, mult = 1;
-    if (t.kind === 'unit') { const d = p.tech.units[t.type]; armor = this.unitArmor(p, d); mult = bonus[t.role] || 1; }
+    if (t.kind === 'unit') { const d = p.tech.units[t.type]; armor = this.unitArmor(p, d) + this.buffArmor(t); mult = bonus[t.role] || 1; }
     else if (t.kind === 'building') { armor = t.built ? this.buildingArmor(p, t) : 0; mult = (t.type === 'wall' || t.type === 'gate') ? (bonus.wall || bonus.building || 0.5) : (bonus.building || 1); }
     const final = Math.max(1, dmg * mult - armor);
     t.hp -= final; t.dirty = true; t.lastDamageTick = this.tick;
@@ -976,7 +996,7 @@ export class Sim {
   // ---------- serialization ----------
   serializeEntity(e) {
     switch (e.kind) {
-      case 'unit': return { i: e.id, k: 'u', t: e.type, o: e.owner, x: +e.x.toFixed(2), y: +e.y.toFixed(2), hp: Math.ceil(e.hp), m: e.maxHp, f: +e.facing.toFixed(2), a: e.anim, at: e.lastAttackTick, hd: e.hidden ? 1 : 0, c: e.carry ? e.carry.res : '', o2: e.order.type, tg: e.order.targetId || e.engage || 0, dx: e.order.x, dy: e.order.y };
+      case 'unit': return { i: e.id, k: 'u', t: e.type, o: e.owner, x: +e.x.toFixed(2), y: +e.y.toFixed(2), hp: Math.ceil(e.hp), m: e.maxHp, f: +e.facing.toFixed(2), a: e.anim, at: e.lastAttackTick, hd: e.hidden ? 1 : 0, c: e.carry ? e.carry.res : '', o2: e.order.type, tg: e.order.targetId || e.engage || 0, dx: e.order.x, dy: e.order.y, ab: e.abilityReady || 0, bf: e.buffUntil || 0 };
       case 'building': return { i: e.id, k: 'b', t: e.type, o: e.owner, x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: e.w, h: e.h, hp: Math.ceil(e.hp), m: e.maxHp, bl: e.built ? 1 : 0, pr: +e.progress.toFixed(3), q: e.queue.map(q => ({ t: q.type, p: +q.progress.toFixed(3), rid: q.rid })), r: e.rally, at: e.lastAttackTick, lv: e.level || 1 };
       case 'tree': return { i: e.id, k: 't', x: e.x, y: e.y, tx: e.tx, ty: e.ty, a: e.amount, v: e.v };
       case 'mine': return { i: e.id, k: 'm', x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: 2, h: 2, a: e.amount };

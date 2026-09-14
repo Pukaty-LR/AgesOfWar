@@ -302,8 +302,9 @@ export class Renderer {
     for (const e of g.ents.values()) {
       if (e.k !== 'u' || e.hd || g.players[e.o].team !== g.myTeam) continue;
       const def = g.unitDef(e); if (!def || !def.aura) continue;
-      const [sx, sy] = this.worldToScreen(e.rx ?? e.x, e.ry ?? e.y); const r = def.aura.range; const pulse = 0.5 + Math.sin(this.time * 2) * 0.15;
-      ctx.strokeStyle = `rgba(255,220,120,${pulse * 0.5})`; ctx.lineWidth = 2 * z; ctx.setLineDash([6 * z, 6 * z]); ctx.beginPath(); ctx.ellipse(sx, sy, r * TW / 2 * z, r * TH / 2 * z, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      const [sx, sy] = this.worldToScreen(e.rx ?? e.x, e.ry ?? e.y); const buffed = def.ability && e.bf > g.tickNow(); const r = buffed ? def.ability.range : def.aura.range; const pulse = 0.5 + Math.sin(this.time * (buffed ? 6 : 2)) * 0.15;
+      ctx.strokeStyle = buffed ? `rgba(255,240,160,${pulse + 0.3})` : `rgba(255,220,120,${pulse * 0.5})`; ctx.lineWidth = (buffed ? 3 : 2) * z; ctx.setLineDash([6 * z, 6 * z]); ctx.beginPath(); ctx.ellipse(sx, sy, r * TW / 2 * z, r * TH / 2 * z, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      if (buffed) { const grd = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * TW / 2 * z); grd.addColorStop(0, 'rgba(255,220,120,0.12)'); grd.addColorStop(1, 'rgba(255,220,120,0)'); ctx.fillStyle = grd; ctx.beginPath(); ctx.ellipse(sx, sy, r * TW / 2 * z, r * TH / 2 * z, 0, 0, Math.PI * 2); ctx.fill(); }
     }
     // rally points of selected buildings
     for (const id of g.selection) {

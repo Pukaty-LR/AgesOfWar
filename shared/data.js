@@ -39,7 +39,8 @@ const tierUnits = {
   chariot:   { role: 'cavalry',  hp: 230, armor: 3, dmg: 22, range: 1.0, cooldown: 1.2, speed: 4.0, sight: 8, pop: 4, size: 0.5, trainTime: 30, cost: { p: 200, s: 120 }, building: 'stable', domain: 'land', projectile: null, splash: 0.9, bonus: { infantry: 1.4 } },
   ballista:  { role: 'siege',    hp: 110, armor: 1, dmg: 45, range: 9,   cooldown: 2.5, speed: 1.8, sight: 10, pop: 3, size: 0.5, trainTime: 28, cost: { p: 140, s: 110 }, building: 'siege', domain: 'land', projectile: 'bolt', minRange: 1.5, bonus: { infantry: 1.6, cavalry: 1.6, building: 1.5 } },
   heavyship: { role: 'ship',     hp: 520, armor: 5, dmg: 40, range: 7,   cooldown: 1.6, speed: 3.0, sight: 10, pop: 5, size: 0.7, trainTime: 36, cost: { p: 220, s: 260 }, building: 'dock', domain: 'sea', projectile: 'bolt', bonus: { building: 1.6, ship: 1.3 } },
-  hero:      { role: 'cavalry',  hp: 620, armor: 6, dmg: 42, range: 1.0, cooldown: 1.0, speed: 3.6, sight: 10, pop: 6, size: 0.46, trainTime: 60, cost: { p: 500, s: 200 }, building: 'hall', domain: 'land', projectile: null, unique: true, aura: { range: 5, dmg: 1.2 }, bonus: {} },
+  hero:      { role: 'cavalry',  hp: 620, armor: 6, dmg: 42, range: 1.0, cooldown: 1.0, speed: 3.6, sight: 10, pop: 6, size: 0.46, trainTime: 60, cost: { p: 500, s: 200 }, building: 'hall', domain: 'land', projectile: null, unique: true, aura: { range: 5, dmg: 1.2 }, bonus: {},
+               ability: { id: 'warcry', name: 'Válečný pokřik', desc: 'Spojenci v okruhu 6 mají 12 s +35 % útok a +2 pancíř.', range: 6, dmg: 1.35, armor: 2, duration: 12, cooldown: 60, hotkey: 'C' } },
   // ww2 variants
   sniper:    { role: 'ranged',   hp: 60,  armor: 0, dmg: 32, range: 8,   cooldown: 2.2, speed: 2.6, sight: 10, pop: 2, size: 0.32, trainTime: 20, cost: { p: 90, s: 40 },  building: 'barracks', domain: 'land', projectile: 'bullet', bonus: { infantry: 1.5, ranged: 1.6 } },
   flamer:    { role: 'infantry', hp: 105, armor: 1, dmg: 7,  range: 2.2, cooldown: 0.25, speed: 2.5, sight: 7, pop: 2, size: 0.34, trainTime: 18, cost: { p: 80, s: 40 },  building: 'barracks', domain: 'land', projectile: 'flame', splash: 0.8, bonus: { building: 2.2, infantry: 1.2 } },
@@ -49,7 +50,8 @@ const tierUnits = {
   tankdestroyer: { role: 'cavalry', hp: 380, armor: 8, dmg: 72, range: 6.5, cooldown: 2.5, speed: 3.0, sight: 9, pop: 4, size: 0.5, trainTime: 34, cost: { p: 280, s: 160 }, building: 'stable', domain: 'land', projectile: 'shell', bonus: { cavalry: 2.2 } },
   rocketart: { role: 'siege',    hp: 120, armor: 1, dmg: 36, range: 11,  cooldown: 4.5, speed: 2.4, sight: 10, pop: 4, size: 0.5, trainTime: 34, cost: { p: 220, s: 160 }, building: 'siege', domain: 'land', projectile: 'shell', splash: 2.0, minRange: 3, bonus: { building: 2.0, infantry: 1.5 } },
   cruiser:   { role: 'ship',     hp: 660, armor: 6, dmg: 50, range: 8.5, cooldown: 1.8, speed: 2.8, sight: 11, pop: 6, size: 0.8, trainTime: 44, cost: { p: 280, s: 320 }, building: 'dock', domain: 'sea', projectile: 'shell', bonus: { building: 1.6, ship: 1.3 } },
-  hero2:     { role: 'cavalry',  hp: 520, armor: 7, dmg: 24, range: 4,   cooldown: 0.6, speed: 3.6, sight: 11, pop: 6, size: 0.5, trainTime: 60, cost: { p: 500, s: 200 }, building: 'hall', domain: 'land', projectile: 'bullet', unique: true, aura: { range: 5, dmg: 1.2 }, bonus: {} },
+  hero2:     { role: 'cavalry',  hp: 520, armor: 7, dmg: 24, range: 4,   cooldown: 0.6, speed: 3.6, sight: 11, pop: 6, size: 0.5, trainTime: 60, cost: { p: 500, s: 200 }, building: 'hall', domain: 'land', projectile: 'bullet', unique: true, aura: { range: 5, dmg: 1.2 }, bonus: {},
+               ability: { id: 'warcry', name: 'Rozkaz k útoku', desc: 'Spojenci v okruhu 6 mají 12 s +35 % útok a +2 pancíř.', range: 6, dmg: 1.35, armor: 2, duration: 12, cooldown: 60, hotkey: 'C' } },
 };
 
 const commonBuildings = {
@@ -221,7 +223,7 @@ export const ERAS = {
       chariot:  { ...tierUnits.chariot,    name: 'Bojový mech',     sprite: 'sf_mech', desc: 'Kráčející mech s plazmovými kanóny.', range: 3.5, projectile: 'plasma', splash: 0.9, speed: 3.2 },
       ballista: { ...tierUnits.ballista,   name: 'Laserová platforma', sprite: 'sf_laser', desc: 'Přesný dalekonosný laser.', range: 10, projectile: 'rail' },
       heavyship: { ...tierUnits.heavyship, name: 'Hover křižník',   sprite: 'sf_cruiser', desc: 'Těžká hover válečná loď.', range: 8, projectile: 'plasmaShell', splash: 1.0 },
-      hero:     { ...tierUnits.hero2,      name: 'Velitel v mechu', sprite: 'sf_hero', desc: 'Jediný hrdina. Spojenci v okolí +20 % útok.', range: 4, projectile: 'plasma', hp: 700, dmg: 34 },
+      hero:     { ...tierUnits.hero2,      name: 'Velitel v mechu', sprite: 'sf_hero', desc: 'Jediný hrdina. Spojenci v okolí +20 % útok.', range: 4, projectile: 'plasma', hp: 700, dmg: 34, ability: { ...tierUnits.hero2.ability, name: 'Přetížení zbraní' } },
     },
     buildings: {
       hall:     { ...commonBuildings.hall,     name: 'Nexus',              sprite: 'sf_hall',     desc: 'Hlavní budova. Vyrábí drony, sklad surovin, +40 populace.' },

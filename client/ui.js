@@ -193,6 +193,8 @@ export class UI {
     if (units.length) {
       const hasWorker = units.some(e => game.unitDef(e).role === 'worker');
       const hasMil = units.some(e => game.unitDef(e).role !== 'worker');
+      const abUnit = units.find(e => game.unitDef(e).ability);
+      if (abUnit) { const ab = game.unitDef(abUnit).ability; const left = Math.max(0, Math.ceil(((abUnit.ab || 0) - game.tickNow()) / 20)); btn(9, { label: ab.name, labelFn: () => { const l = Math.max(0, Math.ceil(((abUnit.ab || 0) - game.tickNow()) / 20)); return l > 0 ? `${ab.name} (${l} s)` : ab.name; }, key: ab.hotkey, icon: () => actionIcon('warcry'), desc: `${ab.desc} Přebití ${ab.cooldown} s.`, act: () => game.useAbility(), canAfford: () => (abUnit.ab || 0) <= game.tickNow() }); }
       if (hasMil) btn(8, { label: 'Hlídkovat', key: 'P', icon: () => actionIcon('patrol'), desc: 'Jednotky hlídkují mezi současnou pozicí a cílem a útočí na vše, co potkají.', act: () => { game.state.mode = 'patrol'; }, active: () => game.state.mode === 'patrol' });
       if (this.buildMenu && hasWorker) {
         const order = ['hall', 'house', 'barracks', 'stable', 'siege', 'dock', 'tower', 'wall'];
@@ -244,7 +246,7 @@ export class UI {
     });
     this.refreshCommandCardState(game);
   }
-  refreshCommandCardState(game) { for (const { el, d } of this.cmdButtons) { el.classList.toggle('disabled', !!(d.canAfford && !d.canAfford())); el.classList.toggle('active', !!(d.active && d.active())); } }
+  refreshCommandCardState(game) { for (const { el, d } of this.cmdButtons) { el.classList.toggle('disabled', !!(d.canAfford && !d.canAfford())); el.classList.toggle('active', !!(d.active && d.active())); if (d.labelFn) { const l = el.querySelector('.lbl'); const t = d.labelFn(); if (l && l.textContent !== t) l.textContent = t; } } }
   handleHotkey(game, k) {
     const K = k.toUpperCase();
     for (const { d } of this.cmdButtons) if (d.key && d.key.toUpperCase() === K) { if (d.canAfford && !d.canAfford()) { game.audio.sfx('error'); this.alert('Nedostatek surovin.', true); return true; } d.act(); this.refreshCommandCardState(game); return true; }
