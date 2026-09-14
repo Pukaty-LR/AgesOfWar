@@ -9,8 +9,8 @@ const PROJ_ARC = { arrow: 0.35, bolt: 0.2, bullet: 0, rock: 0.9, shell: 0.7, fla
 const MAX_TEAMS = 8;
 
 export class Sim {
-  constructor({ seed = 1, size = 96, eraId = 'antiquity', players = [] }) {
-    this.seed = seed;
+  constructor({ seed = 1, size = 96, eraId = 'antiquity', players = [], mapStyle = 'continent' }) {
+    this.seed = seed; this.mapStyle = mapStyle;
     this.rng = mulberry32(seed ^ 0x9E3779B9);
     this.eraId = eraId;
     this.era = ERAS[eraId];
@@ -20,7 +20,7 @@ export class Sim {
     this.events = [];
     this.removed = [];
     this.gameOver = null;
-    this.map = generateMap(seed, size, Math.max(2, players.length));
+    this.map = generateMap(seed, size, Math.max(2, players.length), mapStyle);
     const { w, h } = this.map;
     this.w = w; this.h = h;
     this.blockId = new Int32Array(w * h);      // entity id occupying tile (static)

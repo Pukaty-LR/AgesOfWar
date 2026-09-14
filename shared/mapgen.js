@@ -36,8 +36,18 @@ export function makeNoise(rng) {
   };
 }
 
-export function generateMap(seed, size, numPlayers) {
+export const MAP_STYLES = {
+  continent: { name: 'Pevnina s mořem', desc: 'Moře uprostřed s brody, jezera.' },
+  river: { name: 'Řeka', desc: 'Úzká klikatá řeka s několika brody.' },
+  islands: { name: 'Ostrovy', desc: 'Základny na ostrovech, lodě rozhodují. Úzké písčité šíje spojují ostrovy.' },
+  plains: { name: 'Pláně', desc: 'Skoro bez vody, rychlé pozemní boje.' },
+  lakes: { name: 'Jezera', desc: 'Mnoho jezer, žádné centrální moře.' },
+};
+export const MAP_SIZES = { small: { name: 'Malá', size: 72 }, medium: { name: 'Střední', size: 96 }, large: { name: 'Velká', size: 128 } };
+
+export function generateMap(seed, size, numPlayers, style = 'continent') {
   const rng = mulberry32(seed);
+  const ST = MAP_STYLES[style] ? style : 'continent';
   const noise = makeNoise(rng);
   const noise2 = makeNoise(rng);
   const w = size, h = size;
@@ -55,27 +65,28 @@ export function generateMap(seed, size, numPlayers) {
     spawns.push({ x: Math.round(cx + Math.cos(a) * rx), y: Math.round(cy + Math.sin(a) * ry) });
   }
 
-  // Sea: a sinuous band through the center, plus noise lakes.
+  // Sea: a sinuous band through the center (continent/river), plus noise lakes; style shifts the water level.
   const bandAngle = rng() * Math.PI;
-  const bandW = 5 + rng() * 4;
+  const bandW = ST === 'river' ? 2.4 + rng() * 1.2 : 5 + rng() * 4;
+  const bandDepth = ST === 'river' ? 0.7 : 0.5;
+  const hasBand = ST === 'continent' || ST === 'river';
+  const levelShift = { continent: 0, river: 0.06, islands: -0.16, plains: 0.16, lakes: -0.03 }[ST];
   const dx = Math.cos(bandAngle), dy = Math.sin(bandAngle);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = y * w + x;
-    let v = noise(x / 22, y / 22, 5);              // 0..1
-    v = (v - 0.5) * 1.6 + 0.55;
-    // distance to band line through center, perturbed
+    let v = noise(x / (ST === 'islands' ? 16 : 22), y / (ST === 'islands' ? 16 : 22), 5);              // 0..1
+    v = (v - 0.5) * 1.6 + 0.55 + levelShift;
     const px = x - cx, py = y - cy;
-    const d = Math.abs(px * -dy + py * dx) + (noise2(x / 15, y / 15, 3) - 0.5) * 10;
-    const along = px * dx + py * dy;
-    const band = Math.max(0, 1 - d / bandW);
-    v -= band * 0.5;
-    // map edge falloff slightly upward (land at edges)
-    const ex = Math.min(x, w - 1 - x), ey = Math.min(y, h - 1 - y);
-    const e = Math.min(ex, ey);
-    if (e < 3) v += (3 - e) * 0.08;
-    // fords: land crossings along the band at intervals
-    const fordPhase = ((along + 1000) % 26);
-    if (fordPhase < 5 && Math.abs(along) > 6) v += band * 0.55;
+    if (hasBand) {
+      const d = Math.abs(px * -dy + py * dx) + (noise2(x / 15, y / 15, 3) - 0.5) * (ST === 'river' ? 6 : 10);
+      const along = px * dx + py * dy;
+      const band = Math.max(0, 1 - d / bandW);
+      v -= band * bandDepth;
+      const fordPhase = ((along + 1000) % (ST === 'river' ? 22 : 26));
+      if (fordPhase < (ST === 'river' ? 3 : 5) && Math.abs(along) > 6) v += band * (bandDepth + 0.05);
+    }
+    if (ST === 'islands') { const r = Math.hypot(px / (w / 2), py / (h / 2)); v -= Math.max(0, r - 0.55) * 0.5; } // open sea toward the edges
+    else { const ex = Math.min(x, w - 1 - x), ey = Math.min(y, h - 1 - y); const e = Math.min(ex, ey); if (e < 3) v += (3 - e) * 0.08; }
     height[i] = v;
     moisture[i] = noise2(x / 9 + 50, y / 9 + 50, 3);
   }
@@ -132,10 +143,11 @@ export function generateMap(seed, size, numPlayers) {
     const steps = Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y));
     for (let s = 0; s <= steps; s++) {
       const x = Math.round(a.x + (b.x - a.x) * s / steps), y = Math.round(a.y + (b.y - a.y) * s / steps);
-      for (let oy = -2; oy <= 2; oy++) for (let ox = -2; ox <= 2; ox++) {
+      const cw = ST === 'islands' ? 1 : 2;
+      for (let oy = -cw; oy <= cw; oy++) for (let ox = -cw; ox <= cw; ox++) {
         const tx = x + ox, ty = y + oy; if (tx < 0 || ty < 0 || tx >= w || ty >= h) continue;
         const i = ty * w + tx;
-        if (!isLand(tiles[i])) { tiles[i] = (Math.abs(ox) === 2 || Math.abs(oy) === 2) ? T.SAND : T.DIRT; height[i] = 0.42; }
+        if (!isLand(tiles[i])) { tiles[i] = (Math.abs(ox) === cw || Math.abs(oy) === cw || ST === 'islands') ? T.SAND : T.DIRT; height[i] = 0.42; }
       }
     }
   }

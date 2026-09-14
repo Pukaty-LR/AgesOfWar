@@ -1,6 +1,6 @@
 // App: menus, lobby, connection, and game orchestration.
 import { ERAS, ERA_ORDER, TEAM_COLORS, MAX_PLAYERS } from '../shared/data.js';
-import { generateMap } from '../shared/mapgen.js';
+import { generateMap, MAP_STYLES, MAP_SIZES } from '../shared/mapgen.js';
 import { Net } from './net.js';
 import { Audio } from './audio.js';
 import { UI } from './ui.js';
@@ -131,6 +131,10 @@ class App {
     $('lobby-title').textContent = `${l.name} · ${era.name}`;
     this.renderEraCards($('lobby-eras'), l.era, isHost ? e => this.net.send({ t: 'setEra', era: e }) : null, true);
     $('lobby-era-desc').textContent = `${era.tagline} Suroviny: ${era.resources.p.name} (${era.nodes.mine.name}) a ${era.resources.s.name} (${era.nodes.secondary.name}).`;
+    const ms = $('map-style'), mz = $('map-size');
+    if (!ms.options.length) { for (const [k, v] of Object.entries(MAP_STYLES)) { const o = document.createElement('option'); o.value = k; o.textContent = v.name; ms.appendChild(o); } for (const [k, v] of Object.entries(MAP_SIZES)) { const o = document.createElement('option'); o.value = k; o.textContent = `${v.name} (${v.size}×${v.size})`; mz.appendChild(o); } ms.onchange = () => this.net.send({ t: 'setMap', style: ms.value }); mz.onchange = () => this.net.send({ t: 'setMap', size: mz.value }); }
+    ms.value = l.mapStyle || 'continent'; mz.value = l.mapSize || 'medium'; ms.disabled = !isHost; mz.disabled = !isHost;
+    $('map-desc').textContent = (MAP_STYLES[l.mapStyle] || MAP_STYLES.continent).desc;
     const tb = $('slot-list'); tb.innerHTML = '';
     l.slots.forEach((s, idx) => {
       const tr = document.createElement('tr'); const mine = s.id === this.myId; const editable = mine || (isHost && s.isAI);

@@ -8,6 +8,7 @@ import { WebSocketServer } from 'ws';
 import { Sim } from '../shared/sim.js';
 import { AIPlayer } from '../shared/ai.js';
 import { ERAS, TICK_RATE, NET_RATE, MAX_PLAYERS, TEAM_COLORS, MAP_SIZE } from '../shared/data.js';
+import { MAP_STYLES, MAP_SIZES } from '../shared/mapgen.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -43,7 +44,7 @@ function broadcastLobbyList() {
   for (const c of clients.values()) if (!c.lobby) send(c.ws, { t: 'lobbies', list });
 }
 function lobbyState(l) {
-  return { id: l.id, name: l.name, hostId: l.hostId, era: l.era, max: l.max, state: l.state, slots: l.slots.map(s => ({ id: s.id, name: s.name, faction: s.faction, team: s.team, color: s.color, ready: s.ready, isAI: s.isAI, diff: s.diff, connected: s.isAI || (clients.get(s.id)?.ws.readyState === 1) })) };
+  return { id: l.id, name: l.name, hostId: l.hostId, era: l.era, max: l.max, state: l.state, mapStyle: l.mapStyle, mapSize: l.mapSize, slots: l.slots.map(s => ({ id: s.id, name: s.name, faction: s.faction, team: s.team, color: s.color, ready: s.ready, isAI: s.isAI, diff: s.diff, connected: s.isAI || (clients.get(s.id)?.ws.readyState === 1) })) };
 }
 function broadcastLobby(l) { const st = { t: 'lobby', lobby: lobbyState(l) }; for (const s of l.slots) if (!s.isAI) { const c = clients.get(s.id); if (c) send(c.ws, st); } }
 function freeColor(l) { const used = new Set(l.slots.map(s => s.color)); for (let i = 0; i < TEAM_COLORS.length; i++) if (!used.has(i)) return i; return 0; }
@@ -77,7 +78,7 @@ function leaveLobby(c, silent = false, explicit = false) {
 function startGame(l) {
   const seed = (Math.random() * 0x7fffffff) | 0;
   const players = l.slots.map(s => ({ name: s.name, faction: s.faction, team: s.team, color: s.color, isAI: s.isAI }));
-  const sim = new Sim({ seed, size: MAP_SIZE, eraId: l.era, players });
+  const sim = new Sim({ seed, size: (MAP_SIZES[l.mapSize] || MAP_SIZES.medium).size, eraId: l.era, players, mapStyle: l.mapStyle || 'continent' });
   const ais = l.slots.map((s, i) => s.isAI ? new AIPlayer(sim, i, s.diff || 'normal') : null).filter(Boolean);
   const game = { sim, ais, seed, interval: null, acc: 0, last: Date.now(), chat(text) { for (const s of l.slots) if (!s.isAI) { const c = clients.get(s.id); if (c) send(c.ws, { t: 'chat', from: '', text, sys: true }); } } };
   l.game = game; l.state = 'game';
@@ -155,7 +156,7 @@ wss.on('connection', (ws, req) => {
       case 'host': {
         if (l) leaveLobby(c, true);
         const era = ERAS[m.era] && ERAS[m.era].available ? m.era : 'antiquity';
-        const lobby = { id: nextLobbyId++, name: String(m.name || `${c.name}ova hra`).slice(0, 28), hostId: c.id, era, max: Math.min(MAX_PLAYERS, Math.max(2, m.max | 0 || 4)), state: 'lobby', slots: [], game: null };
+        const lobby = { id: nextLobbyId++, name: String(m.name || `${c.name}ova hra`).slice(0, 28), hostId: c.id, era, max: Math.min(MAX_PLAYERS, Math.max(2, m.max | 0 || 4)), state: 'lobby', slots: [], game: null, mapStyle: 'continent', mapSize: 'medium' };
         lobby.slots.push({ id: c.id, name: c.name, faction: defaultFaction(era), team: 0, color: 0, ready: false, isAI: false, token: c.token });
         lobbies.set(lobby.id, lobby); c.lobby = lobby;
         broadcastLobby(lobby); broadcastLobbyList();
@@ -197,6 +198,13 @@ wss.on('connection', (ws, req) => {
         if (!ERAS[m.era] || !ERAS[m.era].available) return;
         l.era = m.era; for (const s of l.slots) { s.faction = defaultFaction(l.era); s.ready = false; }
         broadcastLobby(l); broadcastLobbyList();
+        break;
+      }
+      case 'setMap': {
+        if (!l || l.hostId !== c.id || l.state !== 'lobby') return;
+        if (m.style && MAP_STYLES[m.style]) l.mapStyle = m.style;
+        if (m.size && MAP_SIZES[m.size]) l.mapSize = m.size;
+        broadcastLobby(l);
         break;
       }
       case 'addBot': {

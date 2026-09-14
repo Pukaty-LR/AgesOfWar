@@ -77,6 +77,9 @@ tr:hover td { background: rgba(255,220,150,0.04); }
 .era-card .lock { position: absolute; top: 8px; right: 10px; font-size: 11px; color: #e0b34b; background: #2b1d0b; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--line); }
 .era-pick.small .era-card { padding: 8px 10px; min-height: 0; } .era-pick.small .era-tag { display: none; }
 .era-desc { font-size: 13px; color: #cdbb95; margin-bottom: 10px; min-height: 18px; }
+.map-opts { display: flex; gap: 14px; align-items: center; margin: 0 0 12px; font-size: 13px; color: #cdbb95; flex-wrap: wrap; }
+.map-opts label { display: flex; align-items: center; gap: 6px; } .map-opts select { padding: 5px 8px; font-size: 14px; }
+.map-opts span { color: #9b8a6a; font-style: italic; }
 .lobby-grid { display: grid; grid-template-columns: 1fr 300px; gap: 18px; }
 .lobby-right { display: flex; flex-direction: column; gap: 8px; }
 .chat { flex: 1; min-height: 300px; max-height: 420px; overflow-y: auto; background: #120d08; border: 1px solid var(--line); border-radius: 4px; padding: 8px; font-size: 14px; }
