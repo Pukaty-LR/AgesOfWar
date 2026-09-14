@@ -348,6 +348,7 @@ export class Sim {
     if (!this.inBounds(x0, y0) || !this.inBounds(x1, y1)) return null;
     const g = this.buildable;
     if (!g[y0 * this.w + x0] || !g[y1 * this.w + x1]) return null;
+    if (x0 === x1 && y0 === y1) return [{ x: x0, y: y0 }];
     const p = astar(g, this.w, this.h, x0, y0, (x, y) => x === x1 && y === y1, x1, y1, 20000);
     if (!p) return null;
     const last = p[p.length - 1];
@@ -823,7 +824,7 @@ export class Sim {
       case 'unit': return { i: e.id, k: 'u', t: e.type, o: e.owner, x: +e.x.toFixed(2), y: +e.y.toFixed(2), hp: Math.ceil(e.hp), m: e.maxHp, f: +e.facing.toFixed(2), a: e.anim, at: e.lastAttackTick, hd: e.hidden ? 1 : 0, c: e.carry ? e.carry.res : '', o2: e.order.type, tg: e.order.targetId || e.engage || 0, dx: e.order.x, dy: e.order.y };
       case 'building': return { i: e.id, k: 'b', t: e.type, o: e.owner, x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: e.w, h: e.h, hp: Math.ceil(e.hp), m: e.maxHp, bl: e.built ? 1 : 0, pr: +e.progress.toFixed(3), q: e.queue.map(q => ({ t: q.type, p: +q.progress.toFixed(3) })), r: e.rally, at: e.lastAttackTick };
       case 'tree': return { i: e.id, k: 't', x: e.x, y: e.y, tx: e.tx, ty: e.ty, a: e.amount, v: e.v };
-      case 'mine': return { i: e.id, k: 'm', x: e.x, y: e.y, tx: e.tx, ty: e.ty, a: e.amount };
+      case 'mine': return { i: e.id, k: 'm', x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: 2, h: 2, a: e.amount };
       case 'proj': return { i: e.id, k: 'p', t: e.type, x: +e.x.toFixed(2), y: +e.y.toFixed(2), sx: e.sx, sy: e.sy, tx: +e.tx.toFixed(2), ty: +e.ty.toFixed(2), arc: e.arc, o: e.owner };
     }
     return null;

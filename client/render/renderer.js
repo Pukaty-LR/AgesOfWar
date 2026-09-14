@@ -5,6 +5,7 @@ import { TW, TH, S, iso, facingToDir, unitSprite, buildingSprite, treeSprite, mi
 const CHUNK = 12;
 const ELEV = 56;            // px per height unit above sea level
 const SEA = 0.36;
+const FR = 3;               // fog cells per tile
 
 export class Renderer {
   constructor(canvas, game) {
@@ -32,7 +33,10 @@ export class Renderer {
     const H = (x, y) => map.height[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))];
     for (let y = 0; y <= h; y++) for (let x = 0; x <= w; x++) this.vh[y * (w + 1) + x] = (H(x - 1, y - 1) + H(x, y - 1) + H(x - 1, y) + H(x, y)) / 4;
     this.visible = new Uint8Array(w * h); this.explored = new Uint8Array(w * h);
-    this.fogCanvas = document.createElement('canvas'); this.fogCanvas.width = w; this.fogCanvas.height = h; this.fogCtx = this.fogCanvas.getContext('2d'); this.fogImg = this.fogCtx.createImageData(w, h);
+    this.fw = w * FR; this.fh = h * FR; this.visF = new Uint8Array(this.fw * this.fh); this.expF = new Uint8Array(this.fw * this.fh);
+    this.fogRaw = document.createElement('canvas'); this.fogRaw.width = this.fw; this.fogRaw.height = this.fh; this.fogRawCtx = this.fogRaw.getContext('2d'); this.fogImg = this.fogRawCtx.createImageData(this.fw, this.fh);
+    this.fogCanvas = document.createElement('canvas'); this.fogCanvas.width = this.fw; this.fogCanvas.height = this.fh; this.fogCtx = this.fogCanvas.getContext('2d');
+    this.fogCtx.fillStyle = 'rgb(6,5,8)'; this.fogCtx.fillRect(0, 0, this.fw, this.fh);
     this.particles = []; this.effects = [];
   }
   elevV(vx, vy) { const v = this.vh[vy * (this.map.w + 1) + vx]; return Math.max(0, v - SEA) * ELEV; }
@@ -140,15 +144,17 @@ export class Renderer {
 
   // ---------- fog ----------
   updateFog(ents, myTeam, players) {
-    const w = this.map.w, h = this.map.h; const vis = this.visible; vis.fill(0);
-    const mark = (x, y, r) => { const r2 = r * r; const x0 = Math.max(0, (x - r) | 0), x1 = Math.min(w - 1, (x + r) | 0), y0 = Math.max(0, (y - r) | 0), y1 = Math.min(h - 1, (y + r) | 0); for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) { const dx = tx + 0.5 - x, dy = ty + 0.5 - y; if (dx * dx + dy * dy <= r2) vis[ty * w + tx] = 1; } };
+    const w = this.map.w, h = this.map.h, fw = this.fw, fh = this.fh; const vis = this.visF; vis.fill(0);
+    const mark = (x, y, r) => { const R = r * FR, R2 = R * R; const cx = x * FR, cy = y * FR; const x0 = Math.max(0, (cx - R) | 0), x1 = Math.min(fw - 1, (cx + R) | 0), y0 = Math.max(0, (cy - R) | 0), y1 = Math.min(fh - 1, (cy + R) | 0); for (let ty = y0; ty <= y1; ty++) { const dy = ty + 0.5 - cy; const row = ty * fw; for (let tx = x0; tx <= x1; tx++) { const dx = tx + 0.5 - cx; if (dx * dx + dy * dy <= R2) vis[row + tx] = 1; } } };
     for (const e of ents.values()) {
       if (e.o === undefined || players[e.o].team !== myTeam) continue;
       if (e.k === 'u') mark(e.x, e.y, e.sight || 7); else if (e.k === 'b') mark(e.x, e.y, e.t === 'tower' ? 9 : (e.w > 1 ? 8 : 5));
     }
-    const d = this.fogImg.data;
-    for (let i = 0; i < w * h; i++) { if (vis[i]) this.explored[i] = 1; const a = vis[i] ? 0 : (this.explored[i] ? 120 : 255); d[i * 4] = 6; d[i * 4 + 1] = 5; d[i * 4 + 2] = 8; d[i * 4 + 3] = a; }
-    this.fogCtx.putImageData(this.fogImg, 0, 0);
+    const d = this.fogImg.data; const exp = this.expF;
+    for (let i = 0; i < fw * fh; i++) { if (vis[i]) exp[i] = 1; const a = vis[i] ? 0 : (exp[i] ? 125 : 255); d[i * 4] = 6; d[i * 4 + 1] = 5; d[i * 4 + 2] = 8; d[i * 4 + 3] = a; }
+    this.fogRawCtx.putImageData(this.fogImg, 0, 0);
+    const fc = this.fogCtx; fc.clearRect(0, 0, fw, fh); fc.filter = 'blur(1.2px)'; fc.drawImage(this.fogRaw, 0, 0); fc.filter = 'none';
+    for (let ty = 0; ty < h; ty++) for (let tx = 0; tx < w; tx++) { const fi = (ty * FR + 1) * fw + tx * FR + 1; const i = ty * w + tx; this.visible[i] = vis[fi]; if (vis[fi]) this.explored[i] = 1; }
   }
   isVisibleTile(x, y) { const w = this.map.w; const tx = x | 0, ty = y | 0; if (tx < 0 || ty < 0 || tx >= w || ty >= this.map.h) return false; return this.visible[ty * w + tx] === 1; }
   isExploredTile(x, y) { const w = this.map.w; const tx = x | 0, ty = y | 0; if (tx < 0 || ty < 0 || tx >= w || ty >= this.map.h) return false; return this.explored[ty * w + tx] === 1; }
@@ -420,7 +426,7 @@ export class Renderer {
     ctx.translate(ox, oy); ctx.scale(z, z);
     ctx.transform(TW / 2, TH / 2, -TW / 2, TH / 2, 0, 0); // world tile units -> iso px
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(this.fogCanvas, 0, 0, this.map.w, this.map.h);
+    ctx.drawImage(this.fogCanvas, 0, 0, this.fw, this.fh, 0, 0, this.map.w, this.map.h);
     ctx.restore();
   }
   drawOverlays(ctx, state, ox, oy, z, list) {

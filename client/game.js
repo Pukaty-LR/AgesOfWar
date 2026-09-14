@@ -11,7 +11,7 @@ export class Game {
     this.renderer = new Renderer(canvas, this);
     this.ents = new Map(); this.players = []; this.me = 0; this.myTeam = 0;
     this.selection = new Set(); this.groups = {};
-    this.state = { mode: null, placing: null, drag: null, dragMoved: false, mouse: { x: 0, y: 0 }, altHeld: false, shift: false, ctrl: false, midDrag: null };
+    this.state = { mode: null, placing: null, drag: null, dragMoved: false, mouse: { x: -1, y: -1 }, altHeld: false, shift: false, ctrl: false, midDrag: null };
     this.keys = {}; this.running = false; this.lastFrame = 0; this.lastTick = 0; this.lastSnapAt = 0;
     this.lastAlert = null; this.lastFogAt = 0; this.combatHeat = 0; this.chatOpen = false;
     this.settings = { scrollSpeed: 60, edgeScroll: true, showHp: true };
@@ -33,7 +33,7 @@ export class Game {
     this.renderer.setMap(this.map, this.era);
     const s = this.map.spawns[this.me]; this.renderer.cam.x = s.x; this.renderer.cam.y = s.y; this.renderer.cam.zoom = 1;
     this.gameOver = null; this.running = true; this.startedAt = performance.now(); this.tick = 0; this.lastSnapAt = performance.now();
-    this.state.mode = null; this.state.placing = null; this.state.drag = null;
+    this.state.mode = null; this.state.placing = null; this.state.drag = null; this.state.mouse = { x: -1, y: -1 }; this.keys = {};
     this.ui.onGameStart(this);
     this.audio.startMusic(this.eraDef.music);
     this.renderer.resize();
@@ -70,8 +70,8 @@ export class Game {
     this.ents.delete(id); this.selection.delete(id);
   }
   setBlocked(e, on) {
-    const w = this.map.w;
-    for (let y = e.ty; y < e.ty + (e.h || 1); y++) for (let x = e.tx; x < e.tx + (e.w || 1); x++) { if (x < 0 || y < 0 || x >= w || y >= this.map.h) continue; this.blocked[y * w + x] = on ? 1 : 0; }
+    const w = this.map.w; const ew = e.w || (e.k === 'm' ? 2 : 1), eh = e.h || (e.k === 'm' ? 2 : 1);
+    for (let y = e.ty; y < e.ty + eh; y++) for (let x = e.tx; x < e.tx + ew; x++) { if (x < 0 || y < 0 || x >= w || y >= this.map.h) continue; this.blocked[y * w + x] = on ? 1 : 0; }
     if (e.k === 'b' && e.t === 'wall') { const key = e.tx + ',' + e.ty; if (on) this.wallGrid.set(key, e.o); else this.wallGrid.delete(key); }
   }
   wallAt(tx, ty, owner) { const o = this.wallGrid.get(tx + ',' + ty); return o !== undefined && this.players[o].team === this.players[owner].team; }
@@ -237,6 +237,7 @@ export class Game {
       if (e.button === 1) { st.midDrag = { x: sx, y: sy }; e.preventDefault(); return; }
       if (e.button === 0) {
         if (st.placing) { this.confirmPlacement(); return; }
+        if (st.mode === 'move') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.orderMove(wx, wy); if (!st.shift) st.mode = null; return; }
         if (st.mode === 'amove' || st.mode === 'attack') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.orderAttackMove(wx, wy, this.renderer.pick(sx, sy)); if (!st.shift) st.mode = null; return; }
         if (st.mode === 'rally') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); const t = this.renderer.pick(sx, sy); this.send({ t: 'rally', ids: this.myBuildingsSelected(), x: wx, y: wy, targetId: t ? t.i : 0 }); st.mode = null; this.audio.sfx('click'); return; }
         st.drag = { x0: sx, y0: sy, x1: sx, y1: sy }; st.dragMoved = false;

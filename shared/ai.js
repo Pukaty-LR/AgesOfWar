@@ -102,9 +102,10 @@ export class AIPlayer {
     }
 
     // 5. Attack waves
-    const threshold = (hard ? 6 : 9) + this.wave * 3;
+    const threshold = (hard ? 6 : 10) + this.wave * 3;
     const idleArmy = army.filter(u => u.order.type === 'idle');
-    if (!threat && idleArmy.length >= threshold && tick - this.lastAttackTick > 20 * 45) {
+    const minTick = hard ? 20 * 60 * 2.5 : 20 * 60 * 5;
+    if (!threat && idleArmy.length >= threshold && tick - this.lastAttackTick > 20 * 45 && tick > minTick) {
       const target = this.pickEnemyTarget(hall);
       if (target) {
         sim.command(this.pid, { t: 'amove', ids: idleArmy.map(u => u.id), x: target.x, y: target.y });

@@ -85,7 +85,7 @@ export class UI {
     // selected units highlight
     for (const id of game.selection) { const e = game.ents.get(id); if (e && e.k === 'u') { ctx.fillStyle = '#5eff7a'; ctx.fillRect(e.x - 0.7, e.y - 0.7, 1.4, 1.4); } }
     // fog
-    ctx.imageSmoothingEnabled = true; ctx.drawImage(R.fogCanvas, 0, 0);
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(R.fogCanvas, 0, 0, R.fw, R.fh, 0, 0, game.map.w, game.map.h);
     // pings
     const now = performance.now();
     this.pings = this.pings.filter(p => now - p.t < 4000);

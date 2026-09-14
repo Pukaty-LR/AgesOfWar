@@ -12,7 +12,7 @@ const screens = ['menu', 'browser', 'host', 'lobby', 'settings', 'game'];
 
 class App {
   constructor() {
-    this.settings = Object.assign({ name: '', music: 55, sfx: 80, scroll: 60, edge: true, hp: true }, JSON.parse(localStorage.getItem('aow-settings') || '{}'));
+    this.settings = Object.assign({ name: '', music: 55, sfx: 80, scroll: 60, edge: true, hp: false }, JSON.parse(localStorage.getItem('aow-settings') || '{}'));
     this.net = new Net(); this.audio = new Audio(); this.ui = new UI(this);
     this.game = new Game($('game'), this.net, this.audio, this.ui);
     this.lobby = null; this.myId = 0; this.hostEra = 'antiquity'; this.quick = false;
@@ -35,7 +35,7 @@ class App {
     let id = 1;
     for (const t of map.trees) stub.ents.set(id, { i: id++, k: 't', x: t.tx + 0.5, y: t.ty + 0.5, tx: t.tx, ty: t.ty, v: t.v });
     for (const m of map.mines) stub.ents.set(id, { i: id++, k: 'm', x: m.tx, y: m.ty, tx: m.tx - 1, ty: m.ty - 1 });
-    const r = new Renderer(canvas, stub); r.setMap(map, 'antiquity'); r.explored.fill(1); r.visible.fill(1); r.updateFog = () => {}; r.fogCtx.clearRect(0, 0, map.w, map.h);
+    const r = new Renderer(canvas, stub); r.setMap(map, 'antiquity'); r.explored.fill(1); r.visible.fill(1); r.updateFog = () => {}; r.fogCtx.clearRect(0, 0, r.fw, r.fh);
     r.cam.zoom = 1.1; let t0 = performance.now(); let a = 0;
     const loop = t => { if (this.screen !== 'game') { const dt = Math.min(0.05, (t - t0) / 1000); a += dt * 0.05; r.cam.x = 32 + Math.cos(a) * 14; r.cam.y = 32 + Math.sin(a * 0.7) * 14; if (canvas.clientWidth !== r.W || canvas.clientHeight !== r.H) r.resize(); r.draw(dt, { mouse: { x: 0, y: 0 } }); const ctx = r.ctx; ctx.setTransform(r.dpr, 0, 0, r.dpr, 0, 0); ctx.fillStyle = 'rgba(8,6,4,0.35)'; ctx.fillRect(0, 0, r.W, r.H); } t0 = t; requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
@@ -44,6 +44,9 @@ class App {
   // ---------- menus ----------
   bindMenus() {
     $('name').value = this.settings.name;
+    this.hostEra = this.settings.era || 'antiquity';
+    const pickEra = e => { this.hostEra = e; this.settings.era = e; this.save(); this.renderEraCards($('menu-eras'), e, pickEra, true); };
+    this.renderEraCards($('menu-eras'), this.hostEra, pickEra, true);
     $('name').addEventListener('change', () => { this.settings.name = $('name').value.trim(); this.save(); });
     $('btn-quick').onclick = () => { if (!this.name()) return; this.quick = true; this.net.send({ t: 'host', name: `${this.settings.name} vs AI`, era: this.hostEra, max: 2 }); };
     $('btn-host').onclick = () => { if (!this.name()) return; $('host-name').value = `${this.settings.name}ova hra`; this.renderEraCards($('host-eras'), this.hostEra, e => { this.hostEra = e; this.renderEraCards($('host-eras'), e, null, true); }); this.show('host'); };
