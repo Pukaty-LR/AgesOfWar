@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ages of War</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='16,2 30,16 16,30 2,16' fill='%23c9a227'/%3E%3C/svg%3E">
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<!-- ===== MAIN MENU ===== -->
+<div id="screen-menu" class="screen">
+  <div class="menu-box">
+    <h1 class="title"><span class="t1">AGES</span><span class="t2">of</span><span class="t1">WAR</span></h1>
+    <div class="subtitle">Online RTS &middot; Starověk &middot; Druhá světová &middot; Sci-fi</div>
+    <label class="field"><span>Tvoje jméno</span><input id="name" maxlength="18" placeholder="Vojevůdce" autocomplete="off"></label>
+    <div class="menu-buttons">
+      <button id="btn-quick" class="big primary">⚔ Rychlá hra proti AI</button>
+      <button id="btn-host" class="big">🏰 Hostovat hru</button>
+      <button id="btn-join" class="big">🌍 Připojit se · seznam serverů</button>
+      <button id="btn-settings" class="big">⚙ Nastavení</button>
+    </div>
+    <div class="conn-status" id="conn-status">Připojuji se k serveru…</div>
+  </div>
+  <div class="footer">v0.1 demo · WASD/šipky kamera · kolečko zoom · pravé tlačítko = rozkaz</div>
+</div>
+
+<!-- ===== SERVER BROWSER ===== -->
+<div id="screen-browser" class="screen hidden">
+  <div class="panel wide">
+    <div class="panel-head"><h2>Seznam serverů</h2><div><button id="btn-refresh">↻ Obnovit</button><button id="btn-browser-back">← Zpět</button></div></div>
+    <table class="servers"><thead><tr><th>Název</th><th>Hostitel</th><th>Éra</th><th>Hráči</th><th>Stav</th><th></th></tr></thead><tbody id="server-list"></tbody></table>
+    <div class="empty" id="server-empty">Žádný server. Založ vlastní přes „Hostovat hru".</div>
+    <div class="direct"><span>Jiný server (LAN):</span><input id="direct-addr" placeholder="např. 192.168.1.20:8080"><button id="btn-direct">Připojit</button></div>
+  </div>
+</div>
+
+<!-- ===== HOST DIALOG ===== -->
+<div id="screen-host" class="screen hidden">
+  <div class="panel">
+    <div class="panel-head"><h2>Nová hra</h2><button id="btn-host-back">← Zpět</button></div>
+    <label class="field"><span>Název hry</span><input id="host-name" maxlength="28" placeholder="Bitva o brod"></label>
+    <label class="field"><span>Max. hráčů</span><select id="host-max"><option>2</option><option>3</option><option selected>4</option><option>6</option><option>8</option></select></label>
+    <div class="era-pick" id="host-eras"></div>
+    <button id="btn-host-create" class="big primary">Vytvořit</button>
+  </div>
+</div>
+
+<!-- ===== LOBBY ===== -->
+<div id="screen-lobby" class="screen hidden">
+  <div class="panel wide lobby">
+    <div class="panel-head"><h2 id="lobby-title">Lobby</h2><button id="btn-lobby-leave">← Opustit</button></div>
+    <div class="lobby-grid">
+      <div class="lobby-left">
+        <div class="era-pick small" id="lobby-eras"></div>
+        <div class="era-desc" id="lobby-era-desc"></div>
+        <table class="slots"><thead><tr><th>Hráč</th><th>Frakce</th><th>Tým</th><th>Barva</th><th>Stav</th><th></th></tr></thead><tbody id="slot-list"></tbody></table>
+        <div class="lobby-actions">
+          <button id="btn-add-bot">+ Bot</button>
+          <button id="btn-add-bot-hard">+ Bot (těžký)</button>
+          <button id="btn-ready" class="primary">Připraven</button>
+          <button id="btn-start" class="primary">▶ Spustit hru</button>
+        </div>
+        <div class="faction-desc" id="faction-desc"></div>
+      </div>
+      <div class="lobby-right">
+        <div class="chat" id="lobby-chat"></div>
+        <input id="lobby-chat-input" placeholder="Napiš zprávu a stiskni Enter">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SETTINGS ===== -->
+<div id="screen-settings" class="screen hidden">
+  <div class="panel">
+    <div class="panel-head"><h2>Nastavení</h2><button id="btn-settings-back">← Zpět</button></div>
+    <label class="field"><span>Hudba</span><input type="range" id="vol-music" min="0" max="100" value="55"></label>
+    <label class="field"><span>Zvuky</span><input type="range" id="vol-sfx" min="0" max="100" value="80"></label>
+    <label class="field"><span>Rychlost posunu kamery</span><input type="range" id="scroll-speed" min="20" max="100" value="60"></label>
+    <label class="field check"><input type="checkbox" id="opt-edge" checked><span>Posun kamery okrajem obrazovky</span></label>
+    <label class="field check"><input type="checkbox" id="opt-hp" checked><span>Zobrazovat životy vždy</span></label>
+    <div class="hotkeys">
+      <h3>Ovládání</h3>
+      <div>Levé tlačítko: výběr / tažení rámečku · Shift: přidat k výběru · dvojklik: všechny stejného typu</div>
+      <div>Pravé tlačítko: chytrý rozkaz (jdi / útoč / těž / stav) · Shift+pravé: zařadit do fronty</div>
+      <div>A: útočný pochod · S: stop · H: držet pozici · Ctrl+1-9: skupiny · Space: poslední událost</div>
+      <div>WASD / šipky / okraj: kamera · kolečko: zoom · střední tlačítko: posun · Enter: chat · Esc: zrušit</div>
+      <div>Hradba: L, klik na začátek, klik na konec – cesta obejde překážky · F1: vyber všechnu armádu · .: nečinný dělník</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== GAME ===== -->
+<div id="screen-game" class="screen hidden">
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div id="topbar">
+      <div class="res" id="res-p"><span class="ico ico-p"></span><span class="val">0</span></div>
+      <div class="res" id="res-s"><span class="ico ico-s"></span><span class="val">0</span></div>
+      <div class="res" id="res-pop"><span class="ico ico-pop"></span><span class="val">0/0</span></div>
+      <div class="spacer"></div>
+      <div id="game-clock">00:00</div>
+      <div id="game-info"></div>
+      <button id="btn-menu-ingame">☰</button>
+    </div>
+    <div id="alerts"></div>
+    <div id="chatlog"></div>
+    <input id="chat-input" class="hidden" placeholder="Zpráva… (Enter odešle, Esc zruší)" maxlength="200">
+    <div id="tooltip" class="hidden"></div>
+    <div id="bottombar">
+      <div id="minimap-wrap"><canvas id="minimap" width="236" height="236"></canvas><div id="minimap-btns"><button id="btn-idle-worker" title="Nečinný dělník (.)">👷</button><button id="btn-army" title="Vybrat armádu (F1)">⚔</button></div></div>
+      <div id="selpanel"><div id="sel-empty">Nic není vybráno</div><div id="sel-single" class="hidden"><canvas id="portrait" width="96" height="96"></canvas><div id="sel-info"><div id="sel-name"></div><div id="sel-owner"></div><div class="hpbar"><div id="sel-hp"></div><span id="sel-hp-text"></span></div><div id="sel-stats"></div><div id="sel-queue"></div></div></div><div id="sel-multi" class="hidden"></div></div>
+      <div id="cmdcard"></div>
+    </div>
+    <div id="placement-hint" class="hidden"></div>
+  </div>
+  <div id="pause-menu" class="overlay hidden"><div class="panel"><h2>Menu</h2><button id="btn-resume" class="big primary">Pokračovat</button><label class="field"><span>Hudba</span><input type="range" id="vol-music2" min="0" max="100"></label><label class="field"><span>Zvuky</span><input type="range" id="vol-sfx2" min="0" max="100"></label><button id="btn-surrender" class="big">Vzdát se a odejít</button></div></div>
+  <div id="endscreen" class="overlay hidden"><div class="panel wide"><h1 id="end-title">VÍTĚZSTVÍ</h1><div id="end-sub"></div><table class="stats" id="end-stats"></table><button id="btn-end-menu" class="big primary">Zpět do menu</button></div></div>
+</div>
+
+<div id="toast" class="hidden"></div>
+<script type="module" src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+// Ages of War - shared game data (used by server sim and client UI)
+
+export const TICK_RATE = 20;          // simulation ticks per second
+export const NET_RATE = 10;           // snapshots per second
+export const MAP_SIZE = 96;           // tiles per side
+export const MAX_PLAYERS = 8;
+
+export const TEAM_COLORS = [
+  { id: 0, name: 'Červená',   hex: '#e23b3b' },
+  { id: 1, name: 'Modrá',     hex: '#2f7ee8' },
+  { id: 2, name: 'Zelená',    hex: '#3fbf4a' },
+  { id: 3, name: 'Žlutá',     hex: '#f0c419' },
+  { id: 4, name: 'Fialová',   hex: '#9b4fe0' },
+  { id: 5, name: 'Oranžová',  hex: '#f07b1e' },
+  { id: 6, name: 'Tyrkysová', hex: '#27c7c1' },
+  { id: 7, name: 'Bílá',      hex: '#e8e8e8' },
+];
+
+// Terrain ids
+export const T = { GRASS: 0, DIRT: 1, SAND: 2, SHALLOW: 3, WATER: 4, ROCK: 5 };
+
+const commonUnits = {
+  // key: shared "role" ids across eras. Names/visuals differ per era.
+  worker:   { role: 'worker',   hp: 45,  armor: 0, dmg: 4,  range: 0.7, cooldown: 1.0, speed: 2.7, sight: 6, pop: 1, size: 0.32, trainTime: 12, cost: { p: 50, s: 0 },   building: 'hall',     domain: 'land', canGather: true, canBuild: true, projectile: null },
+  infantry: { role: 'infantry', hp: 120, armor: 2, dmg: 13, range: 0.8, cooldown: 1.0, speed: 2.5, sight: 7, pop: 2, size: 0.34, trainTime: 15, cost: { p: 70, s: 10 },  building: 'barracks', domain: 'land', projectile: null, bonus: { cavalry: 1.3 } },
+  ranged:   { role: 'ranged',   hp: 65,  armor: 0, dmg: 11, range: 5.5, cooldown: 1.3, speed: 2.6, sight: 8, pop: 2, size: 0.32, trainTime: 16, cost: { p: 60, s: 35 },  building: 'barracks', domain: 'land', projectile: 'arrow', bonus: { infantry: 1.25 } },
+  cavalry:  { role: 'cavalry',  hp: 170, armor: 3, dmg: 20, range: 0.9, cooldown: 1.1, speed: 4.3, sight: 8, pop: 3, size: 0.42, trainTime: 22, cost: { p: 120, s: 40 }, building: 'stable',   domain: 'land', projectile: null, bonus: { ranged: 1.6, siege: 1.6 } },
+  siege:    { role: 'siege',    hp: 130, armor: 1, dmg: 55, range: 8,   cooldown: 3.2, speed: 1.6, sight: 9, pop: 4, size: 0.5,  trainTime: 30, cost: { p: 160, s: 130 }, building: 'siege',    domain: 'land', projectile: 'rock', splash: 1.1, minRange: 2, bonus: { building: 3.0, wall: 4.0 } },
+  ship:     { role: 'ship',     hp: 320, armor: 3, dmg: 24, range: 6.5, cooldown: 1.5, speed: 3.4, sight: 9, pop: 3, size: 0.6,  trainTime: 28, cost: { p: 130, s: 160 }, building: 'dock',     domain: 'sea',  projectile: 'bolt', bonus: { building: 1.5 } },
+};
+
+const commonBuildings = {
+  hall:     { hp: 1600, armor: 5, w: 3, h: 3, cost: { p: 350, s: 250 }, buildTime: 70, trains: ['worker'], dropoff: true, popCap: 40, hotkey: 'H' },
+  barracks: { hp: 950,  armor: 4, w: 3, h: 3, cost: { p: 130, s: 90 },  buildTime: 32, trains: ['infantry', 'ranged'], hotkey: 'B' },
+  stable:   { hp: 950,  armor: 4, w: 3, h: 3, cost: { p: 160, s: 110 }, buildTime: 36, trains: ['cavalry'], hotkey: 'S' },
+  siege:    { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 170, s: 140 }, buildTime: 38, trains: ['siege'], hotkey: 'W' },
+  dock:     { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 110, s: 140 }, buildTime: 32, trains: ['ship'], shore: true, hotkey: 'D' },
+  tower:    { hp: 550,  armor: 6, w: 1, h: 1, cost: { p: 70,  s: 90 },  buildTime: 26, trains: [], attack: { dmg: 15, range: 6.5, cooldown: 1.0, projectile: 'arrow' }, hotkey: 'T' },
+  wall:     { hp: 320,  armor: 12, w: 1, h: 1, cost: { p: 0,   s: 8 },   buildTime: 4,  trains: [], isWall: true, hotkey: 'L' },
+};
+
+function era(base) { return base; }
+
+export const ERAS = {
+  antiquity: era({
+    id: 'antiquity',
+    name: 'Starověk',
+    tagline: 'Legie, hoplíti a triéry. Zlato z dolů, dřevo z lesů.',
+    available: true,
+    year: '~50 př. n. l.',
+    resources: {
+      p: { id: 'gold', name: 'Zlato', short: 'Zl', color: '#f2c94c' },
+      s: { id: 'wood', name: 'Dřevo', short: 'Dř', color: '#b7863f' },
+    },
+    nodes: { mine: { name: 'Zlatý důl', amount: 12000, perTrip: 10, tripTicks: 22 }, secondary: { name: 'Les', kind: 'trees', amount: 150, perTrip: 10, chopTicks: 8, chopHits: 5 } },
+    palette: { grass: [92, 140, 58], grass2: [78, 122, 50], dirt: [150, 120, 78], sand: [214, 196, 140], water: [36, 96, 150], deep: [22, 62, 112], rock: [120, 118, 110] },
+    music: { scale: [0, 2, 3, 5, 7, 8, 10], root: 220, tempo: 84, style: 'lyre' },
+    factions: [
+      { id: 'rome',     name: 'Řím',      desc: 'Disciplína: pěchota +15 % HP, věže +10 % dmg.',        mods: { infantry: { hp: 1.15 }, tower: { dmg: 1.1 } },
+        unitNames: { worker: 'Otrok', infantry: 'Legionář', ranged: 'Lučištník', cavalry: 'Equites', siege: 'Onager', ship: 'Triéra' } },
+      { id: 'gaul',     name: 'Galové',   desc: 'Divokost: pěchota +10 % dmg, jezdectvo +10 % rychlost.', mods: { infantry: { dmg: 1.1 }, cavalry: { speed: 1.1 } },
+        unitNames: { worker: 'Sedlák', infantry: 'Válečník', ranged: 'Prakovník', cavalry: 'Jezdec', siege: 'Beranidlo', ship: 'Dlouhá loď' } },
+      { id: 'greece',   name: 'Řecko',    desc: 'Falanga: střelci +15 % dmg, lodě +10 % HP.',            mods: { ranged: { dmg: 1.15 }, ship: { hp: 1.1 } },
+        unitNames: { worker: 'Dělník', infantry: 'Hoplít', ranged: 'Toxotés', cavalry: 'Hippeus', siege: 'Balista', ship: 'Pentéra' } },
+      { id: 'carthage', name: 'Kartágo',  desc: 'Obchod: doly +15 % výnos, lodě -15 % cena.',           mods: { economy: { mine: 1.15 }, ship: { cost: 0.85 } },
+        unitNames: { worker: 'Dělník', infantry: 'Posvátná četa', ranged: 'Baleárský prakovník', cavalry: 'Numidský jezdec', siege: 'Katapult', ship: 'Kvinkveréma' } },
+    ],
+    units: {
+      worker:   { ...commonUnits.worker,   name: 'Dělník',      sprite: 'ant_worker' },
+      infantry: { ...commonUnits.infantry, name: 'Pěšák',       sprite: 'ant_infantry' },
+      ranged:   { ...commonUnits.ranged,   name: 'Lučištník',   sprite: 'ant_ranged' },
+      cavalry:  { ...commonUnits.cavalry,  name: 'Jezdec',      sprite: 'ant_cavalry' },
+      siege:    { ...commonUnits.siege,    name: 'Katapult',    sprite: 'ant_siege' },
+      ship:     { ...commonUnits.ship,     name: 'Válečná loď', sprite: 'ant_ship' },
+    },
+    buildings: {
+      hall:     { ...commonBuildings.hall,     name: 'Radnice',         sprite: 'ant_hall',     desc: 'Hlavní budova. Cvičí dělníky, sklad surovin, +40 populace.' },
+      barracks: { ...commonBuildings.barracks, name: 'Kasárna',         sprite: 'ant_barracks', desc: 'Cvičí pěchotu a lučištníky.' },
+      stable:   { ...commonBuildings.stable,   name: 'Stáje',           sprite: 'ant_stable',   desc: 'Cvičí jezdectvo.' },
+      siege:    { ...commonBuildings.siege,    name: 'Obléhací dílna',  sprite: 'ant_siege',    desc: 'Staví katapulty.' },
+      dock:     { ...commonBuildings.dock,     name: 'Přístav',         sprite: 'ant_dock',     desc: 'Staví válečné lodě. Musí stát u vody.' },
+      tower:    { ...commonBuildings.tower,    name: 'Strážní věž',     sprite: 'ant_tower',    desc: 'Automaticky střílí na nepřátele.' },
+      wall:     { ...commonBuildings.wall,     name: 'Kamenná hradba',  sprite: 'ant_wall',     desc: 'Klikni na začátek a konec – hradba obejde překážky.' },
+    },
+  }),
+
+  ww2: era({
+    id: 'ww2',
+    name: 'Druhá světová',
+    tagline: 'Tanky, houfnice a torpédoborce. Ropa z vrtů, ocel ze šrotovišť.',
+    available: true,
+    year: '1939–1945',
+    resources: {
+      p: { id: 'oil', name: 'Ropa', short: 'Ro', color: '#3a3a3a' },
+      s: { id: 'steel', name: 'Ocel', short: 'Oc', color: '#a9b4c2' },
+    },
+    nodes: { mine: { name: 'Ropné pole', amount: 12000, perTrip: 10, tripTicks: 22 }, secondary: { name: 'Šrotoviště', kind: 'scrap', amount: 150, perTrip: 10, chopTicks: 8, chopHits: 5 } },
+    palette: { grass: [96, 118, 64], grass2: [82, 102, 56], dirt: [122, 104, 80], sand: [186, 176, 140], water: [42, 84, 118], deep: [26, 54, 84], rock: [104, 104, 100] },
+    music: { scale: [0, 2, 4, 5, 7, 9, 11], root: 196, tempo: 112, style: 'march' },
+    factions: [
+      { id: 'germany', name: 'Německo', desc: 'Blitzkrieg: tanky +15 % pancíř, +5 % rychlost.',    mods: { cavalry: { armor: 1.15, speed: 1.05 } },
+        unitNames: { worker: 'Ženista', infantry: 'Grenadier', ranged: 'MG-34 střelec', cavalry: 'Panzer IV', siege: 'Houfnice sFH 18', ship: 'Torpédoborec Z' } },
+      { id: 'poland',  name: 'Polsko',  desc: 'Odhodlání: pěchota -20 % doba výcviku, +10 % HP.',  mods: { infantry: { trainTime: 0.8, hp: 1.1 } },
+        unitNames: { worker: 'Saper', infantry: 'Pěšák', ranged: 'Kulometčík', cavalry: '7TP', siege: 'Houfnice wz. 14', ship: 'ORP Torpédoborec' } },
+      { id: 'ussr',    name: 'SSSR',    desc: 'Masa: pěchota -20 % cena, ropa +10 % výnos.',      mods: { infantry: { cost: 0.8 }, economy: { mine: 1.1 } },
+        unitNames: { worker: 'Dělník', infantry: 'Střelec', ranged: 'DP-27 kulometčík', cavalry: 'T-34', siege: 'Kaťuša', ship: 'Torpédoborec Gněvnyj' } },
+      { id: 'usa',     name: 'USA',     desc: 'Průmysl: dělostřelectvo +1 dosah, budovy -15 % cena.', mods: { siege: { range: 1.12 }, buildings: { cost: 0.85 } },
+        unitNames: { worker: 'Ženista', infantry: 'GI', ranged: 'BAR střelec', cavalry: 'M4 Sherman', siege: 'Houfnice M101', ship: 'Torpédoborec Fletcher' } },
+      { id: 'uk',      name: 'Británie', desc: 'Námořnictvo: lodě +20 % HP, bunkry +1 dosah.',    mods: { ship: { hp: 1.2 }, tower: { range: 1.15 } },
+        unitNames: { worker: 'Sapér', infantry: 'Tommy', ranged: 'Bren střelec', cavalry: 'Cromwell', siege: 'Houfnice 25pdr', ship: 'HMS Torpédoborec' } },
+    ],
+    units: {
+      worker:   { ...commonUnits.worker,   name: 'Ženista',      sprite: 'ww2_worker' },
+      infantry: { ...commonUnits.infantry, name: 'Pěšák',        sprite: 'ww2_infantry', range: 3.5, projectile: 'bullet', dmg: 9, cooldown: 0.7, hp: 100 },
+      ranged:   { ...commonUnits.ranged,   name: 'Kulometčík',   sprite: 'ww2_ranged', range: 6, projectile: 'bullet', dmg: 7, cooldown: 0.35, hp: 70 },
+      cavalry:  { ...commonUnits.cavalry,  name: 'Tank',         sprite: 'ww2_tank', hp: 340, armor: 7, dmg: 38, range: 4.5, cooldown: 1.8, speed: 3.3, size: 0.5, cost: { p: 190, s: 110 }, projectile: 'shell', bonus: { infantry: 1.2, building: 1.5 } },
+      siege:    { ...commonUnits.siege,    name: 'Dělostřelectvo', sprite: 'ww2_artillery', range: 10, projectile: 'shell', splash: 1.4, dmg: 60, minRange: 3 },
+      ship:     { ...commonUnits.ship,     name: 'Torpédoborec', sprite: 'ww2_destroyer', hp: 380, range: 7.5, projectile: 'shell', dmg: 30 },
+    },
+    buildings: {
+      hall:     { ...commonBuildings.hall,     name: 'Velitelství',     sprite: 'ww2_hall',     desc: 'Hlavní budova. Cvičí ženisty, sklad surovin, +40 populace.' },
+      barracks: { ...commonBuildings.barracks, name: 'Kasárna',         sprite: 'ww2_barracks', desc: 'Cvičí pěchotu a kulometčíky.' },
+      stable:   { ...commonBuildings.stable,   name: 'Tanková továrna', sprite: 'ww2_factory',  desc: 'Vyrábí tanky.' },
+      siege:    { ...commonBuildings.siege,    name: 'Dělostřelecký park', sprite: 'ww2_artpark', desc: 'Vyrábí houfnice.' },
+      dock:     { ...commonBuildings.dock,     name: 'Loděnice',        sprite: 'ww2_shipyard', desc: 'Staví torpédoborce. Musí stát u vody.' },
+      tower:    { ...commonBuildings.tower,    name: 'Bunkr',           sprite: 'ww2_bunker',   desc: 'Kulometné hnízdo, střílí automaticky.', attack: { dmg: 6, range: 6.5, cooldown: 0.3, projectile: 'bullet' } },
+      wall:     { ...commonBuildings.wall,     name: 'Betonová zeď',    sprite: 'ww2_wall',     desc: 'Klikni na začátek a konec – zeď obejde překážky.' },
+    },
+  }),
+
+  scifi: era({
+    id: 'scifi',
+    name: 'Sci-fi',
+    tagline: 'Mimozemské houby, plazmové věže, orbitální flotily.',
+    available: false,
+    year: '2340',
+    resources: { p: { id: 'plasma', name: 'Plazma', short: 'Pl', color: '#6ae0ff' }, s: { id: 'spore', name: 'Houba', short: 'Ho', color: '#c56aff' } },
+    factions: [],
+    units: {},
+    buildings: {},
+  }),
+};
+
+export const ERA_ORDER = ['antiquity', 'ww2', 'scifi'];
+
+// Build the effective (faction-modified) unit/building stats table for a player.
+export function makeTechTable(eraId, factionId) {
+  const e = ERAS[eraId];
+  const f = e.factions.find(x => x.id === factionId) || e.factions[0];
+  const units = {};
+  for (const [k, u] of Object.entries(e.units)) {
+    const m = f.mods[k] || {};
+    const cost = { p: Math.round(u.cost.p * (m.cost || 1)), s: Math.round(u.cost.s * (m.cost || 1)) };
+    units[k] = {
+      ...u, id: k, name: (f.unitNames && f.unitNames[k]) || u.name, genericName: u.name,
+      hp: Math.round(u.hp * (m.hp || 1)), armor: Math.round(u.armor * (m.armor || 1)),
+      dmg: Math.round(u.dmg * (m.dmg || 1)), speed: u.speed * (m.speed || 1),
+      range: u.range * (m.range || 1), trainTime: u.trainTime * (m.trainTime || 1), cost,
+    };
+  }
+  const buildings = {};
+  const bmods = f.mods.buildings || {};
+  for (const [k, b] of Object.entries(e.buildings)) {
+    const m = f.mods[k] || {};
+    const cmul = (m.cost || 1) * (bmods.cost || 1);
+    const attack = b.attack ? { ...b.attack, dmg: Math.round(b.attack.dmg * (m.dmg || 1)), range: b.attack.range * (m.range || 1) } : null;
+    buildings[k] = { ...b, id: k, cost: { p: Math.round(b.cost.p * cmul), s: Math.round(b.cost.s * cmul) }, attack };
+  }
+  const economy = f.mods.economy || {};
+  return { era: e, faction: f, units, buildings, economy };
+}
+
+export const CMD = {
+  MOVE: 'move', ATTACK: 'attack', ATTACK_MOVE: 'amove', STOP: 'stop', HOLD: 'hold',
+  GATHER: 'gather', BUILD: 'build', TRAIN: 'train', CANCEL_TRAIN: 'cancelTrain',
+  RALLY: 'rally', WALL: 'wall', CANCEL_BUILD: 'cancelBuild', REPAIR: 'repair',
+};
+
+export const HOTKEYS = {
+  worker: 'Q', infantry: 'Q', ranged: 'W', cavalry: 'Q', siege: 'Q', ship: 'Q',
+};

@@ -1,0 +1,661 @@
+// Procedural isometric sprites: units, buildings, resources. Everything drawn with canvas primitives and cached.
+import { TEAM_COLORS } from '../../shared/data.js';
+
+export const TW = 64, TH = 32;   // tile diamond size at zoom 1
+export const S = 2;              // internal render scale (supersampling)
+
+export function iso(x, y, z = 0) { return [(x - y) * (TW / 2), (x + y) * (TH / 2) - z]; }
+export function screenAngle(a) { const dx = Math.cos(a) - Math.sin(a), dy = (Math.cos(a) + Math.sin(a)) * 0.5; return Math.atan2(dy, dx); }
+export function facingToDir(a) { const sa = screenAngle(a); return ((Math.round(sa / (Math.PI / 4)) % 8) + 8) % 8; }
+const DIR_ANGLE = d => d * Math.PI / 4;
+
+// ---------- color helpers ----------
+export function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+export function rgb(c, a = 1) { return a === 1 ? `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})` : `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`; }
+export function shade(c, k) { return c.map(v => Math.max(0, Math.min(255, v * k))); }
+export function mix(a, b, t) { return a.map((v, i) => v + (b[i] - v) * t); }
+export function teamRgb(idx) { return hexToRgb(TEAM_COLORS[idx % TEAM_COLORS.length].hex); }
+
+const cache = new Map();
+export function cached(key, w, h, ax, ay, draw) {
+  let c = cache.get(key);
+  if (c) return c;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil(w * S); canvas.height = Math.ceil(h * S);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(S, S); ctx.translate(ax, ay);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  draw(ctx);
+  c = { canvas, ax, ay, w, h };
+  cache.set(key, c);
+  return c;
+}
+export function blit(ctx, spr, x, y, zoom) { ctx.drawImage(spr.canvas, x - spr.ax * zoom, y - spr.ay * zoom, spr.w * zoom, spr.h * zoom); }
+
+// ---------- primitive helpers (all in zoom-1 pixels) ----------
+function poly(ctx, pts, fill, stroke, lw = 1) {
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+}
+function ellipse(ctx, x, y, rx, ry, fill, stroke, lw = 1) { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); } }
+function line(ctx, x0, y0, x1, y1, color, lw = 1) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.stroke(); }
+function rrect(ctx, x, y, w, h, r, fill, stroke, lw = 1) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); } }
+
+/** Extruded prism from world-space polygon (tile units relative to anchor), z0 base height, height h (px). */
+export function prism(ctx, pts, z0, h, top, side, outline = 'rgba(0,0,0,0.55)', lightDir = 1) {
+  const base = pts.map(p => iso(p[0], p[1], z0));
+  const topP = pts.map(p => iso(p[0], p[1], z0 + h));
+  const cx = base.reduce((s, p) => s + p[1], 0) / base.length;
+  // side faces: draw those facing viewer (edge midpoint y > center y)
+  const n = pts.length;
+  const faces = [];
+  for (let i = 0; i < n; i++) {
+    const a = base[i], b = base[(i + 1) % n];
+    const my = (a[1] + b[1]) / 2;
+    if (my > cx - 0.01) {
+      // light: left-facing faces brighter
+      const dx = b[0] - a[0];
+      const k = dx > 0 ? 0.78 : 0.6;
+      faces.push({ pts: [a, b, topP[(i + 1) % n], topP[i]], k, my });
+    }
+  }
+  faces.sort((p, q) => p.my - q.my);
+  for (const f of faces) poly(ctx, f.pts, rgb(shade(side, f.k)), outline, 0.8);
+  poly(ctx, topP, rgb(top), outline, 0.8);
+}
+function isoRect(x, y, w, h) { return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]; }
+function rot(pts, a, cx = 0, cy = 0) { const c = Math.cos(a), s = Math.sin(a); return pts.map(([x, y]) => [cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c]); }
+
+// ---------- unit drawing ----------
+const SKIN = [232, 190, 150], SKIN_D = [190, 140, 100], METAL = [200, 205, 215], METAL_D = [120, 125, 135], WOOD = [130, 88, 46], WOOD_D = [86, 56, 28], OUT = 'rgba(15,10,5,0.8)';
+
+function walkPhase(anim, frame) { return anim === 'walk' ? (frame / 6) * Math.PI * 2 : 0; }
+
+/** Small humanoid, feet at (0,0). dir: screen dir 0..7. */
+function humanoid(ctx, o) {
+  const { dir, anim, frame, team } = o;
+  const sa = DIR_ANGLE(dir);
+  const fx = Math.cos(sa), fy = Math.sin(sa);       // facing vector on screen
+  const front = fy > 0.1, side = Math.abs(fx) > 0.7;
+  const ph = walkPhase(anim, frame);
+  const bob = anim === 'walk' ? Math.abs(Math.sin(ph)) * 1.2 : 0;
+  const legA = anim === 'walk' ? Math.sin(ph) * 3 : 0;
+  const swing = anim === 'attack' ? [0, -0.9, 0.7, 0.3][frame % 4] : (anim === 'work' ? [-0.6, 0.2, 0.8, 0.1][frame % 4] : 0);
+  const tc = team, tcD = shade(team, 0.6), tcL = shade(team, 1.25);
+  const scale = o.scale || 1;
+  ctx.save(); ctx.scale(scale, scale);
+  // shadow
+  ellipse(ctx, 0, 0, 7, 3.5, 'rgba(0,0,0,0.35)');
+  // legs
+  const legC = rgb(o.legs || [70, 55, 40]);
+  const lx = -fy * 2.2, ly = fx * 1.1; // perpendicular offset for two legs
+  rrect(ctx, lx - 1.6 + fx * legA * 0.3, -9 + Math.abs(legA) * 0 - 0, 3.2, 9 - bob * 0.3 + legA * 0.4, 1.2, legC, OUT, 0.6);
+  rrect(ctx, -lx - 1.6 - fx * legA * 0.3, -9, 3.2, 9 - bob * 0.3 - legA * 0.4, 1.2, legC, OUT, 0.6);
+  const y0 = -9 - bob;
+  // back-hand item (shield) if drawn behind
+  const drawShield = o.shield && !front;
+  if (drawShield) shield(ctx, -fx * 5, y0 - 8 + 2, tc, o.shield, dir);
+  // weapon behind body if facing away
+  const weaponBehind = fy < -0.1;
+  if (weaponBehind && o.weapon) weapon(ctx, o, fx, fy, y0, swing, tc);
+  // torso
+  const torso = o.torso || tc;
+  rrect(ctx, -5, y0 - 12, 10, 13, 3, rgb(torso), OUT, 0.8);
+  // torso highlight & belt
+  rrect(ctx, -4, y0 - 11, 4, 10, 2, rgb(shade(torso, 1.18), 0.9));
+  line(ctx, -5, y0 - 3, 5, y0 - 3, rgb(o.belt || [60, 40, 25]), 1.6);
+  if (o.emblem) { ctx.fillStyle = rgb(o.emblem); ctx.fillRect(-1.5, y0 - 10, 3, 3); }
+  // arms
+  const armC = rgb(o.sleeves || SKIN);
+  rrect(ctx, -7.5, y0 - 11, 3, 8, 1.4, armC, OUT, 0.6);
+  rrect(ctx, 4.5, y0 - 11, 3, 8, 1.4, armC, OUT, 0.6);
+  // head
+  const hy = y0 - 16;
+  ellipse(ctx, 0, hy, 4.2, 4.5, rgb(SKIN), OUT, 0.8);
+  if (front) { ctx.fillStyle = '#2a1a10'; ctx.fillRect(-2 + fx * 0.8, hy - 0.5, 1.2, 1.4); ctx.fillRect(0.8 + fx * 0.8, hy - 0.5, 1.2, 1.4); }
+  // helmet / hat
+  helmet(ctx, o.helmet, hy, tc, fx, fy);
+  // front items
+  if (!weaponBehind && o.weapon) weapon(ctx, o, fx, fy, y0, swing, tc);
+  if (o.shield && front) shield(ctx, -fx * 4 + fy * 3, y0 - 6, tc, o.shield, dir);
+  // carried resource
+  if (o.carry === 'p') { ellipse(ctx, -fx * 3, y0 - 7, 4, 3.5, '#e8c04a', OUT, 0.7); ellipse(ctx, -fx * 3 - 1, y0 - 8, 1.2, 1, '#fff2b0'); }
+  else if (o.carry === 's') { ctx.save(); ctx.translate(0, y0 - 9); ctx.rotate(-0.3); rrect(ctx, -7, -2, 14, 4, 1, rgb(WOOD), OUT, 0.7); rrect(ctx, -6, -4.5, 12, 3.5, 1, rgb(shade(WOOD, 1.15)), OUT, 0.7); ctx.restore(); }
+  ctx.restore();
+}
+function helmet(ctx, type, hy, tc, fx, fy) {
+  switch (type) {
+    case 'roman': ellipse(ctx, 0, hy - 1.2, 4.6, 4, rgb(METAL), OUT, 0.8); ctx.fillStyle = rgb(shade(METAL, 0.75)); ctx.fillRect(-4.6, hy - 0.5, 9.2, 1.6); // crest
+      poly(ctx, [[-1, hy - 5], [1, hy - 5], [1.5, hy - 9], [-1.5, hy - 9]], rgb(tc), OUT, 0.6); ellipse(ctx, 0, hy - 8.5, 2.2, 1.6, rgb(tc), OUT, 0.5); break;
+    case 'greek': ellipse(ctx, 0, hy - 1.2, 4.6, 4, rgb([210, 180, 90]), OUT, 0.8); poly(ctx, [[-1.2, hy - 5], [1.2, hy - 5], [0.8, hy - 10], [-0.8, hy - 10]], rgb(tc), OUT, 0.6); break;
+    case 'cap': ellipse(ctx, 0, hy - 1.5, 4.5, 3.5, rgb(shade(tc, 0.8)), OUT, 0.8); break;
+    case 'band': ctx.strokeStyle = rgb(tc); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, hy - 1, 4.4, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); ctx.fillStyle = '#4a2a14'; ctx.beginPath(); ctx.arc(0, hy - 1.5, 4.2, Math.PI, Math.PI * 2); ctx.fill(); break;
+    case 'hair': ctx.fillStyle = '#5a3416'; ctx.beginPath(); ctx.arc(0, hy - 1.3, 4.3, Math.PI * 0.95, Math.PI * 2.05); ctx.fill(); break;
+    case 'stahlhelm': ellipse(ctx, 0, hy - 1.5, 5.2, 4, rgb([88, 96, 80]), OUT, 0.8); ellipse(ctx, 0, hy + 0.5, 5.4, 1.6, rgb([70, 76, 62]), OUT, 0.6); ctx.fillStyle = rgb(tc); ctx.fillRect(-4.5, hy - 1.5, 9, 1.4); break;
+    case 'garrison': ellipse(ctx, 0, hy - 1.5, 4.6, 3.6, rgb([96, 92, 70]), OUT, 0.8); ctx.fillStyle = rgb(tc); ctx.fillRect(-4.2, hy - 1.2, 8.4, 1.3); break;
+    case 'hardhat': ellipse(ctx, 0, hy - 1.5, 4.8, 3.8, rgb([220, 180, 50]), OUT, 0.8); ellipse(ctx, 0, hy + 0.3, 5.2, 1.4, rgb([190, 150, 40]), OUT, 0.6); break;
+    default: break;
+  }
+}
+function shield(ctx, x, y, tc, type, dir) {
+  if (type === 'scutum') { rrect(ctx, x - 4, y - 7, 8, 14, 2.5, rgb(tc), OUT, 0.9); ellipse(ctx, x, y, 1.8, 1.8, rgb(METAL), OUT, 0.5); line(ctx, x, y - 6, x, y + 6, rgb(shade(tc, 1.4)), 0.8); }
+  else if (type === 'round') { ellipse(ctx, x, y, 6, 6, rgb(tc), OUT, 0.9); ellipse(ctx, x, y, 2, 2, rgb(METAL), OUT, 0.5); ellipse(ctx, x, y, 4.5, 4.5, null, rgb(shade(tc, 1.4)), 0.8); }
+  else if (type === 'oval') { ellipse(ctx, x, y, 4.5, 7, rgb(tc), OUT, 0.9); line(ctx, x, y - 6, x, y + 6, rgb(shade(tc, 1.4)), 1); }
+}
+function weapon(ctx, o, fx, fy, y0, swing, tc) {
+  const hx = fx * 6, hy = y0 - 8 + fy * 2; // hand position
+  ctx.save(); ctx.translate(hx, hy);
+  const ang = Math.atan2(fy, fx);
+  switch (o.weapon) {
+    case 'sword': ctx.rotate(ang * 0.4 + swing * 1.4 - 0.9); line(ctx, 0, 0, 0, -11, rgb(METAL), 2); line(ctx, 0, 0, 0, -11, rgb(shade(METAL, 1.3)), 0.8); line(ctx, -2.5, -1, 2.5, -1, rgb(WOOD_D), 1.6); line(ctx, 0, 0, 0, 3, rgb(WOOD), 2); break;
+    case 'spear': ctx.rotate(ang * 0.5 + swing * 0.8 - 0.4); line(ctx, 0, 8, 0, -16, rgb(WOOD), 1.6); poly(ctx, [[-1.6, -16], [1.6, -16], [0, -21]], rgb(METAL), OUT, 0.5); break;
+    case 'axe': ctx.rotate(swing * 1.6 - 0.6 + ang * 0.3); line(ctx, 0, 4, 0, -12, rgb(WOOD), 1.8); poly(ctx, [[0, -12], [5, -14], [5, -8], [0, -9]], rgb(METAL), OUT, 0.6); break;
+    case 'pick': ctx.rotate(swing * 1.6 - 0.6 + ang * 0.3); line(ctx, 0, 4, 0, -12, rgb(WOOD), 1.8); ctx.beginPath(); ctx.moveTo(-5, -10); ctx.quadraticCurveTo(0, -15, 5, -10); ctx.strokeStyle = rgb(METAL_D); ctx.lineWidth = 2; ctx.stroke(); break;
+    case 'bow': { ctx.rotate(ang); const pull = o.anim === 'attack' ? [0, 3, 1, 0][o.frame % 4] : 0; ctx.beginPath(); ctx.arc(-pull, 0, 8, -Math.PI * 0.45, Math.PI * 0.45); ctx.strokeStyle = rgb(WOOD); ctx.lineWidth = 1.6; ctx.stroke(); line(ctx, 5 - pull, -7.5, 1 - pull * 2, 0, '#ddd', 0.6); line(ctx, 5 - pull, 7.5, 1 - pull * 2, 0, '#ddd', 0.6); if (pull) line(ctx, 1 - pull * 2, 0, 9, 0, rgb(WOOD_D), 1); break; }
+    case 'sling': ctx.rotate(ang + swing * 2); line(ctx, 0, 0, 0, -9, '#c9b28a', 0.9); ellipse(ctx, 0, -9, 1.6, 1.6, '#777', OUT, 0.4); break;
+    case 'rifle': ctx.rotate(ang); line(ctx, -6, 0, 12, 0, rgb(WOOD_D), 2.4); line(ctx, 2, -0.3, 14, -0.3, rgb(METAL_D), 1.4); if (o.anim === 'attack' && o.frame % 4 === 1) { ellipse(ctx, 15.5, -0.3, 2.5, 1.8, 'rgba(255,220,120,0.9)'); } break;
+    case 'mg': ctx.rotate(ang); line(ctx, -7, 0, 15, 0, rgb(METAL_D), 3); line(ctx, 4, 0, 16, 0, rgb([60, 60, 60]), 1.6); line(ctx, 8, 0, 6, 5, rgb(METAL_D), 1); line(ctx, 8, 0, 10, 5, rgb(METAL_D), 1); rrect(ctx, -2, -3, 5, 3, 0.5, rgb([70, 60, 40]), OUT, 0.5); if (o.anim === 'attack' && o.frame % 2 === 1) ellipse(ctx, 17, 0, 2.5, 1.8, 'rgba(255,220,120,0.9)'); break;
+    case 'wrench': ctx.rotate(swing * 1.4 - 0.4 + ang * 0.3); line(ctx, 0, 2, 0, -9, rgb(METAL_D), 2); ellipse(ctx, 0, -9.5, 2.5, 2, rgb(METAL), OUT, 0.5); break;
+    case 'shovel': ctx.rotate(swing * 1.5 - 0.5 + ang * 0.3); line(ctx, 0, 4, 0, -10, rgb(WOOD), 1.6); poly(ctx, [[-2.5, -10], [2.5, -10], [2, -15], [-2, -15]], rgb(METAL_D), OUT, 0.5); break;
+  }
+  ctx.restore();
+}
+
+// ---------- vehicles / mounts ----------
+function horse(ctx, o, riderFn) {
+  const { dir, anim, frame, team } = o;
+  const sa = DIR_ANGLE(dir); const fx = Math.cos(sa), fy = Math.sin(sa);
+  const ph = walkPhase(anim, frame);
+  const gallop = anim === 'walk' ? Math.sin(ph) : 0;
+  ellipse(ctx, 0, 0, 12, 5, 'rgba(0,0,0,0.35)');
+  const body = o.horseColor || [110, 75, 45];
+  // legs
+  for (let i = 0; i < 4; i++) { const t = (i < 2 ? 1 : -1); const s = (i % 2 ? 1 : -1); const lx = fx * 6 * t - fy * 3 * s, lx2 = lx + (anim === 'walk' ? gallop * 3 * t * s : 0); rrect(ctx, lx2 - 1.3, -10, 2.6, 10 + (i % 2 ? 0 : 1), 1, rgb(shade(body, 0.8)), OUT, 0.5); }
+  // body (ellipse along facing)
+  ctx.save(); ctx.translate(0, -12 + Math.abs(gallop)); ctx.rotate(Math.atan2(fy * 0.6, fx));
+  ellipse(ctx, 0, 0, 13, 6, rgb(body), OUT, 0.9);
+  ellipse(ctx, -2, -2, 8, 3, rgb(shade(body, 1.15), 0.6));
+  // saddle cloth
+  rrect(ctx, -5, -4, 9, 8, 2, rgb(team), OUT, 0.6);
+  ctx.restore();
+  // neck & head
+  const nx = fx * 12, ny = -14 + fy * 2;
+  line(ctx, fx * 9, -13, nx, ny - 9, rgb(body), 4.5);
+  ellipse(ctx, nx + fx * 3, ny - 10, 4, 2.6, rgb(shade(body, 0.95)), OUT, 0.8);
+  ctx.fillStyle = rgb(shade(body, 0.6)); ctx.fillRect(nx - 1.5, ny - 13.5, 1.6, 3); ctx.fillRect(nx + 1.5, ny - 13.5, 1.6, 3);
+  // tail
+  line(ctx, -fx * 12, -13, -fx * 16, -6, rgb(shade(body, 0.7)), 2);
+  // rider
+  ctx.save(); ctx.translate(0, -14); ctx.scale(0.85, 0.85); riderFn(ctx); ctx.restore();
+}
+
+function tank(ctx, o) {
+  const { dir, team, anim, frame } = o;
+  const a = worldAngleForDir(dir);
+  const hullC = mix([90, 96, 80], team, 0.45), hullD = shade(hullC, 0.7);
+  ellipse(ctx, 0, 0, 22, 11, 'rgba(0,0,0,0.35)');
+  const hull = rot(isoRect(-0.5, -0.32, 1.0, 0.64), a);
+  const trackL = rot(isoRect(-0.55, -0.4, 1.1, 0.14), a), trackR = rot(isoRect(-0.55, 0.26, 1.1, 0.14), a);
+  prism(ctx, trackL, 0, 5, [50, 50, 48], [35, 35, 33]); prism(ctx, trackR, 0, 5, [50, 50, 48], [35, 35, 33]);
+  prism(ctx, hull, 3, 9, hullC, hullD);
+  const tur = rot(isoRect(-0.22, -0.2, 0.44, 0.4), a);
+  prism(ctx, tur, 12, 7, shade(hullC, 1.1), hullD);
+  // barrel
+  const recoil = anim === 'attack' && frame % 4 === 1 ? 0.08 : 0;
+  const [bx0, by0] = iso(Math.cos(a) * (0.1 - recoil), Math.sin(a) * (0.1 - recoil), 16), [bx1, by1] = iso(Math.cos(a) * (0.75 - recoil), Math.sin(a) * (0.75 - recoil), 16);
+  line(ctx, bx0, by0, bx1, by1, OUT, 4); line(ctx, bx0, by0, bx1, by1, rgb([70, 74, 66]), 2.4);
+  if (anim === 'attack' && frame % 4 === 1) { ellipse(ctx, bx1, by1, 6, 4, 'rgba(255,210,110,0.9)'); ellipse(ctx, bx1, by1, 3, 2, '#fff'); }
+  // team stripe
+  const [sx, sy] = iso(0, 0, 21); ctx.fillStyle = rgb(team); ctx.fillRect(sx - 3, sy - 1.5, 6, 3);
+}
+function artillery(ctx, o) {
+  const { dir, team, anim, frame } = o; const a = worldAngleForDir(dir);
+  ellipse(ctx, 0, 0, 16, 8, 'rgba(0,0,0,0.35)');
+  const metal = mix([80, 86, 72], team, 0.3);
+  // wheels
+  for (const s of [-1, 1]) { const [wx, wy] = iso(-Math.sin(a) * 0.32 * s, Math.cos(a) * 0.32 * s, 0); ellipse(ctx, wx, wy - 6, 5, 5.5, rgb([60, 58, 52]), OUT, 0.8); ellipse(ctx, wx, wy - 6, 2, 2.2, rgb([120, 118, 110]), OUT, 0.5); }
+  // axle & trail
+  const [tx0, ty0] = iso(-Math.cos(a) * 0.1, -Math.sin(a) * 0.1, 6), [tx1, ty1] = iso(-Math.cos(a) * 0.7, -Math.sin(a) * 0.7, 2);
+  line(ctx, tx0, ty0, tx1, ty1, rgb(shade(metal, 0.8)), 3);
+  const [ax0, ay0] = iso(-Math.sin(a) * 0.32, Math.cos(a) * 0.32, 6), [ax1, ay1] = iso(Math.sin(a) * 0.32, -Math.cos(a) * 0.32, 6); line(ctx, ax0, ay0, ax1, ay1, rgb(shade(metal, 0.7)), 2.5);
+  // shield plate
+  const sh = rot(isoRect(0.02, -0.28, 0.06, 0.56), a); prism(ctx, sh, 4, 10, metal, shade(metal, 0.75));
+  // barrel (elevated)
+  const recoil = anim === 'attack' && frame % 4 === 1 ? 0.12 : 0;
+  const [bx0, by0] = iso(-Math.cos(a) * (0.15 + recoil), -Math.sin(a) * (0.15 + recoil), 9), [bx1, by1] = iso(Math.cos(a) * (0.8 - recoil), Math.sin(a) * (0.8 - recoil), 22);
+  line(ctx, bx0, by0, bx1, by1, OUT, 4.5); line(ctx, bx0, by0, bx1, by1, rgb([90, 92, 84]), 3);
+  if (anim === 'attack' && frame % 4 === 1) { ellipse(ctx, bx1, by1, 7, 5, 'rgba(255,200,100,0.9)'); }
+}
+function catapult(ctx, o) {
+  const { dir, team, anim, frame } = o; const a = worldAngleForDir(dir);
+  ellipse(ctx, 0, 0, 17, 8.5, 'rgba(0,0,0,0.35)');
+  for (const s of [-1, 1]) for (const f of [-1, 1]) { const [wx, wy] = iso(Math.cos(a) * 0.3 * f - Math.sin(a) * 0.36 * s, Math.sin(a) * 0.3 * f + Math.cos(a) * 0.36 * s, 0); ellipse(ctx, wx, wy - 4, 4, 4.5, rgb(WOOD_D), OUT, 0.8); ellipse(ctx, wx, wy - 4, 1.5, 1.7, rgb(WOOD), OUT, 0.4); }
+  const frame1 = rot(isoRect(-0.45, -0.3, 0.9, 0.08), a), frame2 = rot(isoRect(-0.45, 0.22, 0.9, 0.08), a);
+  prism(ctx, frame1, 4, 6, WOOD, WOOD_D); prism(ctx, frame2, 4, 6, WOOD, WOOD_D);
+  const cross = rot(isoRect(0.1, -0.34, 0.1, 0.68), a); prism(ctx, cross, 4, 14, WOOD, WOOD_D);
+  // arm: rests back, swings forward on attack
+  const t = anim === 'attack' ? [0.0, 1.0, 0.7, 0.2][frame % 4] : 0;
+  const armAng = -0.35 + t * 1.5; // elevation angle
+  const len = 0.7;
+  const bx = Math.cos(a) * (0.1 - Math.cos(armAng) * len), by = Math.sin(a) * (0.1 - Math.cos(armAng) * len), bz = 10 + Math.sin(armAng) * 40 + 10;
+  const [p0x, p0y] = iso(Math.cos(a) * 0.12, Math.sin(a) * 0.12, 10), [p1x, p1y] = iso(bx, by, bz);
+  line(ctx, p0x, p0y, p1x, p1y, OUT, 4); line(ctx, p0x, p0y, p1x, p1y, rgb(WOOD), 2.6);
+  ellipse(ctx, p1x, p1y, 3.5, 3.5, rgb([110, 105, 95]), OUT, 0.7); // bucket / rock
+  if (t < 0.5) ellipse(ctx, p1x, p1y - 1, 2.5, 2.5, rgb([130, 125, 115]), OUT, 0.5);
+  const [fx, fy] = iso(0, 0, 22); ctx.fillStyle = rgb(team); ctx.fillRect(fx - 2, fy - 8, 4, 6);
+}
+function shipAntiquity(ctx, o) {
+  const { dir, team, frame } = o; const a = worldAngleForDir(dir);
+  const bobz = Math.sin(frame / 6 * Math.PI * 2) * 1.2;
+  ellipse(ctx, 0, 0, 28, 13, 'rgba(0,0,0,0.25)');
+  const hullPts = rot([[-0.75, -0.22], [0.5, -0.24], [0.9, 0], [0.5, 0.24], [-0.75, 0.22], [-0.95, 0]], a);
+  prism(ctx, hullPts, 2 + bobz, 9, [150, 105, 60], [110, 70, 35]);
+  // deck stripe & oars
+  for (let i = -2; i <= 2; i++) for (const s of [-1, 1]) { const [ox, oy] = iso(Math.cos(a) * i * 0.25 - Math.sin(a) * 0.24 * s, Math.sin(a) * i * 0.25 + Math.cos(a) * 0.24 * s, 8 + bobz); const [ex, ey] = iso(Math.cos(a) * i * 0.25 - Math.sin(a) * 0.5 * s, Math.sin(a) * i * 0.25 + Math.cos(a) * 0.5 * s, 1 + bobz); line(ctx, ox, oy, ex, ey, rgb(WOOD), 1.4); }
+  // mast & sail
+  const [mx, my] = iso(-0.05, 0, 11 + bobz);
+  line(ctx, mx, my, mx, my - 34, rgb(WOOD_D), 2.5);
+  const sw = 20;
+  const sailPts = [[mx - sw / 2, my - 32], [mx + sw / 2, my - 32], [mx + sw / 2 + 2, my - 12], [mx - sw / 2 - 2, my - 10]];
+  poly(ctx, sailPts, '#efe4c8', OUT, 0.8);
+  ctx.fillStyle = rgb(team); ctx.fillRect(mx - sw / 2 + 2, my - 24, sw - 4, 5);
+  // ram
+  const [rx, ry] = iso(Math.cos(a) * 1.0, Math.sin(a) * 1.0, 4 + bobz); ellipse(ctx, rx, ry, 3, 2, rgb(METAL_D), OUT, 0.5);
+}
+function destroyer(ctx, o) {
+  const { dir, team, frame, anim } = o; const a = worldAngleForDir(dir);
+  const bobz = Math.sin(frame / 6 * Math.PI * 2) * 0.8;
+  ellipse(ctx, 0, 0, 32, 14, 'rgba(0,0,0,0.25)');
+  const grey = [128, 136, 142];
+  const hullPts = rot([[-0.95, -0.2], [0.6, -0.2], [1.05, 0], [0.6, 0.2], [-0.95, 0.2], [-1.05, 0.08], [-1.05, -0.08]], a);
+  prism(ctx, hullPts, 1 + bobz, 8, grey, shade(grey, 0.65));
+  const sup = rot(isoRect(-0.35, -0.12, 0.5, 0.24), a); prism(ctx, sup, 9 + bobz, 9, shade(grey, 1.1), shade(grey, 0.7));
+  const bridge = rot(isoRect(-0.1, -0.08, 0.2, 0.16), a); prism(ctx, bridge, 18 + bobz, 7, shade(grey, 1.15), shade(grey, 0.72));
+  // stack
+  const [sx, sy] = iso(-0.45, 0, 18 + bobz); rrect(ctx, sx - 2.5, sy - 10, 5, 10, 1, rgb([70, 72, 74]), OUT, 0.7);
+  // turrets
+  for (const px of [0.55, -0.7]) { const tur = rot(isoRect(px - 0.09, -0.09, 0.18, 0.18), a); prism(ctx, tur, 9 + bobz, 5, shade(grey, 1.05), shade(grey, 0.7)); const [bx0, by0] = iso(Math.cos(a) * px, Math.sin(a) * px, 13 + bobz), [bx1, by1] = iso(Math.cos(a) * (px + 0.3), Math.sin(a) * (px + 0.3), 14 + bobz); line(ctx, bx0, by0, bx1, by1, rgb([60, 62, 64]), 2); if (anim === 'attack' && frame % 4 === 1 && px > 0) ellipse(ctx, bx1, by1, 5, 3.5, 'rgba(255,210,110,0.9)'); }
+  const [fx, fy] = iso(-0.2, 0, 26 + bobz); line(ctx, fx, fy, fx, fy - 10, '#333', 1); ctx.fillStyle = rgb(team); ctx.fillRect(fx, fy - 10, 7, 4);
+}
+// screen dir -> world angle such that facingToDir(worldAngle) == dir (approx inverse)
+function worldAngleForDir(dir) { const sa = DIR_ANGLE(dir); // screen angle -> world angle: screen vec (cos sa, sin sa) = (cx - sy, (cx+sy)/2)
+  const dx = Math.cos(sa), dy = Math.sin(sa) * 2; const cx = (dx + dy) / 2, sy = (dy - dx) / 2; return Math.atan2(sy, cx); }
+
+// ---------- unit sprite registry ----------
+const UNIT_DRAW = {
+  ant_worker: (ctx, o) => humanoid(ctx, { ...o, torso: mix([200, 180, 140], o.team, 0.5), helmet: 'band', weapon: o.anim === 'work' || o.anim === 'attack' ? (o.workKind === 'mine' ? 'pick' : 'axe') : 'axe', legs: [90, 70, 50] }),
+  ant_infantry: (ctx, o) => humanoid(ctx, { ...o, helmet: o.faction === 'greece' ? 'greek' : (o.faction === 'gaul' ? 'hair' : 'roman'), weapon: o.faction === 'greece' || o.faction === 'gaul' ? 'spear' : 'sword', shield: o.faction === 'rome' ? 'scutum' : (o.faction === 'greece' ? 'round' : 'oval'), sleeves: SKIN, belt: [140, 110, 60] }),
+  ant_ranged: (ctx, o) => humanoid(ctx, { ...o, helmet: 'cap', weapon: o.faction === 'gaul' || o.faction === 'carthage' ? 'sling' : 'bow', torso: mix(o.team, [120, 110, 90], 0.25), legs: [80, 60, 40] }),
+  ant_cavalry: (ctx, o) => horse(ctx, o, c => humanoid(c, { ...o, helmet: o.faction === 'greece' ? 'greek' : 'roman', weapon: 'spear', shield: 'round', anim: o.anim === 'walk' ? 'idle' : o.anim })),
+  ant_siege: (ctx, o) => catapult(ctx, o),
+  ant_ship: (ctx, o) => shipAntiquity(ctx, o),
+  ww2_worker: (ctx, o) => humanoid(ctx, { ...o, torso: mix([110, 110, 100], o.team, 0.45), helmet: 'hardhat', weapon: o.workKind === 'mine' ? 'wrench' : 'shovel', legs: [70, 70, 65], sleeves: mix([110, 110, 100], o.team, 0.3) }),
+  ww2_infantry: (ctx, o) => humanoid(ctx, { ...o, torso: mix([96, 100, 80], o.team, 0.5), helmet: o.faction === 'germany' ? 'stahlhelm' : 'garrison', weapon: 'rifle', legs: [75, 78, 62], sleeves: mix([96, 100, 80], o.team, 0.4), belt: [50, 40, 30], emblem: o.team }),
+  ww2_ranged: (ctx, o) => humanoid(ctx, { ...o, torso: mix([90, 94, 76], o.team, 0.5), helmet: o.faction === 'germany' ? 'stahlhelm' : 'garrison', weapon: 'mg', legs: [70, 72, 58], sleeves: mix([90, 94, 76], o.team, 0.4) }),
+  ww2_tank: (ctx, o) => tank(ctx, o),
+  ww2_artillery: (ctx, o) => artillery(ctx, o),
+  ww2_destroyer: (ctx, o) => destroyer(ctx, o),
+};
+const UNIT_BOX = { default: [24, 44, 12, 40], ant_cavalry: [44, 56, 22, 50], ant_siege: [56, 70, 28, 62], ant_ship: [80, 80, 40, 70], ww2_tank: [64, 56, 32, 48], ww2_artillery: [56, 52, 28, 44], ww2_destroyer: [90, 80, 45, 70] };
+const ANIM_FRAMES = { idle: 1, walk: 6, attack: 4, work: 4 };
+
+export function unitSprite(sprite, colorIdx, dir, anim, frame, extra = {}) {
+  const frames = ANIM_FRAMES[anim] || 1; frame = frame % frames;
+  const key = `u|${sprite}|${colorIdx}|${dir}|${anim}|${frame}|${extra.carry || ''}|${extra.faction || ''}|${extra.workKind || ''}`;
+  const box = UNIT_BOX[sprite] || UNIT_BOX.default;
+  return cached(key, box[0], box[1], box[2], box[3], ctx => {
+    const fn = UNIT_DRAW[sprite]; if (!fn) { ellipse(ctx, 0, -8, 8, 8, '#f0f', '#000'); return; }
+    fn(ctx, { dir, anim, frame, team: teamRgb(colorIdx), carry: extra.carry, faction: extra.faction, workKind: extra.workKind });
+  });
+}
+export function animFrameCount(anim) { return ANIM_FRAMES[anim] || 1; }
+
+// ---------- buildings ----------
+const STONE = [214, 200, 170], STONE_D = [160, 146, 118], ROOF = [178, 74, 48], ROOF_D = [130, 52, 34], CONCRETE = [150, 148, 138], CONCRETE_D = [105, 103, 95], OLIVE = [96, 104, 70], OLIVE_D = [66, 72, 48], BRICK = [150, 78, 56], BRICK_D = [100, 52, 38];
+
+function gableRoof(ctx, x, y, w, h, z, ridgeH, top, side, axis = 'x') {
+  // gable along axis: ridge line through center at height z+ridgeH
+  if (axis === 'x') {
+    const A = iso(x, y, z), B = iso(x + w, y, z), C = iso(x + w, y + h, z), D = iso(x, y + h, z);
+    const R0 = iso(x, y + h / 2, z + ridgeH), R1 = iso(x + w, y + h / 2, z + ridgeH);
+    poly(ctx, [A, B, R1, R0], rgb(shade(top, 0.8)), OUT, 0.8);   // back slope
+    poly(ctx, [D, C, R1, R0], rgb(top), OUT, 0.8);                // front slope
+    poly(ctx, [B, C, R1], rgb(side), OUT, 0.8);                   // right gable
+    // tile lines
+    for (let i = 1; i < 4; i++) { const t = i / 4; const p0 = [D[0] + (R0[0] - D[0]) * t, D[1] + (R0[1] - D[1]) * t], p1 = [C[0] + (R1[0] - C[0]) * t, C[1] + (R1[1] - C[1]) * t]; line(ctx, p0[0], p0[1], p1[0], p1[1], rgb(shade(top, 0.85)), 0.7); }
+  } else {
+    const A = iso(x, y, z), B = iso(x + w, y, z), C = iso(x + w, y + h, z), D = iso(x, y + h, z);
+    const R0 = iso(x + w / 2, y, z + ridgeH), R1 = iso(x + w / 2, y + h, z + ridgeH);
+    poly(ctx, [A, D, R1, R0], rgb(shade(top, 1.05)), OUT, 0.8);
+    poly(ctx, [B, C, R1, R0], rgb(shade(top, 0.8)), OUT, 0.8);
+    poly(ctx, [D, C, R1], rgb(side), OUT, 0.8);
+    for (let i = 1; i < 4; i++) { const t = i / 4; const p0 = [B[0] + (R0[0] - B[0]) * t, B[1] + (R0[1] - B[1]) * t], p1 = [C[0] + (R1[0] - C[0]) * t, C[1] + (R1[1] - C[1]) * t]; line(ctx, p0[0], p0[1], p1[0], p1[1], rgb(shade(top, 0.7)), 0.7); }
+  }
+}
+function flag(ctx, x, y, z, team, h = 22) { const [px, py] = iso(x, y, z); line(ctx, px, py, px, py - h, '#3a2a1a', 1.5); poly(ctx, [[px, py - h], [px + 11, py - h + 3.5], [px, py - h + 7]], rgb(team), OUT, 0.6); }
+function windows(ctx, pts, z, n, color = [60, 50, 40]) { for (let i = 0; i < n; i++) { const t = (i + 0.5) / n; const x = pts[0][0] + (pts[1][0] - pts[0][0]) * t, y = pts[0][1] + (pts[1][1] - pts[0][1]) * t; const [sx, sy] = iso(x, y, z); rrect(ctx, sx - 1.8, sy - 4, 3.6, 5, 0.5, rgb(color), OUT, 0.5); } }
+function doorAt(ctx, x, y, z, color = [50, 35, 20]) { const [sx, sy] = iso(x, y, z); rrect(ctx, sx - 3, sy - 8, 6, 8, 1, rgb(color), OUT, 0.6); }
+function columns(ctx, x0, y0, x1, y1, n, z, h) { for (let i = 0; i <= n; i++) { const t = i / n; const [sx, sy] = iso(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, z); line(ctx, sx, sy, sx, sy - h, rgb(STONE_D), 3.2); line(ctx, sx - 0.6, sy, sx - 0.6, sy - h, rgb(shade(STONE, 1.05)), 1.4); } }
+function sandbags(ctx, pts, z) { for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; const n = 5; for (let k = 0; k < n; k++) { const t = (k + 0.5) / n; const [sx, sy] = iso(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, z); ellipse(ctx, sx, sy - 2, 4, 2.4, rgb([170, 150, 105]), OUT, 0.5); ellipse(ctx, sx, sy - 5, 3.6, 2.2, rgb([185, 165, 118]), OUT, 0.5); } } }
+
+const BUILDING_DRAW = {
+  ant_hall: (ctx, o) => {
+    const team = o.team;
+    prism(ctx, isoRect(0.05, 0.05, 2.9, 2.9), 0, 6, shade(STONE, 0.9), STONE_D); // platform
+    prism(ctx, isoRect(0.4, 0.4, 2.2, 2.2), 6, 30, STONE, STONE_D);
+    columns(ctx, 0.35, 2.7, 2.7, 2.7, 4, 6, 30); columns(ctx, 2.7, 0.35, 2.7, 2.7, 4, 6, 30);
+    gableRoof(ctx, 0.2, 0.2, 2.6, 2.6, 36, 22, ROOF, ROOF_D, 'x');
+    doorAt(ctx, 1.5, 2.62, 6);
+    flag(ctx, 1.5, 1.5, 58, team, 24);
+    windows(ctx, [[2.62, 0.7], [2.62, 2.3]], 24, 2);
+  },
+  ant_barracks: (ctx, o) => {
+    prism(ctx, isoRect(0.1, 0.1, 2.8, 2.8), 0, 4, shade(STONE, 0.85), STONE_D);
+    prism(ctx, isoRect(0.25, 0.25, 2.5, 2.5), 4, 24, shade(STONE, 0.95), STONE_D);
+    gableRoof(ctx, 0.1, 0.1, 2.8, 2.8, 28, 16, [120, 60, 40], [90, 44, 30], 'y');
+    doorAt(ctx, 2.75, 1.5, 4); windows(ctx, [[0.5, 2.75], [2.5, 2.75]], 18, 3);
+    // training yard posts
+    for (const p of [[0.35, 0.35], [2.65, 0.35]]) { const [sx, sy] = iso(p[0], p[1], 4); line(ctx, sx, sy, sx, sy - 18, rgb(WOOD_D), 2); }
+    flag(ctx, 2.7, 0.3, 4, o.team, 30);
+    // crossed spears sign
+    const [sx, sy] = iso(2.8, 1.5, 22); line(ctx, sx - 5, sy - 6, sx + 5, sy + 4, rgb(METAL), 1.2); line(ctx, sx + 5, sy - 6, sx - 5, sy + 4, rgb(METAL), 1.2);
+  },
+  ant_stable: (ctx, o) => {
+    prism(ctx, isoRect(0.1, 0.1, 2.8, 2.8), 0, 2, [150, 120, 80], [110, 88, 58]);
+    prism(ctx, isoRect(0.2, 0.2, 1.7, 2.6), 2, 18, [200, 170, 120], [150, 120, 80]);
+    gableRoof(ctx, 0.05, 0.05, 2.0, 2.9, 20, 14, [130, 110, 70], [96, 80, 50], 'y');
+    // fence paddock
+    const fence = [[2.0, 0.2], [2.85, 0.2], [2.85, 2.85], [2.0, 2.85]];
+    for (let i = 0; i < 3; i++) { const a = fence[i], b = fence[i + 1]; const [ax, ay] = iso(a[0], a[1], 2), [bx, by] = iso(b[0], b[1], 2); line(ctx, ax, ay - 6, bx, by - 6, rgb(WOOD), 1.4); line(ctx, ax, ay - 3, bx, by - 3, rgb(WOOD), 1.4); for (let k = 0; k <= 3; k++) { const t = k / 3; const [px, py] = iso(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, 2); line(ctx, px, py, px, py - 8, rgb(WOOD_D), 1.6); } }
+    // hay
+    const [hx, hy] = iso(2.4, 1.2, 2); ellipse(ctx, hx, hy - 3, 7, 4.5, rgb([215, 185, 90]), OUT, 0.7);
+    // horse head sign
+    const [sx, sy] = iso(1.9, 1.5, 15); ellipse(ctx, sx, sy, 4, 3, rgb([110, 75, 45]), OUT, 0.6);
+    flag(ctx, 0.3, 0.3, 2, o.team, 32);
+    doorAt(ctx, 1.9, 2.0, 2);
+  },
+  ant_siege: (ctx, o) => {
+    prism(ctx, isoRect(0.1, 0.1, 2.8, 2.8), 0, 3, [150, 130, 100], [110, 95, 70]);
+    prism(ctx, isoRect(0.2, 0.2, 2.6, 1.4), 3, 16, [170, 130, 80], [120, 90, 55]);
+    gableRoof(ctx, 0.1, 0.1, 2.8, 1.6, 19, 12, [110, 80, 50], [80, 58, 36], 'x');
+    // workyard: logs and a half-built catapult frame
+    for (let i = 0; i < 3; i++) { const [lx, ly] = iso(0.5 + i * 0.12, 2.3, 3 + i * 4); ctx.save(); ctx.translate(lx, ly); ctx.rotate(-0.46); rrect(ctx, -2, -14, 4, 28, 1.5, rgb(WOOD), OUT, 0.6); ctx.restore(); }
+    prism(ctx, isoRect(1.6, 1.9, 1.0, 0.1), 3, 6, WOOD, WOOD_D); prism(ctx, isoRect(1.6, 2.6, 1.0, 0.1), 3, 6, WOOD, WOOD_D);
+    const [ax, ay] = iso(2.1, 2.3, 9); line(ctx, ax, ay, ax - 6, ay - 22, rgb(WOOD), 2.5); ellipse(ctx, ax - 6, ay - 22, 3, 3, rgb([110, 105, 95]), OUT, 0.6);
+    flag(ctx, 2.8, 0.2, 3, o.team, 30);
+  },
+  ant_dock: (ctx, o) => {
+    // pier on posts
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { const [px, py] = iso(0.15 + i * 0.9, 0.15 + j * 0.9, 0); line(ctx, px, py + 4, px, py - 6, rgb(WOOD_D), 2.2); }
+    prism(ctx, isoRect(0.05, 0.05, 2.9, 2.9), 6, 3, [170, 130, 80], [120, 90, 55]);
+    for (let i = 1; i < 12; i++) { const [ax, ay] = iso(0.05 + i * 0.24, 0.05, 9), [bx, by] = iso(0.05 + i * 0.24, 2.95, 9); line(ctx, ax, ay, bx, by, rgb([140, 105, 62]), 0.7); }
+    prism(ctx, isoRect(0.3, 0.3, 1.5, 1.5), 9, 16, [200, 170, 120], [150, 120, 80]);
+    gableRoof(ctx, 0.2, 0.2, 1.7, 1.7, 25, 11, [130, 70, 45], [96, 50, 32], 'x');
+    // crane & boat under construction
+    const [cx, cy] = iso(2.3, 0.6, 9); line(ctx, cx, cy, cx, cy - 34, rgb(WOOD_D), 2.5); line(ctx, cx, cy - 34, cx + 22, cy - 22, rgb(WOOD_D), 2); line(ctx, cx + 22, cy - 22, cx + 22, cy - 6, '#ddd', 0.8);
+    const hull = [[1.4, 2.1], [2.7, 2.0], [2.9, 2.4], [2.7, 2.8], [1.4, 2.8], [1.2, 2.45]]; prism(ctx, hull, 9, 6, [150, 105, 60], [110, 70, 35]);
+    // barrels, rope
+    for (const b of [[2.5, 1.2], [2.7, 1.45]]) { const [bx, by] = iso(b[0], b[1], 9); rrect(ctx, bx - 3, by - 8, 6, 8, 2, rgb([120, 85, 45]), OUT, 0.6); }
+    flag(ctx, 0.3, 0.3, 36, o.team, 20);
+  },
+  ant_tower: (ctx, o) => {
+    const c = [[0.5, 0.08], [0.92, 0.5], [0.5, 0.92], [0.08, 0.5]];
+    prism(ctx, isoRect(0.05, 0.05, 0.9, 0.9), 0, 3, shade(STONE, 0.85), STONE_D);
+    prism(ctx, [[0.15, 0.15], [0.85, 0.15], [0.85, 0.85], [0.15, 0.85]], 3, 44, STONE, STONE_D);
+    prism(ctx, isoRect(0.05, 0.05, 0.9, 0.9), 47, 6, shade(STONE, 1.05), STONE_D);
+    // crenellations
+    for (const p of [[0.1, 0.1], [0.5, 0.05], [0.9, 0.1], [0.95, 0.5], [0.9, 0.9], [0.5, 0.95], [0.1, 0.9], [0.05, 0.5]]) prism(ctx, isoRect(p[0] - 0.08, p[1] - 0.08, 0.16, 0.16), 53, 6, STONE, STONE_D);
+    // arrow slits
+    for (const z of [18, 32]) { const [sx, sy] = iso(0.85, 0.5, z); ctx.fillStyle = '#2a1a10'; ctx.fillRect(sx - 1, sy - 6, 2, 7); const [sx2, sy2] = iso(0.5, 0.85, z); ctx.fillRect(sx2 - 1, sy2 - 6, 2, 7); }
+    flag(ctx, 0.5, 0.5, 59, o.team, 16);
+  },
+  ant_wall: (ctx, o) => {
+    const m = o.mask; // bit 1: N (y-1), 2: E (x+1), 4: S (y+1), 8: W (x-1)
+    const h = 20;
+    // center block
+    const cw = 0.5, c0 = 0.5 - cw / 2;
+    let pts;
+    // connectors
+    const segs = [];
+    if (m & 1) segs.push(isoRect(c0, 0, cw, 0.5));
+    if (m & 4) segs.push(isoRect(c0, 0.5, cw, 0.5));
+    if (m & 8) segs.push(isoRect(0, c0, 0.5, cw));
+    if (m & 2) segs.push(isoRect(0.5, c0, 0.5, cw));
+    // draw in depth order: N & W first
+    for (const s of segs) prism(ctx, s, 0, h, STONE, STONE_D);
+    // pillar
+    const pw = m === 0 || m === 5 || m === 10 ? cw : 0.62;
+    prism(ctx, isoRect(0.5 - pw / 2, 0.5 - pw / 2, pw, pw), 0, h + (m === 5 || m === 10 ? 0 : 6), shade(STONE, 1.05), STONE_D);
+    // crenels on top
+    if (m === 5) { for (const y of [0.15, 0.5, 0.85]) prism(ctx, isoRect(0.5 - 0.1, y - 0.08, 0.2, 0.16), h, 4, STONE, STONE_D); }
+    else if (m === 10) { for (const x of [0.15, 0.5, 0.85]) prism(ctx, isoRect(x - 0.08, 0.5 - 0.1, 0.16, 0.2), h, 4, STONE, STONE_D); }
+    // stone lines
+    ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 0.6; for (let z = 5; z < h; z += 5) { const [ax, ay] = iso(0, 1, z), [bx, by] = iso(1, 1, z); if (m & 4 || m & 8) { ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); } }
+  },
+  ww2_hall: (ctx, o) => {
+    prism(ctx, isoRect(0.05, 0.05, 2.9, 2.9), 0, 3, shade(CONCRETE, 0.85), CONCRETE_D);
+    prism(ctx, isoRect(0.2, 0.2, 2.6, 2.6), 3, 26, CONCRETE, CONCRETE_D);
+    prism(ctx, isoRect(0.5, 0.5, 1.6, 1.6), 29, 14, shade(CONCRETE, 1.05), CONCRETE_D);
+    windows(ctx, [[2.8, 0.5], [2.8, 2.5]], 20, 4, [40, 50, 60]); windows(ctx, [[0.5, 2.8], [2.5, 2.8]], 20, 4, [40, 50, 60]);
+    doorAt(ctx, 1.5, 2.82, 3, [40, 40, 40]);
+    // antenna & flag
+    const [ax, ay] = iso(2.1, 0.6, 43); line(ctx, ax, ay, ax, ay - 30, '#333', 1.2); line(ctx, ax - 5, ay - 20, ax + 5, ay - 20, '#333', 1); line(ctx, ax - 3, ay - 26, ax + 3, ay - 26, '#333', 1);
+    flag(ctx, 0.9, 0.9, 43, o.team, 24);
+    sandbags(ctx, [[0.0, 0.0], [3.0, 0.0], [3.0, 3.0], [0.0, 3.0]], 0);
+  },
+  ww2_barracks: (ctx, o) => {
+    prism(ctx, isoRect(0.1, 0.1, 2.8, 2.8), 0, 2, [110, 100, 80], [80, 72, 58]);
+    prism(ctx, isoRect(0.2, 0.7, 2.6, 1.6), 2, 14, OLIVE, OLIVE_D);
+    // curved corrugated roof (approximate with several strips)
+    for (let i = 0; i < 6; i++) { const t0 = i / 6, t1 = (i + 1) / 6; const y0 = 0.7 + 1.6 * t0, y1 = 0.7 + 1.6 * t1; const z0 = 16 + Math.sin(t0 * Math.PI) * 12, z1 = 16 + Math.sin(t1 * Math.PI) * 12; poly(ctx, [iso(0.15, y0, z0), iso(2.85, y0, z0), iso(2.85, y1, z1), iso(0.15, y1, z1)], rgb(shade([120, 125, 110], 0.8 + 0.4 * Math.sin((t0 + t1) / 2 * Math.PI))), OUT, 0.7); }
+    doorAt(ctx, 2.82, 1.5, 2, [40, 40, 40]); windows(ctx, [[0.5, 2.32], [2.5, 2.32]], 12, 4, [50, 60, 60]);
+    // tents
+    for (const x of [0.5, 1.5, 2.5]) { poly(ctx, [iso(x - 0.3, 0.15, 2), iso(x + 0.3, 0.15, 2), iso(x, 0.3, 14)], rgb([150, 140, 105]), OUT, 0.6); poly(ctx, [iso(x - 0.3, 0.55, 2), iso(x + 0.3, 0.55, 2), iso(x, 0.3, 14)], rgb([120, 110, 80]), OUT, 0.6); }
+    flag(ctx, 0.25, 0.7, 2, o.team, 30);
+  },
+  ww2_factory: (ctx, o) => {
+    prism(ctx, isoRect(0.05, 0.05, 2.9, 2.9), 0, 2, shade(CONCRETE, 0.8), CONCRETE_D);
+    prism(ctx, isoRect(0.2, 0.2, 2.6, 2.6), 2, 22, BRICK, BRICK_D);
+    // sawtooth roof
+    for (let i = 0; i < 3; i++) { const x0 = 0.2 + i * 0.87, x1 = x0 + 0.87; poly(ctx, [iso(x0, 0.2, 24), iso(x0, 2.8, 24), iso(x0 + 0.3, 2.8, 34), iso(x0 + 0.3, 0.2, 34)], rgb([80, 110, 130]), OUT, 0.6); poly(ctx, [iso(x0 + 0.3, 0.2, 34), iso(x0 + 0.3, 2.8, 34), iso(x1, 2.8, 24), iso(x1, 0.2, 24)], rgb([110, 105, 95]), OUT, 0.6); poly(ctx, [iso(x0, 2.8, 24), iso(x0 + 0.3, 2.8, 34), iso(x1, 2.8, 24)], rgb(BRICK_D), OUT, 0.6); }
+    // chimney
+    prism(ctx, isoRect(2.4, 0.4, 0.3, 0.3), 24, 30, BRICK, BRICK_D);
+    // big door and windows
+    const [dx, dy] = iso(1.5, 2.82, 2); rrect(ctx, dx - 9, dy - 14, 18, 14, 1, rgb([70, 70, 70]), OUT, 0.7); for (let i = 1; i < 4; i++) line(ctx, dx - 9, dy - 14 + i * 3.5, dx + 9, dy - 14 + i * 3.5, 'rgba(0,0,0,0.3)', 0.6);
+    windows(ctx, [[2.82, 0.5], [2.82, 2.5]], 16, 4, [80, 110, 130]);
+    flag(ctx, 0.35, 0.35, 24, o.team, 22);
+  },
+  ww2_artpark: (ctx, o) => {
+    prism(ctx, isoRect(0.05, 0.05, 2.9, 2.9), 0, 1.5, [110, 100, 78], [80, 72, 58]);
+    sandbags(ctx, [[0.1, 0.1], [2.9, 0.1], [2.9, 2.9], [0.1, 2.9]], 1.5);
+    // camo net on poles
+    for (const p of [[0.4, 0.4], [2.6, 0.4], [2.6, 2.6], [0.4, 2.6]]) { const [px, py] = iso(p[0], p[1], 1.5); line(ctx, px, py, px, py - 26, rgb(WOOD_D), 1.6); }
+    poly(ctx, [iso(0.3, 0.3, 27), iso(2.7, 0.3, 27), iso(2.7, 2.7, 27), iso(0.3, 2.7, 27)], 'rgba(90,110,60,0.55)', 'rgba(50,60,30,0.8)', 0.8);
+    // crates & shells
+    for (const c of [[0.8, 0.9], [1.2, 0.8], [0.9, 1.4]]) prism(ctx, isoRect(c[0], c[1], 0.3, 0.3), 1.5, 8, [140, 120, 80], [100, 85, 55]);
+    for (let i = 0; i < 5; i++) { const [sx, sy] = iso(2.0 + i * 0.12, 2.3, 1.5); line(ctx, sx, sy, sx, sy - 9, rgb([120, 100, 60]), 2); }
+    // a gun
+    ctx.save(); const [gx, gy] = iso(1.8, 1.6, 1.5); ctx.translate(gx, gy); artillery(ctx, { dir: 1, team: o.team, anim: 'idle', frame: 0 }); ctx.restore();
+    flag(ctx, 0.2, 0.2, 1.5, o.team, 34);
+  },
+  ww2_shipyard: (ctx, o) => {
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { const [px, py] = iso(0.15 + i * 0.9, 0.15 + j * 0.9, 0); line(ctx, px, py + 4, px, py - 6, rgb([70, 70, 70]), 2.2); }
+    prism(ctx, isoRect(0.05, 0.05, 2.9, 2.9), 6, 3, CONCRETE, CONCRETE_D);
+    prism(ctx, isoRect(0.2, 0.2, 1.4, 1.6), 9, 18, [110, 115, 120], [70, 74, 78]);
+    poly(ctx, [iso(0.15, 0.15, 27), iso(1.65, 0.15, 27), iso(1.65, 1.85, 27), iso(0.15, 1.85, 27)], rgb([80, 84, 88]), OUT, 0.7);
+    // gantry crane
+    const [c0x, c0y] = iso(2.2, 0.3, 9), [c1x, c1y] = iso(2.2, 2.7, 9);
+    line(ctx, c0x, c0y, c0x, c0y - 44, '#555', 2.5); line(ctx, c1x, c1y, c1x, c1y - 44, '#555', 2.5); line(ctx, c0x, c0y - 44, c1x, c1y - 44, '#666', 3); line(ctx, (c0x + c1x) / 2, (c0y + c1y) / 2 - 44, (c0x + c1x) / 2, (c0y + c1y) / 2 - 20, '#999', 0.8);
+    // hull under construction
+    const hull = [[1.5, 2.0], [2.8, 1.9], [2.95, 2.3], [2.8, 2.7], [1.5, 2.75], [1.3, 2.35]]; prism(ctx, hull, 9, 7, [128, 136, 142], [80, 86, 92]);
+    flag(ctx, 0.3, 0.3, 27, o.team, 20);
+  },
+  ww2_bunker: (ctx, o) => {
+    prism(ctx, isoRect(0.02, 0.02, 0.96, 0.96), 0, 2, shade(CONCRETE, 0.8), CONCRETE_D);
+    const oct = [[0.25, 0.05], [0.75, 0.05], [0.95, 0.25], [0.95, 0.75], [0.75, 0.95], [0.25, 0.95], [0.05, 0.75], [0.05, 0.25]];
+    prism(ctx, oct, 2, 16, CONCRETE, CONCRETE_D);
+    prism(ctx, oct.map(p => [0.5 + (p[0] - 0.5) * 0.8, 0.5 + (p[1] - 0.5) * 0.8]), 18, 6, shade(CONCRETE, 1.08), CONCRETE_D);
+    // slits
+    for (const s of [[0.93, 0.5], [0.5, 0.93]]) { const [sx, sy] = iso(s[0], s[1], 12); ctx.fillStyle = '#1a1a1a'; ctx.fillRect(sx - 5, sy - 2, 10, 2.4); }
+    const [mx, my] = iso(0.9, 0.6, 12); line(ctx, mx, my, mx + 7, my + 3, '#222', 2);
+    sandbags(ctx, [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], 0);
+    flag(ctx, 0.5, 0.5, 24, o.team, 14);
+  },
+  ww2_wall: (ctx, o) => {
+    const m = o.mask; const h = 16; const cw = 0.4, c0 = 0.5 - cw / 2;
+    const segs = [];
+    if (m & 1) segs.push(isoRect(c0, 0, cw, 0.5)); if (m & 4) segs.push(isoRect(c0, 0.5, cw, 0.5)); if (m & 8) segs.push(isoRect(0, c0, 0.5, cw)); if (m & 2) segs.push(isoRect(0.5, c0, 0.5, cw));
+    for (const s of segs) prism(ctx, s, 0, h, CONCRETE, CONCRETE_D);
+    prism(ctx, isoRect(0.5 - 0.26, 0.5 - 0.26, 0.52, 0.52), 0, h + 3, shade(CONCRETE, 1.05), CONCRETE_D);
+    // barbed wire on top
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 0.7;
+    if (m & 2 || m & 8) { const [ax, ay] = iso(0, 0.5, h + 4), [bx, by] = iso(1, 0.5, h + 4); ctx.beginPath(); for (let t = 0; t <= 1; t += 0.1) ctx.lineTo(ax + (bx - ax) * t, ay + (by - ay) * t - Math.abs(Math.sin(t * 20)) * 2); ctx.stroke(); }
+    if (m & 1 || m & 4) { const [ax, ay] = iso(0.5, 0, h + 4), [bx, by] = iso(0.5, 1, h + 4); ctx.beginPath(); for (let t = 0; t <= 1; t += 0.1) ctx.lineTo(ax + (bx - ax) * t, ay + (by - ay) * t - Math.abs(Math.sin(t * 20)) * 2); ctx.stroke(); }
+  },
+};
+
+function constructionSite(ctx, w, h, progress, era) {
+  // foundation + scaffold that grows with progress
+  prism(ctx, isoRect(0.05, 0.05, w - 0.1, h - 0.1), 0, 2, era === 'ww2' ? [120, 110, 90] : [150, 130, 100], [100, 85, 60]);
+  const stage = progress;
+  if (stage > 0.05) {
+    const hh = 30 * Math.min(1, stage / 0.8);
+    for (const p of [[0.2, 0.2], [w - 0.2, 0.2], [w - 0.2, h - 0.2], [0.2, h - 0.2]]) { const [sx, sy] = iso(p[0], p[1], 2); line(ctx, sx, sy, sx, sy - hh, rgb(WOOD_D), 2); }
+    for (let z = 10; z < hh; z += 10) { const pts = [[0.2, 0.2], [w - 0.2, 0.2], [w - 0.2, h - 0.2], [0.2, h - 0.2]].map(p => iso(p[0], p[1], 2 + z)); for (let i = 0; i < 4; i++) { const a = pts[i], b = pts[(i + 1) % 4]; line(ctx, a[0], a[1], b[0], b[1], rgb(WOOD), 1.2); } }
+    // partial walls
+    const wallH = Math.max(0, (stage - 0.15) / 0.7) * 20;
+    if (wallH > 0) prism(ctx, isoRect(0.3, 0.3, w - 0.6, h - 0.6), 2, wallH, era === 'ww2' ? CONCRETE : STONE, era === 'ww2' ? CONCRETE_D : STONE_D);
+  }
+  // material pile
+  const [mx, my] = iso(w - 0.5, h - 0.4, 2); for (let i = 0; i < 3; i++) rrect(ctx, mx - 8 + i * 2, my - 3 - i * 3, 12, 3, 1, rgb(WOOD), OUT, 0.5);
+}
+
+const BUILDING_BOX = { 3: [200, 200, 100, 150], 1: [80, 110, 40, 90] };
+/** Returns cached building sprite. mask: wall neighbor mask. stage: 'done' | construction progress bucket */
+export function buildingSprite(sprite, w, h, colorIdx, built, progress, mask = 0, era = 'antiquity') {
+  const bucket = built ? 'done' : Math.floor(progress * 10);
+  const key = `b|${sprite}|${colorIdx}|${bucket}|${mask}`;
+  const box = BUILDING_BOX[w] || BUILDING_BOX[3];
+  return cached(key, box[0], box[1], box[2], box[3], ctx => {
+    ctx.translate(0, 0);
+    if (!built) constructionSite(ctx, w, h, progress, era);
+    else { const fn = BUILDING_DRAW[sprite]; if (fn) fn(ctx, { team: teamRgb(colorIdx), mask }); else prism(ctx, isoRect(0.1, 0.1, w - 0.2, h - 0.2), 0, 30, [200, 0, 200], [100, 0, 100]); }
+  });
+}
+
+// ---------- resources & decoration ----------
+export function treeSprite(variant, era, sway = 0) {
+  const key = `tree|${era}|${variant}|${sway}`;
+  return cached(key, 56, 72, 28, 66, ctx => {
+    ellipse(ctx, 0, 0, 12, 6, 'rgba(0,0,0,0.3)');
+    if (era === 'ww2' && variant >= 2) { // scrap piles for ww2 secondary resource
+      const rust = [130, 80, 50], rustD = [90, 55, 35], grey = [110, 112, 115];
+      ellipse(ctx, 0, -3, 15, 8, rgb([90, 80, 70]), OUT, 0.8);
+      for (let i = 0; i < 7; i++) { const a = i * 1.7 + variant, r = 4 + (i % 3) * 3; const x = Math.cos(a) * r, y = -4 + Math.sin(a) * r * 0.5 - (i % 2) * 5; ctx.save(); ctx.translate(x, y); ctx.rotate(a * 0.7); rrect(ctx, -6, -3, 12, 6, 1, rgb(i % 2 ? rust : grey), OUT, 0.6); ctx.restore(); }
+      // a wheel and a barrel
+      ellipse(ctx, -8, -10, 5, 5, rgb([50, 50, 50]), OUT, 0.7); ellipse(ctx, -8, -10, 2, 2, rgb(grey), OUT, 0.4);
+      rrect(ctx, 5, -20, 7, 11, 2, rgb(rustD), OUT, 0.6); line(ctx, 5, -16, 12, -16, rgb(rust), 1); line(ctx, 5, -12, 12, -12, rgb(rust), 1);
+      return;
+    }
+    const sx = Math.sin(sway) * 2;
+    const trunk = [110, 75, 40];
+    if (variant === 1 || variant === 3) { // conifer
+      line(ctx, 0, 0, sx, -20, rgb(trunk), 4);
+      const g = era === 'ww2' ? [46, 82, 46] : [40, 100, 50];
+      for (let i = 0; i < 4; i++) { const y = -12 - i * 12, w = 20 - i * 4; poly(ctx, [[sx * (i / 3) - w, y], [sx * (i / 3) + w, y], [sx * ((i + 1) / 3), y - 18]], rgb(shade(g, 0.85 + i * 0.1)), OUT, 0.8); poly(ctx, [[sx * (i / 3) - w * 0.6, y - 2], [sx * (i / 3), y - 4], [sx * ((i + 1) / 3), y - 17]], rgb(shade(g, 1.2), 0.5)); }
+    } else { // broadleaf
+      line(ctx, 0, 0, sx * 0.5, -22, rgb(trunk), 5);
+      line(ctx, sx * 0.3, -14, sx * 0.3 - 7, -24, rgb(trunk), 2.5); line(ctx, sx * 0.3, -16, sx * 0.3 + 8, -26, rgb(trunk), 2.5);
+      const g = era === 'ww2' ? [58, 96, 44] : [66, 130, 52];
+      const blobs = variant === 0 ? [[0, -38, 18], [-11, -30, 12], [11, -31, 12], [0, -46, 11], [-6, -40, 9]] : [[0, -34, 16], [-12, -28, 10], [12, -27, 11], [-4, -44, 12], [8, -40, 9]];
+      for (const [bx, by, r] of blobs) ellipse(ctx, bx + sx, by, r, r * 0.85, rgb(shade(g, 0.85)), OUT, 0.9);
+      for (const [bx, by, r] of blobs) ellipse(ctx, bx + sx - r * 0.25, by - r * 0.25, r * 0.6, r * 0.5, rgb(shade(g, 1.2), 0.85));
+      for (const [bx, by, r] of blobs) ellipse(ctx, bx + sx - r * 0.35, by - r * 0.35, r * 0.25, r * 0.2, rgb(shade(g, 1.5), 0.5));
+    }
+  });
+}
+export function mineSprite(era, depleted = 0) {
+  const key = `mine|${era}|${depleted}`;
+  return cached(key, 150, 130, 75, 100, ctx => {
+    // 2x2 footprint, anchored at center (x=1,y=1 in tile units -> iso(0,0))
+    ctx.translate(...iso(-1, -1, 0).map(v => v));
+    if (era === 'ww2') {
+      prism(ctx, isoRect(0.1, 0.1, 1.8, 1.8), 0, 2, [60, 55, 50], [40, 36, 32]);
+      // oil pool
+      ellipse(ctx, ...iso(1.35, 1.35, 2), 22, 11, 'rgba(20,18,20,0.9)'); ellipse(ctx, ...iso(1.2, 1.25, 2), 8, 3, 'rgba(90,80,110,0.5)');
+      // derrick tower
+      const [bx, by] = iso(0.7, 0.7, 2);
+      for (const [ox, oy] of [[-10, 0], [10, 0], [0, -5], [0, 5]]) line(ctx, bx + ox, by + oy, bx, by - 58, '#4a3a2a', 2);
+      for (let z = 12; z < 56; z += 12) { const k = 1 - z / 62; line(ctx, bx - 10 * k, by - z, bx + 10 * k, by - z, '#5a4a3a', 1.2); line(ctx, bx - 10 * k, by - z, bx + 10 * k, by - z - 12 * 0.9, '#5a4a3a', 0.8); }
+      rrect(ctx, bx - 6, by - 62, 12, 5, 1, '#3a2a1a', OUT, 0.6);
+      // pump jack
+      const [px, py] = iso(1.5, 0.6, 2); line(ctx, px, py, px, py - 18, '#444', 3); line(ctx, px - 14, py - 14, px + 12, py - 22, '#666', 3); ellipse(ctx, px - 14, py - 14, 5, 4, '#555', OUT, 0.6); line(ctx, px + 12, py - 22, px + 12, py - 4, '#777', 1.5);
+    } else {
+      // rocky mound with entrance and gold veins
+      const rockC = [128, 118, 100], rockD = [88, 80, 66];
+      const mound = [[0.15, 0.3], [0.6, 0.05], [1.5, 0.05], [1.95, 0.5], [1.9, 1.5], [1.5, 1.95], [0.5, 1.9], [0.05, 1.3]];
+      prism(ctx, mound, 0, 14, rockC, rockD);
+      prism(ctx, [[0.5, 0.5], [1.3, 0.35], [1.7, 0.9], [1.4, 1.5], [0.6, 1.4]], 14, 14, shade(rockC, 1.05), rockD);
+      prism(ctx, [[0.8, 0.7], [1.3, 0.7], [1.3, 1.1], [0.8, 1.1]], 28, 8, shade(rockC, 1.1), rockD);
+      // entrance
+      const [ex, ey] = iso(1.55, 1.55, 4); ctx.fillStyle = '#1a140c'; ctx.beginPath(); ctx.moveTo(ex - 9, ey + 2); ctx.lineTo(ex - 9, ey - 8); ctx.quadraticCurveTo(ex, ey - 18, ex + 9, ey - 8); ctx.lineTo(ex + 9, ey + 2); ctx.closePath(); ctx.fill();
+      line(ctx, ex - 10, ey + 2, ex - 10, ey - 9, rgb(WOOD_D), 2.5); line(ctx, ex + 10, ey + 2, ex + 10, ey - 9, rgb(WOOD_D), 2.5); line(ctx, ex - 11, ey - 9, ex + 11, ey - 9, rgb(WOOD_D), 2.5);
+      // gold specks
+      ctx.fillStyle = '#f2c94c'; for (let i = 0; i < 14; i++) { const [gx, gy] = iso(0.3 + ((i * 7) % 13) / 10, 0.3 + ((i * 5) % 11) / 8, 10 + (i % 4) * 8); ctx.fillRect(gx, gy, 2.2, 1.6); }
+      ctx.fillStyle = '#fff2b0'; for (let i = 0; i < 6; i++) { const [gx, gy] = iso(0.5 + ((i * 3) % 7) / 6, 0.4 + ((i * 5) % 9) / 8, 14 + (i % 3) * 9); ctx.fillRect(gx, gy, 1.2, 1); }
+      // cart
+      const [cx, cy] = iso(0.35, 1.7, 0); rrect(ctx, cx - 6, cy - 9, 12, 6, 1, rgb(WOOD), OUT, 0.6); ellipse(ctx, cx - 4, cy - 2, 2.5, 2.5, '#333', OUT, 0.5); ellipse(ctx, cx + 4, cy - 2, 2.5, 2.5, '#333', OUT, 0.5); ellipse(ctx, cx, cy - 10, 5, 2.5, '#e8c04a', OUT, 0.5);
+    }
+  });
+}
+export function decoSprite(kind, v, era) {
+  const key = `deco|${era}|${kind}|${Math.floor(v * 4)}`;
+  return cached(key, 30, 24, 15, 20, ctx => {
+    if (kind === 0) { // bush
+      const g = era === 'ww2' ? [70, 100, 50] : [80, 140, 60];
+      ellipse(ctx, 0, 0, 8, 4, 'rgba(0,0,0,0.2)'); ellipse(ctx, -3, -4, 6, 5, rgb(shade(g, 0.9)), OUT, 0.6); ellipse(ctx, 3, -5, 6, 5, rgb(g), OUT, 0.6); ellipse(ctx, 0, -8, 5, 4, rgb(shade(g, 1.2)), OUT, 0.6);
+    } else if (kind === 1) { // rock
+      ellipse(ctx, 0, 0, 8, 4, 'rgba(0,0,0,0.25)'); poly(ctx, [[-7, -1], [-4, -7], [3, -9], [8, -3], [6, 1], [-4, 2]], rgb([135, 130, 120]), OUT, 0.8); poly(ctx, [[-4, -6], [2, -8], [5, -4], [-2, -3]], rgb([170, 165, 155]));
+    } else { // shell / driftwood on sand
+      ellipse(ctx, 0, 0, 6, 2.5, 'rgba(0,0,0,0.15)'); ctx.save(); ctx.rotate(v * 3); rrect(ctx, -7, -3, 14, 3.5, 1.5, rgb([160, 130, 90]), OUT, 0.6); ctx.restore();
+    }
+  });
+}
+
+// ---------- icons for command card / portraits ----------
+export function iconCanvas(drawFn, size = 64) {
+  const c = document.createElement('canvas'); c.width = size * 2; c.height = size * 2; const ctx = c.getContext('2d'); ctx.scale(2, 2); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  drawFn(ctx, size); return c;
+}
+export function unitPortrait(sprite, colorIdx, size, extra = {}) {
+  return iconCanvas((ctx, s) => {
+    const spr = unitSprite(sprite, colorIdx, 2, 'idle', 0, extra);
+    const scale = Math.min((s * 0.9) / spr.w, (s * 0.9) / spr.h) * 1.15;
+    ctx.translate(s / 2, s / 2 + spr.h * scale * 0.35); ctx.scale(scale, scale); ctx.drawImage(spr.canvas, -spr.ax, -spr.ay, spr.w, spr.h);
+  }, size);
+}
+export function buildingPortrait(sprite, w, h, colorIdx, size, era) {
+  return iconCanvas((ctx, s) => {
+    const spr = buildingSprite(sprite, w, h, colorIdx, true, 1, w === 1 ? 10 : 0, era);
+    const scale = Math.min((s * 0.95) / spr.w, (s * 0.95) / spr.h);
+    ctx.translate(s / 2, s / 2); ctx.scale(scale, scale); ctx.drawImage(spr.canvas, -spr.w / 2, -spr.h / 2, spr.w, spr.h);
+  }, size);
+}
+export function actionIcon(kind, size = 64) {
+  return iconCanvas((ctx, s) => {
+    ctx.translate(s / 2, s / 2); const r = s * 0.32;
+    switch (kind) {
+      case 'move': ctx.strokeStyle = '#8fdc7a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-r, r * 0.6); ctx.lineTo(r * 0.6, -r * 0.6); ctx.stroke(); ctx.beginPath(); ctx.moveTo(r * 0.6, -r * 0.6); ctx.lineTo(r * 0.6, r * 0.1); ctx.moveTo(r * 0.6, -r * 0.6); ctx.lineTo(-r * 0.1, -r * 0.6); ctx.stroke(); break;
+      case 'stop': ctx.fillStyle = '#e06060'; ctx.beginPath(); ctx.roundRect(-r * 0.7, -r * 0.7, r * 1.4, r * 1.4, 4); ctx.fill(); break;
+      case 'hold': ctx.strokeStyle = '#e0c060'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, r * 0.8, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = '#e0c060'; ctx.beginPath(); ctx.roundRect(-r * 0.15, -r * 0.5, r * 0.3, r); ctx.fill(); break;
+      case 'attack': ctx.strokeStyle = '#e04040'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-r, r); ctx.lineTo(r * 0.7, -r * 0.7); ctx.moveTo(-r * 0.6, r * 0.4); ctx.lineTo(-r * 0.2, r * 0.8); ctx.stroke(); ctx.strokeStyle = '#ddd'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-r * 0.5, r * 0.5); ctx.lineTo(r * 0.8, -r * 0.8); ctx.stroke(); break;
+      case 'amove': ctx.strokeStyle = '#e07040'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-r, r * 0.8); ctx.lineTo(r * 0.5, -r * 0.5); ctx.stroke(); ctx.fillStyle = '#e07040'; ctx.beginPath(); ctx.moveTo(r * 0.8, -r * 0.8); ctx.lineTo(r * 0.8, -r * 0.1); ctx.lineTo(r * 0.1, -r * 0.8); ctx.fill(); break;
+      case 'gather': ctx.fillStyle = '#e8c04a'; ctx.beginPath(); ctx.arc(-r * 0.3, r * 0.2, r * 0.55, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(r * 0.2, r * 0.8); ctx.lineTo(r * 0.8, -r * 0.8); ctx.stroke(); break;
+      case 'build': ctx.strokeStyle = '#d8b07a'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-r * 0.6, r * 0.8); ctx.lineTo(r * 0.4, -r * 0.3); ctx.stroke(); ctx.fillStyle = '#aaa'; ctx.beginPath(); ctx.roundRect(r * 0.1, -r * 0.9, r * 0.8, r * 0.5, 3); ctx.fill(); break;
+      case 'cancel': ctx.strokeStyle = '#e04040'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-r * 0.7, -r * 0.7); ctx.lineTo(r * 0.7, r * 0.7); ctx.moveTo(r * 0.7, -r * 0.7); ctx.lineTo(-r * 0.7, r * 0.7); ctx.stroke(); break;
+      case 'rally': ctx.strokeStyle = '#ddd'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-r * 0.5, r); ctx.lineTo(-r * 0.5, -r); ctx.stroke(); ctx.fillStyle = '#e0c060'; ctx.beginPath(); ctx.moveTo(-r * 0.5, -r); ctx.lineTo(r * 0.8, -r * 0.6); ctx.lineTo(-r * 0.5, -r * 0.2); ctx.fill(); break;
+      case 'back': ctx.strokeStyle = '#ddd'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(r * 0.5, -r * 0.7); ctx.lineTo(-r * 0.5, 0); ctx.lineTo(r * 0.5, r * 0.7); ctx.stroke(); break;
+      case 'repair': ctx.strokeStyle = '#aaa'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-r * 0.7, r * 0.7); ctx.lineTo(r * 0.3, -r * 0.3); ctx.stroke(); ctx.beginPath(); ctx.arc(r * 0.5, -r * 0.5, r * 0.4, 0, Math.PI * 2); ctx.stroke(); break;
+    }
+  }, size);
+}
