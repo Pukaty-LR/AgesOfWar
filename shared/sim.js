@@ -453,6 +453,9 @@ export class Sim {
 
   setOrder(u, order, queue = false) {
     if (queue && u.order.type !== 'idle') { u.queue.push(order); return; }
+    // AoE-style: a worker pulled from gathering to build returns to the same resource afterwards
+    if (order.type === 'build' && u.order.type === 'gather') u.resume = { type: 'gather', targetId: u.order.targetId, kind: u.order.kind, phase: 'go' };
+    else if (order.type !== 'build') u.resume = null;
     u.queue = queue ? u.queue : [];
     u.order = order; u.path = null; u.engage = 0; u.stuck = 0; u.dirty = true;
     if (order.type === 'idle' || order.type === 'hold') u.anim = 'idle';
@@ -460,6 +463,7 @@ export class Sim {
   }
   nextOrder(u) {
     if (u.queue.length) { const o = u.queue.shift(); u.order = o; u.path = null; u.engage = 0; u.stuck = 0; u.dirty = true; }
+    else if (u.resume && u.order.type === 'build') { const r = u.resume; u.resume = null; const node = this.ents.get(r.targetId); u.order = node && !node.dead ? { ...r } : { type: 'idle' }; if (u.order.type === 'gather') { u.order.kind = node.kind; } u.path = null; u.dirty = true; }
     else { u.order = { type: 'idle' }; u.path = null; u.anim = 'idle'; u.dirty = true; }
   }
 
