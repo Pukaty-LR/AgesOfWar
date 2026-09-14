@@ -165,7 +165,7 @@ export class UI {
       if (sig !== this.lastSig || multi.children.length !== sel.length + 1) {
         multi.innerHTML = '';
         const head = document.createElement('div'); head.className = 'multi-head'; head.textContent = `${sel.length} ${sel.length < 5 ? 'jednotky' : 'jednotek'} vybráno`; multi.appendChild(head);
-        for (const e of sel) { const d = document.createElement('div'); d.className = 'mi'; d.title = game.entName(e); const c = this.portrait(game, e); const cc = document.createElement('canvas'); cc.width = 44; cc.height = 44; cc.getContext('2d').drawImage(c, 0, 0, 44, 44); d.appendChild(cc); const hp = document.createElement('div'); hp.className = 'hp'; hp.style.width = (e.hp / e.m * 100) + '%'; d.appendChild(hp); d.onclick = ev => { if (ev.shiftKey) { game.selection.delete(e.i); game.ui.dirty = true; game.ui.selectionChanged = true; } else game.select([e]); }; multi.appendChild(d); }
+        for (const e of sel) { const d = document.createElement('div'); d.className = 'mi' + (e.k === 'u' && e.t === game.subgroup && game.subgroupTypes().length > 1 ? ' sub' : ''); d.title = game.entName(e) + (game.subgroupTypes().length > 1 ? ' (Tab přepíná podskupinu)' : ''); const c = this.portrait(game, e); const cc = document.createElement('canvas'); cc.width = 44; cc.height = 44; cc.getContext('2d').drawImage(c, 0, 0, 44, 44); d.appendChild(cc); const hp = document.createElement('div'); hp.className = 'hp'; hp.style.width = (e.hp / e.m * 100) + '%'; d.appendChild(hp); d.onclick = ev => { if (ev.shiftKey) { game.selection.delete(e.i); game.ui.dirty = true; game.ui.selectionChanged = true; } else game.select([e]); }; multi.appendChild(d); }
       } else { let i = 1; for (const e of sel) { const hp = multi.children[i++]?.querySelector('.hp'); if (hp) hp.style.width = (e.hp / e.m * 100) + '%'; } }
     }
     if (sig !== this.lastSig) { this.lastSig = sig; this.buildCommandCard(game, sel); }
@@ -175,13 +175,17 @@ export class UI {
     const card = $('cmdcard'); card.innerHTML = ''; this.cmdButtons = [];
     const own = sel.filter(e => e.o === game.me);
     if (!own.length) return;
-    const units = own.filter(e => e.k === 'u'), blds = own.filter(e => e.k === 'b');
+    const allUnits = own.filter(e => e.k === 'u'), blds = own.filter(e => e.k === 'b');
     const p = game.players[game.me];
     const slots = new Array(12).fill(null);
     const btn = (slot, def) => { slots[slot] = def; };
+    // subgroup (Tab): the card follows one unit type at a time, like Warcraft 3
+    const types = game.subgroupTypes(); if (!types.includes(game.subgroup)) game.subgroup = types[0];
+    const units = allUnits.filter(e => e.t === game.subgroup);
     if (units.length) {
       const hasWorker = units.some(e => game.unitDef(e).role === 'worker');
       const hasMil = units.some(e => game.unitDef(e).role !== 'worker');
+      if (hasMil) btn(8, { label: 'Hlídkovat', key: 'P', icon: () => actionIcon('patrol'), desc: 'Jednotky hlídkují mezi současnou pozicí a cílem a útočí na vše, co potkají.', act: () => { game.state.mode = 'patrol'; }, active: () => game.state.mode === 'patrol' });
       if (this.buildMenu && hasWorker) {
         const order = ['hall', 'barracks', 'stable', 'siege', 'dock', 'tower', 'wall'];
         order.forEach((k, i) => { const b = game.tech.buildings[k]; btn(i, { label: b.name, key: b.hotkey, icon: () => buildingPortrait(b.sprite, b.w, b.h, p.color, 64, game.era), cost: b.cost, desc: b.desc, act: () => game.startPlacing(k), canAfford: () => p.res.p >= b.cost.p && p.res.s >= b.cost.s }); });

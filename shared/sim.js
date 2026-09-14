@@ -254,14 +254,17 @@ export class Sim {
             if (target.kind === 'building' && target.owner === pid && u.role === 'worker' && (!target.built || target.hp < target.maxHp)) { this.setOrder(u, { type: 'build', targetId: target.id }, c.queue); continue; }
           }
           if (u.hidden) continue;
-          this.setOrder(u, { type: 'move', x: c.x, y: c.y }, c.queue);
+          if (!c._f) c._f = this.formation(myUnits, c.x, c.y);
+          const fi = myUnits.indexOf(u);
+          this.setOrder(u, { type: 'move', x: c._f[fi].x, y: c._f[fi].y }, c.queue);
         }
         // Buildings: smart = rally
         for (const b of units.filter(e => e.kind === 'building')) this.setRally(b, c.x, c.y, target ? target.id : 0);
         break;
       }
-      case 'move': for (const u of myUnits) this.setOrder(u, { type: 'move', x: c.x, y: c.y }, c.queue); break;
-      case 'amove': for (const u of myUnits) this.setOrder(u, { type: 'amove', x: c.x, y: c.y }, c.queue); break;
+      case 'move': { const f = this.formation(myUnits, c.x, c.y); myUnits.forEach((u, i) => this.setOrder(u, { type: 'move', x: f[i].x, y: f[i].y }, c.queue)); break; }
+      case 'amove': { const f = this.formation(myUnits, c.x, c.y); myUnits.forEach((u, i) => this.setOrder(u, { type: 'amove', x: f[i].x, y: f[i].y }, c.queue)); break; }
+      case 'patrol': { const f = this.formation(myUnits, c.x, c.y); myUnits.forEach((u, i) => { if (u.role === 'worker' || u.hidden) return; this.setOrder(u, { type: 'patrol', x: f[i].x, y: f[i].y, x0: u.x, y0: u.y }, c.queue); }); break; }
       case 'attack': { const t = this.ents.get(c.targetId); if (!t || t.dead) break; for (const u of myUnits) this.setOrder(u, { type: 'attack', targetId: t.id }, c.queue); break; }
       case 'stop': for (const u of myUnits) { u.queue = []; this.setOrder(u, { type: 'idle' }); } break;
       case 'hold': for (const u of myUnits) { u.queue = []; this.setOrder(u, { type: 'hold' }); } break;
@@ -381,6 +384,31 @@ export class Sim {
 
   setRally(b, x, y, targetId) { b.rally = { x, y, targetId }; b.dirty = true; }
 
+  /** WC3-style formation: spread a group into a block facing the direction of travel; falls back to the point for unreachable cells. */
+  formation(units, x, y) {
+    const n = units.length; if (n <= 1) return units.map(() => ({ x, y }));
+    const cx = units.reduce((s, u) => s + u.x, 0) / n, cy = units.reduce((s, u) => s + u.y, 0) / n;
+    const dx = x - cx, dy = y - cy, d = Math.hypot(dx, dy) || 1; const fx = dx / d, fy = dy / d; // forward
+    const rx = -fy, ry = fx; // right
+    const cols = Math.min(8, Math.ceil(Math.sqrt(n * 1.6))); const rows = Math.ceil(n / cols);
+    const sp = 0.85 + Math.max(...units.map(u => u.size)) * 0.6;
+    // sort: melee/high-hp first rows, ranged/siege behind, keep relative left-right order
+    const order = units.map((u, i) => ({ u, i, rank: u.role === 'siege' ? 3 : (u.role === 'ranged' ? 2 : (u.role === 'worker' ? 1 : 0)), side: (u.x - cx) * rx + (u.y - cy) * ry })).sort((a, b) => a.rank - b.rank || a.side - b.side);
+    const out = new Array(n);
+    order.forEach((o, k) => {
+      const r = Math.floor(k / cols), c = k % cols; const rowCount = Math.min(cols, n - r * cols);
+      const off = (c - (rowCount - 1) / 2) * sp, back = -r * sp;
+      let tx = x + rx * off + fx * back, ty = y + ry * off + fy * back;
+      const pass = this.passFor(o.u.domain, this.teamOf(o.u));
+      if (!this.inBounds(tx | 0, ty | 0) || !pass[(ty | 0) * this.w + (tx | 0)]) {
+        const nt = nearestTile(this.w, this.h, tx | 0, ty | 0, (px, py) => pass[py * this.w + px] === 1, 3);
+        if (nt) { tx = nt.x + 0.5; ty = nt.y + 0.5; } else { tx = x; ty = y; }
+      }
+      out[o.i] = { x: tx, y: ty };
+    });
+    return out;
+  }
+
   // ---------- tiers / upgrades ----------
   availableTrains(p, b) {
     const def = p.tech.buildings[b.type]; const out = [...(def.trains || [])];
@@ -493,6 +521,15 @@ export class Sim {
         const t = this.ents.get(o.targetId);
         if (!t || t.dead || t.hp <= 0) { this.nextOrder(u); break; }
         moved = this.attackTarget(u, def, t, true);
+        break;
+      }
+      case 'patrol': {
+        if (def.dmg > 0) {
+          if (u.engage) { const t = this.ents.get(u.engage); if (!t || t.dead) { u.engage = 0; u.path = null; } else { moved = this.attackTarget(u, def, t, true); break; } }
+          if ((this.tick + u.id) % 5 === 0) { const t = this.nearestEnemy(u, Math.max(def.sight, def.range + 1), true); if (t) { u.engage = t.id; u.path = null; break; } }
+        }
+        moved = this.moveTo(u, def, o.x, o.y, 0.4);
+        if (!moved) { const nx = o.x0, ny = o.y0; o.x0 = o.x; o.y0 = o.y; o.x = nx; o.y = ny; u.path = null; u.dirty = true; moved = true; }
         break;
       }
       case 'gather': moved = this.stepGather(u, def, o); break;

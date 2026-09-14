@@ -181,6 +181,10 @@ export class Game {
   }
   gatherKind(kind) { const ids = this.selectedIds(e => e.k === 'u' && e.o === this.me && this.unitDef(e).role === 'worker'); if (!ids.length) return; this.send({ t: 'gatherKind', ids, kind, queue: this.state.shift }); this.audio.sfx('ack', 0.7); }
   demolish() { const ids = this.myBuildingsSelected(); if (!ids.length) return; this.send({ t: 'demolish', ids }); this.audio.sfx('click'); this.select([]); }
+  orderPatrol(wx, wy) { const ids = this.selectedIds(e => e.k === 'u' && e.o === this.me && this.unitDef(e).role !== 'worker'); if (!ids.length) return; this.send({ t: 'patrol', ids, x: wx, y: wy, queue: this.state.shift }); this.audio.sfx('ack', 0.7); this.renderer.addEffect({ kind: 'marker', x: wx, y: wy, color: 'rgba(120,200,255,0.9)' }); }
+  /** WC3-style subgroups: the command card follows one unit type at a time; Tab cycles. */
+  subgroupTypes() { const types = []; for (const id of this.selection) { const e = this.ents.get(id); if (e && e.k === 'u' && e.o === this.me && !types.includes(e.t)) types.push(e.t); } return types; }
+  cycleSubgroup() { const types = this.subgroupTypes(); if (types.length < 2) return; const i = types.indexOf(this.subgroup); this.subgroup = types[(i + 1) % types.length]; this.ui.lastSig = ''; this.ui.dirty = true; this.audio.sfx('click'); }
   orderStop() { const ids = this.myUnitsSelected(); if (ids.length) { this.send({ t: 'stop', ids }); this.audio.sfx('click'); } }
   orderHold() { const ids = this.myUnitsSelected(); if (ids.length) { this.send({ t: 'hold', ids }); this.audio.sfx('click'); } }
   train(type) { const blds = this.myBuildingsSelected(); if (!blds.length) return; const def = this.tech.units[type]; const p = this.players[this.me]; if (p.res.p < def.cost.p || p.res.s < def.cost.s) { this.ui.alert('Nedostatek surovin.', true); this.audio.sfx('error'); return; } // pick building with shortest queue
@@ -247,6 +251,7 @@ export class Game {
       if (e.button === 0) {
         if (st.placing) { this.confirmPlacement(); return; }
         if (st.mode === 'move') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.orderMove(wx, wy); if (!st.shift) st.mode = null; return; }
+        if (st.mode === 'patrol') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.orderPatrol(wx, wy); if (!st.shift) st.mode = null; return; }
         if (st.mode === 'gather' || st.mode === 'repair') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); const t = this.renderer.pick(sx, sy); if (t) this.smartCommand(wx, wy, t); else this.audio.sfx('error'); st.mode = null; return; }
         if (st.mode === 'amove' || st.mode === 'attack') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.orderAttackMove(wx, wy, this.renderer.pick(sx, sy)); if (!st.shift) st.mode = null; return; }
         if (st.mode === 'rally') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); const t = this.renderer.pick(sx, sy); this.send({ t: 'rally', ids: this.myBuildingsSelected(), x: wx, y: wy, targetId: t ? t.i : 0 }); st.mode = null; this.audio.sfx('click'); return; }
@@ -300,6 +305,7 @@ export class Game {
       if (e.key === 'Escape') { if (st.placing) this.cancelPlacing(); else if (st.mode) st.mode = null; else if (this.ui.buildMenu) { this.ui.buildMenu = false; this.ui.selectionChanged = true; } else if (this.selection.size) this.select([]); else this.ui.togglePause(); return; }
       if (e.key === ' ') { if (this.lastAlert) this.centerOn(this.lastAlert.x, this.lastAlert.y); return; }
       if (e.key === 'F1') { e.preventDefault(); this.selectArmy(); return; }
+      if (e.key === 'Tab') { e.preventDefault(); this.cycleSubgroup(); return; }
       if (k === '.') { this.selectIdleWorker(); return; }
       if (/^[0-9]$/.test(k)) {
         if (e.ctrlKey || e.shiftKey) { this.groups[k] = [...this.selection]; this.ui.alert(`Skupina ${k} uložena`, false); }
