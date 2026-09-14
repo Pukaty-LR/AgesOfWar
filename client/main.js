@@ -19,10 +19,12 @@ class App {
     this.bindMenus(); this.bindNet(); this.startBackground();
     this.show('menu');
     this.net.connect();
-    document.addEventListener('pointerdown', () => this.audio.init(), { once: false });
-    document.addEventListener('keydown', () => this.audio.init(), { once: true });
+    const wake = () => { this.audio.init(); this.menuMusic(); };
+    document.addEventListener('pointerdown', wake, { once: false });
+    document.addEventListener('keydown', wake, { once: true });
   }
   save() { localStorage.setItem('aow-settings', JSON.stringify(this.settings)); }
+  menuMusic() { if (this.screen === 'game' || !this.audio.ctx) return; const era = ERAS[this.hostEra] || ERAS.antiquity; if (!this.audio.running || this.audio.style !== era.music) { this.audio.era = this.hostEra; this.audio.setIntensity(0); this.audio.startMusic(era.music); } }
   show(name) { for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); $('bg').style.display = name === 'game' ? 'none' : 'block'; this.screen = name; if (name === 'game') this.game.renderer.resize(); }
   toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(this.toastT); this.toastT = setTimeout(() => t.classList.add('hidden'), 3500); }
   token() { if (!this.settings.token) { this.settings.token = Math.random().toString(36).slice(2) + Date.now().toString(36); this.save(); } return this.settings.token; }
@@ -51,7 +53,7 @@ class App {
   bindMenus() {
     $('name').value = this.settings.name;
     this.hostEra = this.settings.era || 'antiquity';
-    const pickEra = e => { this.hostEra = e; this.settings.era = e; this.save(); this.renderEraCards($('menu-eras'), e, pickEra, true); if (this.setBgEra) this.setBgEra(e); };
+    const pickEra = e => { this.hostEra = e; this.settings.era = e; this.save(); this.renderEraCards($('menu-eras'), e, pickEra, true); if (this.setBgEra) this.setBgEra(e); this.menuMusic(); };
     this.renderEraCards($('menu-eras'), this.hostEra, pickEra, true);
     $('name').addEventListener('change', () => { this.settings.name = $('name').value.trim(); this.save(); });
     $('btn-quick').onclick = () => { if (!this.name()) return; this.quick = true; this.net.send({ t: 'host', name: `${this.settings.name} vs AI`, era: this.hostEra, max: 2 }); };
@@ -174,7 +176,7 @@ class App {
     const f = me && era.factions.find(x => x.id === me.faction); $('faction-desc').textContent = f ? `${f.name}: ${f.desc}` : '';
   }
   leaveGame(silent = false) {
-    this.game.stop(); if (!silent) this.net.send({ t: 'leave' }); this.lobby = null; this.ui.togglePause(false); this.show('menu'); this.net.send({ t: 'list' });
+    this.game.stop(); if (!silent) this.net.send({ t: 'leave' }); this.lobby = null; $('pause-menu').classList.add('hidden'); this.show('menu'); this.net.send({ t: 'list' }); this.menuMusic();
   }
 }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }

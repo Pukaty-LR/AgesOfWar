@@ -31,6 +31,7 @@ export class Game {
   // ---------- lifecycle ----------
   start(msg) {
     const g = msg.game;
+    document.getElementById('loading').classList.remove('hidden');
     this.era = g.era; this.eraDef = ERAS[g.era]; this.map = g.map; this.map.tiles = Uint8Array.from(g.map.tiles); this.map.height = Float32Array.from(g.map.height);
     this.players = g.players; this.me = g.me; this.myTeam = this.players[this.me].team;
     this.tech = makeTechTable(this.era, this.players[this.me].faction);
@@ -102,6 +103,8 @@ export class Game {
     this.tick = snap.tick; this.lastSnapAt = performance.now();
     for (const d of snap.ents) this.applyEntity(d, true);
     this.players = snap.players; this.ui.onPlayers(this);
+    this.renderer.updateFog(this.ents, this.myTeam, this.players);
+    setTimeout(() => document.getElementById('loading').classList.add('hidden'), 250);
   }
   onSnap(snap) {
     if (!this.running) return;
