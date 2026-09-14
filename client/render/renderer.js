@@ -385,6 +385,13 @@ export class Renderer {
       this.particles.push({ x: e.x + (Math.random() - 0.5) * e.w * 0.6, y: e.y + (Math.random() - 0.5) * e.h * 0.6, z: 20 + Math.random() * 20, vx: 0.2, vy: -0.2, vz: 18, life: 0, max: 2.2, color: [60, 55, 50], size: 5, g: -6, drag: 0.98, grow: 4, alpha: 0.5 });
       if (e.hp < e.m * 0.25 && Math.random() < 0.3) this.particles.push({ x: e.x + (Math.random() - 0.5) * e.w * 0.5, y: e.y + (Math.random() - 0.5) * e.h * 0.5, z: 10, vx: 0, vy: 0, vz: 25, life: 0, max: 0.5, color: [255, 150, 40], size: 4, g: 0, drag: 0.95, grow: -2 });
     }
+    // ambient life: chimney smoke, forge glow, energy pulses; tower muzzle flash
+    if (e.bl && visible) {
+      const sp = def.sprite;
+      if ((sp === 'ww2_factory' || sp === 'ww2_hall' || sp === 'ant_siege') && Math.random() < 0.35) this.particles.push({ x: e.tx + (sp === 'ww2_factory' ? 2.55 : (sp === 'ww2_hall' ? 2.1 : 0.6)), y: e.ty + (sp === 'ww2_factory' ? 0.55 : (sp === 'ww2_hall' ? 0.6 : 2.3)), z: sp === 'ww2_factory' ? 56 : (sp === 'ww2_hall' ? 46 : 22), vx: 0.15, vy: -0.15, vz: 12, life: 0, max: 2.6, color: [150, 150, 150], size: 2.5, g: -3, drag: 0.985, grow: 3, alpha: 0.35 });
+      if (sp.startsWith('sf_') && Math.random() < 0.08) this.particles.push({ x: e.x + (Math.random() - 0.5) * e.w * 0.5, y: e.y + (Math.random() - 0.5) * e.h * 0.5, z: 10 + Math.random() * 20, vx: 0, vy: 0, vz: 10, life: 0, max: 1.4, color: [120, 230, 255], size: 1.6, g: 0, drag: 1, grow: -1, alpha: 0.7 });
+      if (def.attack && e.at !== undefined && (g.tickNow() - e.at) < 3) { const [fx, fy] = this.worldToScreen(e.x, e.y, (e.lv || 1) >= 2 ? 70 : 56); ctx.fillStyle = this.era === 'scifi' ? 'rgba(120,230,255,0.85)' : 'rgba(255,220,140,0.85)'; ctx.beginPath(); ctx.arc(fx, fy, 5 * z, 0, 7); ctx.fill(); }
+    }
     // training progress bar
     if (e.q && e.q.length && e.o === g.me) {
       const [bx, by] = this.worldToScreen(e.x, e.y); const w2 = 40 * z;
