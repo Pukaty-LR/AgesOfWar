@@ -131,7 +131,7 @@ export class Game {
       }
       case 'chop': this.soundAt('chop', ev.x, ev.y, 0.6); if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(3, ev.x, ev.y, 12, { colors: [[200, 160, 100], [150, 110, 60]], speed: 1.2, vz: 25, life: 0.5, size: 1.4 }); break;
       case 'hammer': this.soundAt('hammer', ev.x, ev.y, 0.5); if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(2, ev.x + (Math.random() - 0.5), ev.y + (Math.random() - 0.5), 14, { colors: [[255, 230, 150]], speed: 0.8, vz: 25, life: 0.3, size: 1.2 }); break;
-      case 'built': if (mine) { this.audio.sfx('buildingDone', 0.8); this.ui.alert(`${this.tech.buildings[ev.ty]?.name}: stavba dokončena`, false); } break;
+      case 'built': if (mine && ev.ty !== 'wall') { this.audio.sfx('buildingDone', 0.8); this.ui.alert(`${this.tech.buildings[ev.ty]?.name}: stavba dokončena`, false); } break;
       case 'spawn': if (mine) this.audio.sfx('unitReady', 0.5); break;
       case 'place': if (mine) this.audio.sfx('placed', 0.6); break;
       case 'msg': if (ev.owner === this.me || ev.owner === -1) { this.ui.alert(ev.text, ev.owner === this.me); if (ev.owner === this.me) this.audio.sfx('error', 0.6); } break;

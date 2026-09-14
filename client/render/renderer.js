@@ -329,7 +329,13 @@ export class Renderer {
     const g = this.game; const def = g.buildingDef(e); if (!def) return;
     const [sx, sy] = this.worldToScreen(e.tx, e.ty);
     let mask = 0;
-    if (def.isWall) { const nb = (dx, dy) => g.wallAt(e.tx + dx, e.ty + dy, e.o) ? 1 : 0; mask = nb(0, -1) | (nb(1, 0) << 1) | (nb(0, 1) << 2) | (nb(-1, 0) << 3); }
+    if (def.isWall) {
+      const nb = (dx, dy) => g.wallAt(e.tx + dx, e.ty + dy, e.o) ? 1 : 0;
+      const n = nb(0, -1), ea = nb(1, 0), s = nb(0, 1), w = nb(-1, 0);
+      mask = n | (ea << 1) | (s << 2) | (w << 3);
+      // diagonal connectors only where no orthogonal link exists between the two
+      if (!n && !ea && nb(1, -1)) mask |= 16; if (!ea && !s && nb(1, 1)) mask |= 32; if (!s && !w && nb(-1, 1)) mask |= 64; if (!w && !n && nb(-1, -1)) mask |= 128;
+    }
     const spr = buildingSprite(def.sprite, e.w, e.h, g.players[e.o].color, !!e.bl, e.pr, mask, this.era);
     const visible = this.isVisibleTile(e.x, e.y);
     if (!visible) ctx.filter = 'brightness(0.7)';

@@ -338,6 +338,19 @@ function doorAt(ctx, x, y, z, color = [50, 35, 20]) { const [sx, sy] = iso(x, y,
 function columns(ctx, x0, y0, x1, y1, n, z, h) { for (let i = 0; i <= n; i++) { const t = i / n; const [sx, sy] = iso(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, z); line(ctx, sx, sy, sx, sy - h, rgb(STONE_D), 3.2); line(ctx, sx - 0.6, sy, sx - 0.6, sy - h, rgb(shade(STONE, 1.05)), 1.4); } }
 function sandbags(ctx, pts, z) { for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; const n = 5; for (let k = 0; k < n; k++) { const t = (k + 0.5) / n; const [sx, sy] = iso(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, z); ellipse(ctx, sx, sy - 2, 4, 2.4, rgb([170, 150, 105]), OUT, 0.5); ellipse(ctx, sx, sy - 5, 3.6, 2.2, rgb([185, 165, 118]), OUT, 0.5); } } }
 
+function wallSegs(M, cw) {
+  const c0 = 0.5 - cw / 2; const segs = []; const diag = a => rot(isoRect(0.5, 0.5 - cw / 2, 0.72, cw), a, 0.5, 0.5);
+  if (M & 1) segs.push(isoRect(c0, 0, cw, 0.5));
+  if (M & 8) segs.push(isoRect(0, c0, 0.5, cw));
+  if (M & 128) segs.push(diag(-3 * Math.PI / 4));
+  if (M & 16) segs.push(diag(-Math.PI / 4));
+  if (M & 64) segs.push(diag(3 * Math.PI / 4));
+  if (M & 4) segs.push(isoRect(c0, 0.5, cw, 0.5));
+  if (M & 2) segs.push(isoRect(0.5, c0, 0.5, cw));
+  if (M & 32) segs.push(diag(Math.PI / 4));
+  return segs;
+}
+
 const BUILDING_DRAW = {
   ant_hall: (ctx, o) => {
     const team = o.team;
@@ -410,23 +423,13 @@ const BUILDING_DRAW = {
     flag(ctx, 0.5, 0.5, 59, o.team, 16);
   },
   ant_wall: (ctx, o) => {
-    const m = o.mask; // bit 1: N (y-1), 2: E (x+1), 4: S (y+1), 8: W (x-1)
+    const M = o.mask; const m = M & 15; // bit 1: N (y-1), 2: E (x+1), 4: S (y+1), 8: W (x-1); 16 NE, 32 SE, 64 SW, 128 NW
     const h = 20;
-    // center block
     const cw = 0.5, c0 = 0.5 - cw / 2;
-    let pts;
-    // connectors
-    const segs = [];
-    if (m & 1) segs.push(isoRect(c0, 0, cw, 0.5));
-    if (m & 4) segs.push(isoRect(c0, 0.5, cw, 0.5));
-    if (m & 8) segs.push(isoRect(0, c0, 0.5, cw));
-    if (m & 2) segs.push(isoRect(0.5, c0, 0.5, cw));
-    // draw in depth order: N & W first
+    const segs = wallSegs(M, cw);
     for (const s of segs) prism(ctx, s, 0, h, STONE, STONE_D);
-    // pillar
     const pw = m === 0 || m === 5 || m === 10 ? cw : 0.62;
     prism(ctx, isoRect(0.5 - pw / 2, 0.5 - pw / 2, pw, pw), 0, h + (m === 5 || m === 10 ? 0 : 6), shade(STONE, 1.05), STONE_D);
-    // crenels on top
     if (m === 5) { for (const y of [0.15, 0.5, 0.85]) prism(ctx, isoRect(0.5 - 0.1, y - 0.08, 0.2, 0.16), h, 4, STONE, STONE_D); }
     else if (m === 10) { for (const x of [0.15, 0.5, 0.85]) prism(ctx, isoRect(x - 0.08, 0.5 - 0.1, 0.16, 0.2), h, 4, STONE, STONE_D); }
     // stone lines
@@ -502,9 +505,8 @@ const BUILDING_DRAW = {
     flag(ctx, 0.5, 0.5, 24, o.team, 14);
   },
   ww2_wall: (ctx, o) => {
-    const m = o.mask; const h = 16; const cw = 0.4, c0 = 0.5 - cw / 2;
-    const segs = [];
-    if (m & 1) segs.push(isoRect(c0, 0, cw, 0.5)); if (m & 4) segs.push(isoRect(c0, 0.5, cw, 0.5)); if (m & 8) segs.push(isoRect(0, c0, 0.5, cw)); if (m & 2) segs.push(isoRect(0.5, c0, 0.5, cw));
+    const M = o.mask; const m = M & 15; const h = 16; const cw = 0.4;
+    const segs = wallSegs(M, cw);
     for (const s of segs) prism(ctx, s, 0, h, CONCRETE, CONCRETE_D);
     prism(ctx, isoRect(0.5 - 0.26, 0.5 - 0.26, 0.52, 0.52), 0, h + 3, shade(CONCRETE, 1.05), CONCRETE_D);
     // barbed wire on top
