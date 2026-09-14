@@ -578,8 +578,20 @@ const BUILDING_DRAW = {
     columns(ctx, 0.35, 2.7, 2.7, 2.7, 4, 6, 30); columns(ctx, 2.7, 0.35, 2.7, 2.7, 4, 6, 30);
     gableRoof(ctx, 0.2, 0.2, 2.6, 2.6, 36, 22, ROOF, ROOF_D, 'x');
     doorAt(ctx, 1.5, 2.62, 6);
-    flag(ctx, 1.5, 1.5, 58, team, 24);
     windows(ctx, [[2.62, 0.7], [2.62, 2.3]], 24, 2);
+    const lv = o.level || 1;
+    if (lv >= 2) { // corner statues / braziers
+      for (const p of [[0.25, 2.75], [2.75, 0.25]]) { const [sx, sy] = iso(p[0], p[1], 6); rrect(ctx, sx - 3, sy - 10, 6, 10, 1, rgb(STONE_D), OUT, 0.6); ellipse(ctx, sx, sy - 13, 3, 3, 'rgba(255,150,40,0.9)'); ellipse(ctx, sx, sy - 14, 1.6, 1.8, 'rgba(255,240,170,0.95)'); }
+    }
+    if (lv >= 3) { // second-floor tower with tiled roof
+      prism(ctx, isoRect(0.9, 0.9, 1.2, 1.2), 58, 22, STONE, STONE_D);
+      gableRoof(ctx, 0.8, 0.8, 1.4, 1.4, 80, 14, ROOF, ROOF_D, 'y');
+    }
+    if (lv >= 4) { // golden dome & laurels: imperial city
+      const [cx, cy] = iso(1.5, 1.5, 94); for (let i = 5; i >= 0; i--) { const k = i / 5; ellipse(ctx, cx, cy - (1 - k) * 16, 22 * k + 2, 11 * k + 1, rgb(shade([230, 190, 80], 0.8 + (1 - k) * 0.4)), i === 5 ? OUT : null, 0.8); }
+      ctx.strokeStyle = 'rgba(255,230,120,0.8)'; ctx.lineWidth = 2; for (const z of [6, 30]) { const pts = [[0.2, 0.2], [2.8, 0.2], [2.8, 2.8], [0.2, 2.8]].map(p => iso(p[0], p[1], z)); ctx.beginPath(); ctx.moveTo(pts[3][0], pts[3][1]); ctx.lineTo(pts[2][0], pts[2][1]); ctx.lineTo(pts[1][0], pts[1][1]); ctx.stroke(); }
+    }
+    flag(ctx, 1.5, 1.5, lv >= 4 ? 110 : (lv >= 3 ? 94 : 58), team, 24);
   },
   ant_barracks: (ctx, o) => {
     prism(ctx, isoRect(0.1, 0.1, 2.8, 2.8), 0, 4, shade(STONE, 0.85), STONE_D);
@@ -664,6 +676,30 @@ const BUILDING_DRAW = {
     // stone lines
     ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 0.6; for (let z = 5; z < h; z += 5) { const [ax, ay] = iso(0, 1, z), [bx, by] = iso(1, 1, z); if (m & 4 || m & 8) { ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); } }
   },
+  // ---- houses (2x2) ----
+  ant_house: (ctx, o) => {
+    prism(ctx, isoRect(0.08, 0.08, 1.84, 1.84), 0, 3, shade(STONE, 0.85), STONE_D);
+    prism(ctx, isoRect(0.2, 0.2, 1.6, 1.6), 3, 16, shade(STONE, 0.97), STONE_D);
+    gableRoof(ctx, 0.1, 0.1, 1.8, 1.8, 19, 12, ROOF, ROOF_D, 'x');
+    doorAt(ctx, 1.0, 1.82, 3); windows(ctx, [[1.82, 0.5], [1.82, 1.5]], 12, 2);
+    const [px, py] = iso(0.3, 1.7, 3); ellipse(ctx, px, py - 3, 5, 3, rgb([110, 130, 60]), OUT, 0.6); // garden bush
+    const [ax, ay] = iso(1.7, 0.3, 3); rrect(ctx, ax - 3, ay - 8, 6, 8, 1.5, rgb([150, 110, 60]), OUT, 0.6); // amphora
+  },
+  ww2_house: (ctx, o) => {
+    prism(ctx, isoRect(0.08, 0.08, 1.84, 1.84), 0, 2, [110, 100, 80], [80, 72, 58]);
+    prism(ctx, isoRect(0.15, 0.4, 1.7, 1.2), 2, 12, OLIVE, OLIVE_D);
+    for (let i = 0; i < 5; i++) { const t0 = i / 5, t1 = (i + 1) / 5; const y0 = 0.4 + 1.2 * t0, y1 = 0.4 + 1.2 * t1; const z0 = 14 + Math.sin(t0 * Math.PI) * 8, z1 = 14 + Math.sin(t1 * Math.PI) * 8; poly(ctx, [iso(0.1, y0, z0), iso(1.9, y0, z0), iso(1.9, y1, z1), iso(0.1, y1, z1)], rgb(shade([120, 125, 110], 0.8 + 0.4 * Math.sin((t0 + t1) / 2 * Math.PI))), OUT, 0.7); }
+    doorAt(ctx, 1.85, 1.0, 2, [40, 40, 40]); windows(ctx, [[0.4, 1.62], [1.6, 1.62]], 9, 3, [50, 60, 60]);
+    const [cx, cy] = iso(0.4, 0.4, 24); rrect(ctx, cx - 2, cy - 10, 4, 10, 1, rgb([70, 70, 70]), OUT, 0.6); // stove pipe
+    const [bx, by] = iso(1.7, 0.2, 2); for (let i = 0; i < 3; i++) rrect(ctx, bx - 6 + i * 4, by - 3 - (i % 2) * 3, 5, 3, 1, rgb([120, 100, 60]), OUT, 0.5);
+  },
+  sf_house: (ctx, o) => {
+    prism(ctx, isoRect(0.08, 0.08, 1.84, 1.84), 0, 2, shade(HULL_SF, 0.8), HULL_SF_D);
+    prism(ctx, [[0.5, 0.2], [1.5, 0.2], [1.8, 1.0], [1.5, 1.8], [0.5, 1.8], [0.2, 1.0]], 2, 14, HULL_SF, HULL_SF_D);
+    const [cx, cy] = iso(1.0, 1.0, 16); for (let i = 5; i >= 0; i--) { const k = i / 5; ellipse(ctx, cx, cy - (1 - k) * 12, 22 * k + 2, 11 * k + 1, rgb(shade(HULL_SF, 1 + (1 - k) * 0.22)), i === 5 ? OUT : null, 0.8); }
+    ctx.fillStyle = GLOW; for (const z of [6, 11]) { const [sx, sy] = iso(1.8, 1.0, z); ctx.fillRect(sx - 4, sy - 1, 8, 1.5); const [sx2, sy2] = iso(1.0, 1.8, z); ctx.fillRect(sx2 - 4, sy2 - 1, 8, 1.5); }
+    ctx.fillStyle = 'rgba(197,106,255,0.9)'; ctx.beginPath(); ctx.arc(cx, cy - 13, 2, 0, 7); ctx.fill();
+  },
   // ---- sci-fi buildings ----
   sf_hall: (ctx, o) => {
     const hex = [[0.5, 0.05], [1.4, 0.05], [2.95, 1.5], [2.5, 2.95], [0.5, 2.95], [0.05, 1.5]];
@@ -674,7 +710,20 @@ const BUILDING_DRAW = {
     const [cx, cy] = iso(1.5, 1.5, 47); ctx.strokeStyle = GLOW; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(cx, cy, 30, 15, 0, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = GLOW_SOFT; ctx.lineWidth = 6; ctx.stroke();
     line(ctx, cx, cy, cx, cy - 36, rgb([80, 86, 100]), 2.5); ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(cx, cy - 38, 3.5, 0, 7); ctx.fill();
     for (const z of [12, 22]) { for (const p of [[2.9, 1.5], [1.5, 2.9]]) { const [sx, sy] = iso(p[0], p[1], z); ctx.fillStyle = GLOW; ctx.fillRect(sx - 6, sy - 1, 12, 2); } }
-    doorAt(ctx, 1.5, 2.6, 4, [40, 44, 56]); flag(ctx, 0.6, 0.6, 30, o.team, 22);
+    doorAt(ctx, 1.5, 2.6, 4, [40, 44, 56]);
+    const lv = o.level || 1;
+    if (lv >= 2) { // orbiting sensor drones around the ring
+      for (let i = 0; i < 3; i++) { const a = i * 2.1; const [dx, dy] = iso(1.5 + Math.cos(a) * 1.1, 1.5 + Math.sin(a) * 1.1, 52); ellipse(ctx, dx, dy, 3.5, 2, rgb(HULL_SF), OUT, 0.6); ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(dx, dy - 1, 1.2, 0, 7); ctx.fill(); }
+    }
+    if (lv >= 3) { // second hex tier + energy conduits
+      prism(ctx, hex.map(p => [1.5 + (p[0] - 1.5) * 0.3, 1.5 + (p[1] - 1.5) * 0.3]), 46, 18, shade(HULL_SF, 1.15), HULL_SF_D);
+      ctx.strokeStyle = GLOW; ctx.lineWidth = 1.5; for (const p of [[2.9, 1.5], [1.5, 2.9], [0.1, 1.5]]) { const [x0, y0] = iso(p[0], p[1], 4), [x1, y1] = iso(1.5 + (p[0] - 1.5) * 0.3, 1.5 + (p[1] - 1.5) * 0.3, 46); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); }
+    }
+    if (lv >= 4) { // orbital uplink beam
+      const [cx2, cy2] = iso(1.5, 1.5, 64); const grd = ctx.createLinearGradient(cx2, cy2, cx2, cy2 - 60); grd.addColorStop(0, 'rgba(120,230,255,0.55)'); grd.addColorStop(1, 'rgba(120,230,255,0)'); ctx.fillStyle = grd; ctx.fillRect(cx2 - 5, cy2 - 60, 10, 60);
+      ctx.strokeStyle = 'rgba(197,106,255,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(cx2, cy2 - 6, 26, 13, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    flag(ctx, 0.6, 0.6, 30, o.team, 22);
   },
   sf_barracks: (ctx, o) => {
     prism(ctx, isoRect(0.1, 0.1, 2.8, 2.8), 0, 3, shade(HULL_SF, 0.8), HULL_SF_D);
@@ -777,8 +826,23 @@ const BUILDING_DRAW = {
     doorAt(ctx, 1.5, 2.82, 3, [40, 40, 40]);
     // antenna & flag
     const [ax, ay] = iso(2.1, 0.6, 43); line(ctx, ax, ay, ax, ay - 30, '#333', 1.2); line(ctx, ax - 5, ay - 20, ax + 5, ay - 20, '#333', 1); line(ctx, ax - 3, ay - 26, ax + 3, ay - 26, '#333', 1);
-    flag(ctx, 0.9, 0.9, 43, o.team, 24);
     sandbags(ctx, [[0.0, 0.0], [3.0, 0.0], [3.0, 3.0], [0.0, 3.0]], 0);
+    const lv = o.level || 1;
+    if (lv >= 2) { // radar dish + searchlight
+      const [rx, ry] = iso(0.7, 2.3, 43); line(ctx, rx, ry, rx, ry - 12, '#444', 2); ellipse(ctx, rx + 4, ry - 16, 7, 4, rgb([160, 165, 170]), OUT, 0.7); line(ctx, rx + 4, ry - 16, rx + 9, ry - 20, '#444', 1);
+      const [lx, ly] = iso(2.4, 2.4, 43); rrect(ctx, lx - 3, ly - 8, 6, 8, 1, rgb([80, 84, 88]), OUT, 0.6); ellipse(ctx, lx, ly - 9, 3.5, 2, 'rgba(255,240,200,0.95)');
+    }
+    if (lv >= 3) { // second storey bunker + AA gun
+      prism(ctx, isoRect(0.6, 0.6, 1.4, 1.4), 43, 14, shade(CONCRETE, 1.02), CONCRETE_D);
+      const [gx, gy] = iso(2.2, 1.3, 43); line(ctx, gx, gy, gx, gy - 8, '#333', 3); line(ctx, gx, gy - 8, gx + 10, gy - 20, '#222', 2.2); line(ctx, gx, gy - 8, gx + 12, gy - 16, '#222', 2.2);
+    }
+    if (lv >= 4) { // command tower with big antenna array + flags
+      prism(ctx, isoRect(0.95, 0.95, 0.7, 0.7), 57, 22, shade(CONCRETE, 1.08), CONCRETE_D);
+      const [tx, ty] = iso(1.3, 1.3, 79); line(ctx, tx, ty, tx, ty - 34, '#333', 1.6); for (let i = 0; i < 4; i++) line(ctx, tx - 8 + i * 2, ty - 12 - i * 6, tx + 8 - i * 2, ty - 12 - i * 6, '#333', 1);
+      ctx.fillStyle = 'rgba(255,60,60,0.95)'; ctx.beginPath(); ctx.arc(tx, ty - 35, 2, 0, 7); ctx.fill();
+      for (const p of [[0.3, 0.3], [2.7, 2.7]]) flag(ctx, p[0], p[1], 43, o.team, 20);
+    }
+    flag(ctx, 0.9, 0.9, lv >= 3 ? 57 : 43, o.team, 24);
   },
   ww2_barracks: (ctx, o) => {
     prism(ctx, isoRect(0.1, 0.1, 2.8, 2.8), 0, 2, [110, 100, 80], [80, 72, 58]);
@@ -876,7 +940,7 @@ function constructionSite(ctx, w, h, progress, era) {
   const [mx, my] = iso(w - 0.5, h - 0.4, 2); for (let i = 0; i < 3; i++) rrect(ctx, mx - 8 + i * 2, my - 3 - i * 3, 12, 3, 1, rgb(WOOD), OUT, 0.5);
 }
 
-const BUILDING_BOX = { 3: [230, 250, 115, 130], 1: [96, 140, 48, 100] };
+const BUILDING_BOX = { 3: [230, 250, 115, 130], 2: [160, 180, 80, 110], 1: [96, 140, 48, 100] };
 /** Returns cached building sprite. mask: wall neighbor mask. stage: 'done' | construction progress bucket */
 export function buildingSprite(sprite, w, h, colorIdx, built, progress, mask = 0, era = 'antiquity', level = 1) {
   const bucket = built ? 'done' : Math.floor(progress * 10);

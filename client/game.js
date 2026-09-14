@@ -284,7 +284,7 @@ export class Game {
       else {
         const t = this.renderer.pick(d.x0, d.y0);
         const now = performance.now();
-        if (t && t.k === 'u' && t.o === this.me && this.lastClick.id === t.i && now - this.lastClick.t < 350) { this.selectAllOfType(t); this.lastClick = { t: 0, id: 0 }; }
+        if (t && t.k === 'u' && t.o === this.me && (e.ctrlKey || (this.lastClick.id === t.i && now - this.lastClick.t < 350))) { this.selectAllOfType(t); this.lastClick = { t: 0, id: 0 }; }
         else { this.lastClick = { t: now, id: t ? t.i : 0 }; if (t) this.select([t], st.shift); else if (!st.shift) this.select([]); }
       }
     });

@@ -58,6 +58,14 @@ export class AIPlayer {
       const w = this.pickWorker(workers);
       if (w) sim.command(this.pid, { t: 'smart', ids: [w.id], x: unfinished[0].x, y: unfinished[0].y, targetId: unfinished[0].id });
     }
+    // houses when population is nearly capped (AoE style)
+    if (!unfinished.length && p.pop >= p.popCap - 6 && p.popCap < 200 && tick - this.lastBuildTick > 40) {
+      const def = p.tech.buildings.house;
+      if (p.res.p >= def.cost.p && p.res.s >= def.cost.s) {
+        const spot = this.spotNear(hall.x, hall.y, 4, 11, def); const w = this.pickWorker(workers);
+        if (spot && w) { sim.command(this.pid, { t: 'build', ids: [w.id], type: 'house', tx: spot.x, ty: spot.y }); this.lastBuildTick = tick; }
+      }
+    }
     if (!unfinished.length && this.buildStep < this.plan.length && tick - this.lastBuildTick > 40 && workers.length >= 5) {
       const type = this.plan[this.buildStep];
       const def = p.tech.buildings[type];

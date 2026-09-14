@@ -55,6 +55,7 @@ const tierUnits = {
 const commonBuildings = {
   hall:     { hp: 1600, armor: 5, w: 3, h: 3, cost: { p: 350, s: 250 }, buildTime: 70, trains: ['worker'], dropoff: true, popCap: 40, hotkey: 'H',
               upgrades: [ { level: 2, cost: { p: 300, s: 200 }, time: 60, unlocks: [], popCap: 10, hp: 1.2 }, { level: 3, cost: { p: 500, s: 350 }, time: 80, unlocks: [], popCap: 10, hp: 1.2 }, { level: 4, cost: { p: 800, s: 500 }, time: 100, unlocks: ['hero'], popCap: 20, hp: 1.25 } ] },
+  house:    { hp: 420,  armor: 3, w: 2, h: 2, cost: { p: 40, s: 50 },   buildTime: 18, trains: [], popCap: 8, hotkey: 'E' },
   barracks: { hp: 950,  armor: 4, w: 3, h: 3, cost: { p: 130, s: 90 },  buildTime: 32, trains: ['infantry', 'ranged'], hotkey: 'B',
               upgrades: [ { level: 2, cost: { p: 200, s: 150 }, time: 45, unlocks: ['spearman', 'skirmisher'], hall: 2 }, { level: 3, cost: { p: 350, s: 250 }, time: 60, unlocks: ['veteran', 'longbow'], hall: 3 } ] },
   stable:   { hp: 950,  armor: 4, w: 3, h: 3, cost: { p: 160, s: 110 }, buildTime: 36, trains: ['cavalry'], hotkey: 'S',
@@ -114,6 +115,7 @@ export const ERAS = {
     },
     buildings: {
       hall:     { ...commonBuildings.hall,     name: 'Radnice',         sprite: 'ant_hall',     desc: 'Hlavní budova. Cvičí dělníky, sklad surovin, +40 populace.' },
+      house:    { ...commonBuildings.house,    name: 'Dům',             sprite: 'ant_house',    desc: 'Ubytování: +8 populace.' },
       barracks: { ...commonBuildings.barracks, name: 'Kasárna',         sprite: 'ant_barracks', desc: 'Cvičí pěchotu a lučištníky.' },
       stable:   { ...commonBuildings.stable,   name: 'Stáje',           sprite: 'ant_stable',   desc: 'Cvičí jezdectvo.' },
       siege:    { ...commonBuildings.siege,    name: 'Obléhací dílna',  sprite: 'ant_siege',    desc: 'Staví katapulty.' },
@@ -169,6 +171,7 @@ export const ERAS = {
     },
     buildings: {
       hall:     { ...commonBuildings.hall,     name: 'Velitelství',     sprite: 'ww2_hall',     desc: 'Hlavní budova. Cvičí ženisty, sklad surovin, +40 populace.' },
+      house:    { ...commonBuildings.house,    name: 'Ubytovna',        sprite: 'ww2_house',    desc: 'Ubytování: +8 populace.' },
       barracks: { ...commonBuildings.barracks, name: 'Kasárna',         sprite: 'ww2_barracks', desc: 'Cvičí pěchotu a kulometčíky.' },
       stable:   { ...commonBuildings.stable,   name: 'Tanková továrna', sprite: 'ww2_factory',  desc: 'Vyrábí tanky.' },
       siege:    { ...commonBuildings.siege,    name: 'Dělostřelecký park', sprite: 'ww2_artpark', desc: 'Vyrábí houfnice.' },
@@ -222,6 +225,7 @@ export const ERAS = {
     },
     buildings: {
       hall:     { ...commonBuildings.hall,     name: 'Nexus',              sprite: 'sf_hall',     desc: 'Hlavní budova. Vyrábí drony, sklad surovin, +40 populace.' },
+      house:    { ...commonBuildings.house,    name: 'Obytný modul',       sprite: 'sf_house',    desc: 'Ubytování: +8 populace.' },
       barracks: { ...commonBuildings.barracks, name: 'Výcviková kapsle',   sprite: 'sf_barracks', desc: 'Cvičí mariňáky a railgunnery.' },
       stable:   { ...commonBuildings.stable,   name: 'Továrna na vozidla', sprite: 'sf_factory',  desc: 'Vyrábí hover tanky.' },
       siege:    { ...commonBuildings.siege,    name: 'Zbrojní laboratoř',  sprite: 'sf_lab',      desc: 'Staví mortarové walkery.' },
