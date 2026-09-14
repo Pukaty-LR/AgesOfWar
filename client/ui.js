@@ -55,6 +55,8 @@ export class UI {
   }
   updateTop(game) {
     const p = game.players[game.me]; if (!p) return;
+    let idle = 0; for (const e of game.ents.values()) if (e.k === 'u' && e.o === game.me && e.o2 === 'idle' && game.unitDef(e).role === 'worker') idle++;
+    const badge = $('idle-count'); badge.textContent = idle; badge.classList.toggle('hidden', idle === 0); $('btn-idle-worker').classList.toggle('pulse', idle > 0);
     $('res-p').querySelector('.val').textContent = p.res.p; $('res-s').querySelector('.val').textContent = p.res.s;
     const pop = $('res-pop'); pop.querySelector('.val').textContent = `${p.pop}/${p.popCap}`; pop.classList.toggle('low', p.pop >= p.popCap);
     const s = Math.floor(game.gameTime()); $('game-clock').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -75,7 +77,7 @@ export class UI {
     // entities
     const R = game.renderer;
     for (const e of game.ents.values()) {
-      if (e.k === 't') { if (!R.explored[(e.ty) * game.map.w + e.tx]) continue; ctx.fillStyle = game.era === 'ww2' && e.v >= 2 ? '#8a6a4a' : '#1e4d22'; ctx.fillRect(e.tx, e.ty, 1, 1); }
+      if (e.k === 't') { if (!R.explored[(e.ty) * game.map.w + e.tx]) continue; ctx.fillStyle = '#1e4d22'; ctx.fillRect(e.tx, e.ty, 1, 1); }
       else if (e.k === 'm') { if (!R.explored[e.ty * game.map.w + e.tx]) continue; ctx.fillStyle = game.era === 'ww2' ? '#222' : '#f2c94c'; ctx.fillRect(e.tx, e.ty, 2, 2); }
     }
     for (const e of game.ents.values()) {
@@ -167,9 +169,11 @@ export class UI {
         btn(2, { label: 'Držet', key: 'H', icon: () => actionIcon('hold'), desc: 'Držet pozici, nepronásledovat.', act: () => game.orderHold() });
         if (hasMil || hasWorker) btn(3, { label: 'Útok', key: 'A', icon: () => actionIcon('amove'), desc: 'Útočný pochod: útočí na vše cestou. Klik na nepřítele = útok na cíl.', act: () => { game.state.mode = 'amove'; }, active: () => game.state.mode === 'amove' });
         if (hasWorker) {
-          btn(4, { label: 'Těžit', key: 'G', icon: () => actionIcon('gather'), desc: 'Klikni na důl nebo strom (nebo rovnou pravým tlačítkem).', act: () => { game.state.mode = 'gather'; }, active: () => game.state.mode === 'gather' });
-          btn(5, { label: 'Stavět', key: 'B', icon: () => actionIcon('build'), desc: 'Otevře nabídku staveb.', act: () => { this.buildMenu = true; this.selectionChanged = true; this.dirty = true; this.lastSig = ''; } });
-          btn(6, { label: 'Opravit', key: 'R', icon: () => actionIcon('repair'), desc: 'Klikni na poškozenou vlastní budovu (nebo rovnou pravým tlačítkem).', act: () => { game.state.mode = 'repair'; }, active: () => game.state.mode === 'repair' });
+          const rp = game.eraDef.resources.p, rs = game.eraDef.resources.s;
+          btn(4, { label: 'Těžit ' + rp.name.toLowerCase(), key: 'G', icon: () => actionIcon('gather', 64, rp.color), desc: `Vybraní dělníci jdou těžit ${rp.name.toLowerCase()} z nejbližšího naleziště (${game.eraDef.nodes.mine.name.toLowerCase()}).`, act: () => game.gatherKind('mine') });
+          btn(5, { label: 'Těžit ' + rs.name.toLowerCase(), key: 'F', icon: () => actionIcon('gather', 64, rs.color), desc: `Vybraní dělníci jdou těžit ${rs.name.toLowerCase()} z nejbližšího lesa.`, act: () => game.gatherKind('tree') });
+          btn(6, { label: 'Stavět', key: 'B', icon: () => actionIcon('build'), desc: 'Otevře nabídku staveb.', act: () => { this.buildMenu = true; this.selectionChanged = true; this.dirty = true; this.lastSig = ''; } });
+          btn(7, { label: 'Opravit', key: 'R', icon: () => actionIcon('repair'), desc: 'Klikni na poškozenou vlastní budovu (nebo rovnou pravým tlačítkem).', act: () => { game.state.mode = 'repair'; }, active: () => game.state.mode === 'repair' });
         }
       }
     } else if (blds.length) {
@@ -179,7 +183,8 @@ export class UI {
         const keys = ['Q', 'W', 'E', 'R'];
         def.trains.forEach((u, i) => { const ud = game.tech.units[u]; btn(i, { label: ud.name, key: keys[i], icon: () => unitPortrait(ud.sprite, p.color, 64, { faction: p.faction }), cost: ud.cost, desc: `${ud.genericName}. Útok ${ud.dmg}, pancíř ${ud.armor}, HP ${ud.hp}, dosah ${ud.range >= 1 ? ud.range.toFixed(1) : 'na blízko'}. Populace ${ud.pop}. Výcvik ${Math.round(ud.trainTime)} s.`, act: () => game.train(u), canAfford: () => p.res.p >= ud.cost.p && p.res.s >= ud.cost.s }); });
         if (def.trains.length) btn(4, { label: 'Shromaždiště', key: 'Y', icon: () => actionIcon('rally'), desc: 'Klikni na místo (nebo pravým tlačítkem). Na důl/les = dělníci jdou rovnou těžit.', act: () => { game.state.mode = 'rally'; }, active: () => game.state.mode === 'rally' });
-        if (b.q && b.q.length) btn(11, { label: 'Zrušit výcvik', key: 'X', icon: () => actionIcon('cancel'), cls: 'cancel', desc: 'Zruší poslední jednotku ve frontě.', act: () => game.cancelTrain(b.i, b.q.length - 1) });
+        if (b.q && b.q.length) btn(10, { label: 'Zrušit výcvik', key: 'X', icon: () => actionIcon('cancel'), cls: 'cancel', desc: 'Zruší poslední jednotku ve frontě.', act: () => game.cancelTrain(b.i, b.q.length - 1) });
+        btn(11, { label: 'Zbourat', key: 'Delete', icon: () => actionIcon('demolish'), cls: 'cancel', desc: 'Zbourá vybrané budovy (vrátí 25 % surovin).', act: () => game.demolish() });
       }
     }
     slots.forEach((d, i) => {

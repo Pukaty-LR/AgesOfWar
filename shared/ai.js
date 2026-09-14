@@ -28,9 +28,11 @@ export class AIPlayer {
     const halls = buildings.filter(b => b.type === 'hall' && b.built);
     const hall = halls[0] || buildings.find(b => b.built) || buildings[0];
     if (!hall) return;
-    const hard = this.diff === 'hard', easy = this.diff === 'easy';
+    const impossible = this.diff === 'impossible';
+    const hard = this.diff === 'hard' || impossible, easy = this.diff === 'easy';
     const targetWorkers = hard ? 18 : (easy ? 9 : 14);
     if (easy && tick % 40 !== 0) return; // easy AI thinks half as often
+    if (impossible) { p.res.p += 4; p.res.s += 3; p.dirty = true; } // impossible AI gets a resource trickle
 
     // 1. Economy: keep workers gathering
     const mineNode = sim.nearestNode({ x: hall.x, y: hall.y, owner: this.pid }, 'mine', 16);

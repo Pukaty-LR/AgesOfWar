@@ -326,6 +326,25 @@ export class Sim {
         p.dirty = true;
         break;
       }
+      case 'demolish': { // tear down own finished buildings (walls included); small refund
+        for (const b of units.filter(e => e.kind === 'building')) {
+          const def = p.tech.buildings[b.type];
+          if (b.built) { p.res.p += Math.round(def.cost.p * 0.25); p.res.s += Math.round(def.cost.s * 0.25); }
+          this.events.push({ t: 'death', x: b.x, y: b.y, o: b.owner, k: 'building', ty: b.type, w: b.w, h: b.h, demolished: true });
+          this.killBuilding(b, null, true);
+        }
+        p.dirty = true;
+        break;
+      }
+      case 'gatherKind': { // find nearest resource of a kind for each worker
+        const kind = c.kind === 'mine' ? 'mine' : 'tree';
+        for (const u of myUnits) {
+          if (u.role !== 'worker') continue;
+          const node = this.nearestNode(u, kind, 60);
+          if (node) this.setOrder(u, { type: 'gather', targetId: node.id, phase: 'go' }, c.queue);
+        }
+        break;
+      }
       case 'chat': break;
     }
   }

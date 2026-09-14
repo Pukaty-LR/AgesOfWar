@@ -54,7 +54,7 @@ export const ERAS = {
     },
     nodes: { mine: { name: 'Zlatý důl', amount: 12000, perTrip: 10, tripTicks: 22 }, secondary: { name: 'Les', kind: 'trees', amount: 150, perTrip: 10, chopTicks: 8, chopHits: 5 } },
     palette: { grass: [92, 140, 58], grass2: [78, 122, 50], dirt: [150, 120, 78], sand: [214, 196, 140], water: [36, 96, 150], deep: [22, 62, 112], rock: [120, 118, 110] },
-    music: { scale: [0, 2, 3, 5, 7, 8, 10], root: 220, tempo: 84, style: 'lyre' },
+    music: { scale: [0, 2, 3, 5, 7, 8, 10], root: 220, tempo: 70, style: 'lyre' },
     factions: [
       { id: 'rome',     name: 'Řím',      desc: 'Disciplína: pěchota +15 % HP, věže +10 % dmg.',        mods: { infantry: { hp: 1.15 }, tower: { dmg: 1.1 } },
         unitNames: { worker: 'Otrok', infantry: 'Legionář', ranged: 'Lučištník', cavalry: 'Equites', siege: 'Onager', ship: 'Triéra' } },
@@ -87,16 +87,16 @@ export const ERAS = {
   ww2: era({
     id: 'ww2',
     name: 'Druhá světová',
-    tagline: 'Tanky, houfnice a torpédoborce. Ropa z vrtů, ocel ze šrotovišť.',
+    tagline: 'Tanky, houfnice a torpédoborce. Ropa z vrtů, dřevo z lesů.',
     available: true,
     year: '1939–1945',
     resources: {
       p: { id: 'oil', name: 'Ropa', short: 'Ro', color: '#3a3a3a' },
-      s: { id: 'steel', name: 'Ocel', short: 'Oc', color: '#a9b4c2' },
+      s: { id: 'wood', name: 'Dřevo', short: 'Dř', color: '#b7863f' },
     },
-    nodes: { mine: { name: 'Ropné pole', amount: 12000, perTrip: 10, tripTicks: 22 }, secondary: { name: 'Šrotoviště', kind: 'scrap', amount: 150, perTrip: 10, chopTicks: 8, chopHits: 5 } },
+    nodes: { mine: { name: 'Ropné pole', amount: 12000, perTrip: 10, tripTicks: 22 }, secondary: { name: 'Les', kind: 'trees', amount: 150, perTrip: 10, chopTicks: 8, chopHits: 5 } },
     palette: { grass: [96, 118, 64], grass2: [82, 102, 56], dirt: [122, 104, 80], sand: [186, 176, 140], water: [42, 84, 118], deep: [26, 54, 84], rock: [104, 104, 100] },
-    music: { scale: [0, 2, 4, 5, 7, 9, 11], root: 196, tempo: 112, style: 'march' },
+    music: { scale: [0, 2, 4, 5, 7, 9, 11], root: 196, tempo: 92, style: 'march' },
     factions: [
       { id: 'germany', name: 'Německo', desc: 'Blitzkrieg: tanky +15 % pancíř, +5 % rychlost.',    mods: { cavalry: { armor: 1.15, speed: 1.05 } },
         unitNames: { worker: 'Ženista', infantry: 'Grenadier', ranged: 'MG-34 střelec', cavalry: 'Panzer IV', siege: 'Houfnice sFH 18', ship: 'Torpédoborec Z' } },

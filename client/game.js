@@ -172,6 +172,8 @@ export class Game {
     else this.send({ t: 'amove', ids, x: wx, y: wy, queue: this.state.shift });
     this.audio.sfx('attackOrder', 0.7); this.renderer.addEffect({ kind: 'marker', x: wx, y: wy, color: 'rgba(255,80,80,0.9)' });
   }
+  gatherKind(kind) { const ids = this.selectedIds(e => e.k === 'u' && e.o === this.me && this.unitDef(e).role === 'worker'); if (!ids.length) return; this.send({ t: 'gatherKind', ids, kind, queue: this.state.shift }); this.audio.sfx('ack', 0.7); }
+  demolish() { const ids = this.myBuildingsSelected(); if (!ids.length) return; this.send({ t: 'demolish', ids }); this.audio.sfx('click'); this.select([]); }
   orderStop() { const ids = this.myUnitsSelected(); if (ids.length) { this.send({ t: 'stop', ids }); this.audio.sfx('click'); } }
   orderHold() { const ids = this.myUnitsSelected(); if (ids.length) { this.send({ t: 'hold', ids }); this.audio.sfx('click'); } }
   train(type) { const blds = this.myBuildingsSelected(); if (!blds.length) return; const def = this.tech.units[type]; const p = this.players[this.me]; if (p.res.p < def.cost.p || p.res.s < def.cost.s) { this.ui.alert('Nedostatek surovin.', true); this.audio.sfx('error'); return; } // pick building with shortest queue

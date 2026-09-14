@@ -39,7 +39,7 @@ export class Renderer {
     this.fogCtx.fillStyle = 'rgb(6,5,8)'; this.fogCtx.fillRect(0, 0, this.fw, this.fh);
     this.particles = []; this.effects = [];
   }
-  elevV(vx, vy) { const v = this.vh[vy * (this.map.w + 1) + vx]; return Math.max(0, v - SEA) * ELEV; }
+  elevV(vx, vy) { const v = this.vh[vy * (this.map.w + 1) + vx]; return Math.max(0, v - SEA) * ELEV + Math.max(0, v - 0.83) * 520; }
   /** elevation (px) at world point, bilinear over vertex heights */
   elev(x, y) {
     if (!this.map) return 0;
@@ -77,15 +77,14 @@ export class Renderer {
   }
   hash(x, y) { let n = (x * 374761393 + y * 668265263) | 0; n = (n ^ (n >> 13)) * 1274126177; return ((n ^ (n >> 16)) >>> 0) / 4294967296; }
   tileQuad(x, y) { // 4 corners in iso px (absolute), with elevation
-    const w1 = this.map.w + 1;
-    const e = (vx, vy) => Math.max(0, this.vh[vy * w1 + vx] - SEA) * ELEV;
+    const e = (vx, vy) => this.elevV(vx, vy);
     return [iso(x, y, e(x, y)), iso(x + 1, y, e(x + 1, y)), iso(x + 1, y + 1, e(x + 1, y + 1)), iso(x, y + 1, e(x, y + 1))];
   }
   buildChunk(cx, cy) {
     const map = this.map, w = map.w, h = map.h;
     const x0 = cx * CHUNK, y0 = cy * CHUNK, x1 = Math.min(w, x0 + CHUNK), y1 = Math.min(h, y0 + CHUNK);
     // bounds in iso px
-    const left = iso(x0, y1)[0] - TW, right = iso(x1, y0)[0] + TW, top = iso(x0, y0)[1] - ELEV - TH, bottom = iso(x1, y1)[1] + TH;
+    const left = iso(x0, y1)[0] - TW, right = iso(x1, y0)[0] + TW, top = iso(x0, y0)[1] - ELEV - 100 - TH, bottom = iso(x1, y1)[1] + TH;
     const cw = Math.ceil(right - left), ch = Math.ceil(bottom - top);
     const canvas = document.createElement('canvas'); canvas.width = cw * 1.5; canvas.height = ch * 1.5;
     const ctx = canvas.getContext('2d'); ctx.scale(1.5, 1.5); ctx.translate(-left, -top);
@@ -322,7 +321,7 @@ export class Renderer {
     const moving = e.moving;
     if (anim === 'attack' || anim === 'work') { const dtk = (g.tickNow() - e.at); const fr = animFrameCount(anim); frame = Math.min(fr - 1, Math.floor(dtk / 2)); if (dtk > fr * 2 + 4 && !moving) { anim = e.a === 'work' ? 'work' : 'idle'; frame = anim === 'work' ? Math.floor(this.time * 6) % 4 : 0; } }
     else if (moving || anim === 'walk') { anim = 'walk'; frame = Math.floor((this.time * def.speed * 2.2 + e.i * 0.7)) % 6; }
-    else anim = 'idle';
+    else { anim = 'idle'; frame = Math.floor(this.time * 2.5 + e.i * 0.9) % 4; }
     if (def.role === 'ship') { anim = anim === 'attack' ? 'attack' : 'walk'; if (anim === 'walk') frame = Math.floor(this.time * 3 + e.i) % 6; }
     const extra = { carry: e.c || '', faction: g.players[e.o].faction, workKind: e.o2 === 'gather' ? (g.ents.get(e.tg)?.k === 'm' ? 'mine' : 'tree') : '' };
     const spr = unitSprite(def.sprite, g.players[e.o].color, dir, anim, frame, extra);
@@ -475,16 +474,25 @@ export class Renderer {
   // ---------- picking ----------
   pick(sx, sy) {
     const g = this.game; let best = null, bestD = Infinity;
+    // 1) units by sprite box
     for (const e of g.ents.values()) {
-      if (e.sx === undefined || e.k === 'p' || e.hd) continue;
-      if (e.k === 'u' || e.k === 'b') {
-        if (e.k === 'u' && g.players[e.o].team !== g.myTeam && !this.isVisibleTile(e.x, e.y)) continue;
-        if (e.k === 'b' && !this.isExploredTile(e.x, e.y)) continue;
-        let inside;
-        if (e.k === 'u') { const hw = e.sw * 0.4, top = e.sy - e.say * 0.85, bottom = e.sy + 4; inside = sx >= e.sx - hw && sx <= e.sx + hw && sy >= top && sy <= bottom; }
-        else { const cx = e.sx + (e.w - e.h) * TW / 4 * this.cam.zoom, hw = Math.max(e.w, e.h) * TW / 2 * 0.55 * this.cam.zoom; const top = e.sy - e.say * 0.9, bottom = e.sy + (e.w + e.h) * TH / 4 * this.cam.zoom; inside = sx >= cx - hw && sx <= cx + hw && sy >= top && sy <= bottom; }
-        if (inside) { const d = (e.k === 'u' ? 0 : 1000) + Math.abs(sx - e.sx) + Math.abs(sy - (e.sy - e.say * 0.4)); if (d < bestD) { bestD = d; best = e; } }
-      }
+      if (e.k !== 'u' || e.sx === undefined || e.hd) continue;
+      if (g.players[e.o].team !== g.myTeam && !this.isVisibleTile(e.x, e.y)) continue;
+      const hw = e.sw * 0.4, top = e.sy - e.say * 0.85, bottom = e.sy + 4;
+      if (sx >= e.sx - hw && sx <= e.sx + hw && sy >= top && sy <= bottom) { const d = Math.abs(sx - e.sx) + Math.abs(sy - (e.sy - e.say * 0.4)); if (d < bestD) { bestD = d; best = e; } }
+    }
+    if (best) return best;
+    // 2) buildings by exact footprint (world space) - reliable when buildings are close together
+    const [wx0, wy0] = this.screenToWorld(sx, sy);
+    for (const e of g.ents.values()) {
+      if (e.k !== 'b' || e.sx === undefined || !this.isExploredTile(e.x, e.y)) continue;
+      if (wx0 >= e.tx && wx0 < e.tx + e.w && wy0 >= e.ty && wy0 < e.ty + e.h) return e;
+    }
+    // 3) buildings by the upper part of their sprite (walls/roofs above the footprint), nearest footprint wins
+    for (const e of g.ents.values()) {
+      if (e.k !== 'b' || e.sx === undefined || !this.isExploredTile(e.x, e.y)) continue;
+      const z = this.cam.zoom; const cx = e.sx + (e.w - e.h) * TW / 4 * z, hw = Math.max(e.w, e.h) * TW / 2 * 0.5 * z; const top = e.sy - e.say * 0.9, bottom = e.sy + (e.w + e.h) * TH / 4 * z;
+      if (sx >= cx - hw && sx <= cx + hw && sy >= top && sy <= bottom) { const d = Math.hypot(wx0 - e.x, wy0 - e.y); if (d < bestD) { bestD = d; best = e; } }
     }
     if (best) return best;
     // trees/mines by world tile

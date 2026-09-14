@@ -17,6 +17,7 @@
     <div class="subtitle">Online RTS &middot; Starověk &middot; Druhá světová &middot; Sci-fi</div>
     <label class="field"><span>Tvoje jméno</span><input id="name" maxlength="18" placeholder="Vojevůdce" autocomplete="off"></label>
     <div class="era-pick small" id="menu-eras"></div>
+    <label class="field"><span>Obtížnost AI</span><select id="menu-diff"><option value="easy">Lehká</option><option value="normal" selected>Střední</option><option value="hard">Těžká</option><option value="impossible">Nemožná</option></select></label>
     <div class="menu-buttons">
       <button id="btn-quick" class="big primary">⚔ Rychlá hra proti AI</button>
       <button id="btn-host" class="big">🏰 Hostovat hru</button>
@@ -62,6 +63,7 @@
           <button id="btn-add-bot-easy">+ Bot (lehký)</button>
           <button id="btn-add-bot">+ Bot</button>
           <button id="btn-add-bot-hard">+ Bot (těžký)</button>
+          <button id="btn-add-bot-impossible">+ Bot (nemožný)</button>
           <button id="btn-ready" class="primary">Připraven</button>
           <button id="btn-start" class="primary">▶ Spustit hru</button>
         </div>
@@ -113,7 +115,7 @@
     <input id="chat-input" class="hidden" placeholder="Zpráva… (Enter odešle, Esc zruší)" maxlength="200">
     <div id="tooltip" class="hidden"></div>
     <div id="bottombar">
-      <div id="minimap-wrap"><canvas id="minimap" width="236" height="236"></canvas><div id="minimap-btns"><button id="btn-idle-worker" title="Nečinný dělník (.)">👷</button><button id="btn-army" title="Vybrat armádu (F1)">⚔</button></div></div>
+      <div id="minimap-wrap"><canvas id="minimap" width="236" height="236"></canvas><div id="minimap-btns"><button id="btn-idle-worker" title="Nečinný dělník (.)">👷<span id="idle-count" class="badge hidden">0</span></button><button id="btn-army" title="Vybrat armádu (F1)">⚔</button></div></div>
       <div id="selpanel"><div id="sel-empty">Nic není vybráno</div><div id="sel-single" class="hidden"><canvas id="portrait" width="96" height="96"></canvas><div id="sel-info"><div id="sel-name"></div><div id="sel-owner"></div><div class="hpbar"><div id="sel-hp"></div><span id="sel-hp-text"></span></div><div id="sel-stats"></div><div id="sel-queue"></div></div></div><div id="sel-multi" class="hidden"></div></div>
       <div id="cmdcard"></div>
     </div>

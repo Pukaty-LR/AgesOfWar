@@ -121,56 +121,45 @@ export class Audio {
   playBeat(t) {
     const st = this.style; const e = this.beat % 8; const bar = this.bar; const I = this.intensity;
     const g = this.musicGain;
+    const beatLen = 60 / st.tempo;
     if (st.style === 'lyre') {
-      // drone every 2 bars
-      if (e === 0 && bar % 2 === 0) { this.osc('triangle', this.scaleFreq(0, -1), t, 60 / st.tempo * 8.2, 0.07, g, { a: 0.4, d: 0.5, s: 60 / st.tempo * 6, r: 1.2, sus: 0.8, lp: 500 }); this.osc('sine', this.scaleFreq(4, -1), t, 60 / st.tempo * 8.2, 0.05, g, { a: 0.6, d: 0.5, s: 60 / st.tempo * 6, r: 1.2, sus: 0.8 }); }
-      // frame drum
-      if (e === 0 || e === 4 || (e === 6 && bar % 2 === 1) || (I > 0.4 && (e === 2 || e === 7))) {
-        this.osc('sine', 110, t, 0.25, 0.35 + I * 0.25, g, { slide: 45, a: 0.002, d: 0.08, r: 0.15 });
-        this.noiseBurst(t, 0.06, 0.08 + I * 0.1, g, { f: 900, q: 1, type: 'lowpass' });
+      // ambient pad: slow sine chord, changes every 2 bars
+      if (e === 0 && bar % 2 === 0) {
+        const root = [0, 5, 3, 4][Math.floor(bar / 2) % 4];
+        for (const d of [0, 2, 4]) { const f = this.scaleFreq(root + d, 0); this.osc('sine', f, t, beatLen * 8.5, 0.05, this.delay, { a: 1.2, d: 0.5, s: beatLen * 5.5, r: 1.8, sus: 0.9 }); this.osc('triangle', f / 2, t, beatLen * 8.5, 0.03, g, { a: 1.5, d: 0.5, s: beatLen * 5.5, r: 1.8, sus: 0.9, lp: 400 }); }
       }
-      if (I > 0.55 && (e === 3 || e === 5)) this.noiseBurst(t, 0.05, 0.1, g, { f: 4000, q: 2 });
-      // plucked melody: random walk with rests
+      // soft frame drum, only on 1 (and 3 when battle)
+      if (e === 0 || (I > 0.35 && e === 4)) { this.osc('sine', 100, t, 0.3, 0.12 + I * 0.12, g, { slide: 45, a: 0.004, d: 0.1, r: 0.2 }); }
+      // sparse plucked melody
       const r = this.rand(bar * 8 + e);
-      const density = 0.45 + I * 0.3;
-      if (r < density) {
+      const density = 0.22 + I * 0.2;
+      if (r < density && (e % 2 === 0 || I > 0.5)) {
         const step = [-2, -1, -1, 0, 1, 1, 2, 3][Math.floor(this.rand(bar * 8 + e + 100) * 8)];
-        this.melodyIdx = Math.max(-3, Math.min(10, this.melodyIdx + step));
+        this.melodyIdx = Math.max(-3, Math.min(9, this.melodyIdx + step));
         if (e === 0 && bar % 4 === 0) this.melodyIdx = 0;
         const f = this.scaleFreq(this.melodyIdx, 1);
-        this.osc('triangle', f, t, 0.5, 0.16, this.delay, { a: 0.003, d: 0.15, s: 0.05, r: 0.4, sus: 0.3, lp: 2600 });
-        this.osc('sine', f * 2, t, 0.25, 0.05, this.delay, { a: 0.002, d: 0.08, r: 0.15, sus: 0.2 });
+        this.osc('triangle', f, t, 0.9, 0.07, this.delay, { a: 0.006, d: 0.25, s: 0.1, r: 0.6, sus: 0.3, lp: 1500 });
       }
-      // flute phrase every 4 bars
-      if (bar % 4 === 2 && (e === 0 || e === 3 || e === 6)) {
-        const f = this.scaleFreq([0, 2, 4, 5, 7][Math.floor(this.rand(bar * 3 + e) * 5)], 2);
-        this.osc('sine', f, t, 60 / st.tempo * 1.4, 0.07, this.delay, { a: 0.08, d: 0.2, s: 0.2, r: 0.4, sus: 0.7 });
-      }
-    } else { // march
-      const bd = e === 0 || e === 4; const sn = e === 2 || e === 6 || (I > 0.3 && e === 7);
-      if (bd) { this.osc('sine', 90, t, 0.3, 0.45, g, { slide: 35, a: 0.002, d: 0.1, r: 0.2 }); }
-      if (sn) { this.noiseBurst(t, 0.14, 0.25 + I * 0.2, g, { f: 2200, q: 0.9, type: 'bandpass', r: 0.1 }); this.osc('triangle', 220, t, 0.06, 0.1, g, { slide: 150 }); }
-      // snare roll on bar end when intense
-      if (I > 0.5 && e === 7) for (let i = 0; i < 3; i++) this.noiseBurst(t + i * 0.055, 0.05, 0.14, g, { f: 2500, q: 1 });
-      if (e % 2 === 1 && !sn) this.noiseBurst(t, 0.03, 0.05 + I * 0.05, g, { f: 6000, q: 2 }); // hihat
-      // low strings chord (sawtooth pair) per bar
+      // distant flute every 4 bars
+      if (bar % 4 === 2 && (e === 0 || e === 4)) { const f = this.scaleFreq([0, 2, 4, 5, 7][Math.floor(this.rand(bar * 3 + e) * 5)], 2); this.osc('sine', f, t, beatLen * 2.2, 0.035, this.delay, { a: 0.3, d: 0.3, s: 0.6, r: 0.8, sus: 0.7 }); }
+    } else { // march, softened: brushed snare, warm low strings, muted horn
+      const bd = e === 0 || (I > 0.4 && e === 4); const sn = e === 4 || (I > 0.5 && e === 6);
+      if (bd) this.osc('sine', 80, t, 0.3, 0.18 + I * 0.12, g, { slide: 35, a: 0.003, d: 0.1, r: 0.2 });
+      if (sn) this.noiseBurst(t, 0.12, 0.06 + I * 0.08, g, { f: 1800, q: 0.8, type: 'bandpass', r: 0.1 });
       if (e === 0) {
         const chordRoot = [0, 3, 4, 0][bar % 4];
-        for (const d of [0, 2, 4]) { const f = this.scaleFreq(chordRoot + d, -1); this.osc('sawtooth', f, t, 60 / st.tempo * 4, 0.045, g, { a: 0.15, d: 0.3, s: 60 / st.tempo * 2.5, r: 0.5, sus: 0.7, lp: 700 }); this.osc('sawtooth', f * 1.004, t, 60 / st.tempo * 4, 0.035, g, { a: 0.15, d: 0.3, s: 60 / st.tempo * 2.5, r: 0.5, sus: 0.7, lp: 700 }); }
+        for (const d of [0, 2, 4]) { const f = this.scaleFreq(chordRoot + d, -1); this.osc('sawtooth', f, t, beatLen * 4.2, 0.022, g, { a: 0.5, d: 0.3, s: beatLen * 2.5, r: 0.8, sus: 0.8, lp: 420 }); this.osc('sine', f * 2, t, beatLen * 4.2, 0.03, this.delay, { a: 0.8, d: 0.3, s: beatLen * 2.5, r: 0.8, sus: 0.8 }); }
       }
-      // brass melody
       const r = this.rand(bar * 8 + e);
-      const density = 0.4 + I * 0.3;
-      if (r < density && (e % 2 === 0 || I > 0.5)) {
+      const density = 0.2 + I * 0.25;
+      if (r < density && e % 2 === 0) {
         const step = [-2, -1, 0, 1, 1, 2, 2, 4][Math.floor(this.rand(bar * 8 + e + 300) * 8)];
-        this.melodyIdx = Math.max(-2, Math.min(9, this.melodyIdx + step));
+        this.melodyIdx = Math.max(-2, Math.min(8, this.melodyIdx + step));
         if (e === 0 && bar % 4 === 0) this.melodyIdx = [0, 4, 2, 4][Math.floor(bar / 4) % 4];
         const f = this.scaleFreq(this.melodyIdx, 1);
-        this.osc('sawtooth', f, t, 0.35, 0.13, this.delay, { a: 0.02, d: 0.1, s: 0.1, r: 0.15, sus: 0.6, lp: 1600 + I * 1200 });
-        this.osc('square', f / 2, t, 0.3, 0.04, this.delay, { a: 0.02, d: 0.1, s: 0.1, r: 0.1, sus: 0.5, lp: 900 });
+        this.osc('sawtooth', f, t, 0.7, 0.045, this.delay, { a: 0.08, d: 0.2, s: 0.2, r: 0.3, sus: 0.6, lp: 900 + I * 600 });
       }
-      // trumpet fanfare when intense
-      if (I > 0.7 && bar % 4 === 3 && e >= 4) { const f = this.scaleFreq([4, 7, 9, 11][e - 4], 1); this.osc('sawtooth', f, t, 0.25, 0.12, this.delay, { a: 0.01, d: 0.05, s: 0.1, r: 0.1, lp: 2400 }); }
+      if (I > 0.7 && bar % 4 === 3 && e >= 4 && e % 2 === 0) { const f = this.scaleFreq([4, 7, 9, 11][e - 4], 1); this.osc('sawtooth', f, t, 0.4, 0.05, this.delay, { a: 0.03, d: 0.1, s: 0.15, r: 0.2, lp: 1400 }); }
     }
   }
   rand(n) { const x = Math.sin(n * 12.9898 + this.phraseSeed * 78.233) * 43758.5453; return x - Math.floor(x); }

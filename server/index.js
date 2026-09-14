@@ -49,7 +49,7 @@ function broadcastLobby(l) { const st = { t: 'lobby', lobby: lobbyState(l) }; fo
 function freeColor(l) { const used = new Set(l.slots.map(s => s.color)); for (let i = 0; i < TEAM_COLORS.length; i++) if (!used.has(i)) return i; return 0; }
 function freeTeam(l) { const used = new Set(l.slots.map(s => s.team)); for (let i = 0; i < MAX_PLAYERS; i++) if (!used.has(i)) return i; return 0; }
 function defaultFaction(era) { return ERAS[era].factions[0].id; }
-function validDiff(d) { return ['easy', 'normal', 'hard'].includes(d) ? d : 'normal'; }
+function validDiff(d) { return ['easy', 'normal', 'hard', 'impossible'].includes(d) ? d : 'normal'; }
 
 function leaveLobby(c, silent = false) {
   const l = c.lobby; if (!l) return;

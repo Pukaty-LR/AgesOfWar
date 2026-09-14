@@ -78,9 +78,9 @@ function humanoid(ctx, o) {
   const fx = Math.cos(sa), fy = Math.sin(sa);       // facing vector on screen
   const front = fy > 0.1, side = Math.abs(fx) > 0.7;
   const ph = walkPhase(anim, frame);
-  const bob = anim === 'walk' ? Math.abs(Math.sin(ph)) * 1.2 : 0;
-  const legA = anim === 'walk' ? Math.sin(ph) * 3 : 0;
-  const swing = anim === 'attack' ? [0, -0.9, 0.7, 0.3][frame % 4] : (anim === 'work' ? [-0.6, 0.2, 0.8, 0.1][frame % 4] : 0);
+  const bob = anim === 'walk' ? Math.abs(Math.sin(ph)) * 1.2 : (anim === 'idle' ? [0, 0.5, 0.9, 0.5][frame % 4] : 0);
+  const legA = anim === 'walk' ? Math.sin(ph) * 3.5 : 0;
+  const swing = anim === 'attack' ? [0, -0.9, 0.7, 0.3][frame % 4] : (anim === 'work' ? [-0.6, 0.2, 0.8, 0.1][frame % 4] : (anim === 'idle' ? [0, 0.06, 0.1, 0.06][frame % 4] : 0));
   const tc = team, tcD = shade(team, 0.6), tcL = shade(team, 1.25);
   const scale = o.scale || 1;
   ctx.save(); ctx.scale(scale, scale);
@@ -297,7 +297,7 @@ const UNIT_DRAW = {
   ww2_destroyer: (ctx, o) => destroyer(ctx, o),
 };
 const UNIT_BOX = { default: [24, 44, 12, 40], ant_cavalry: [44, 56, 22, 50], ant_siege: [56, 70, 28, 62], ant_ship: [80, 80, 40, 70], ww2_tank: [64, 56, 32, 48], ww2_artillery: [56, 52, 28, 44], ww2_destroyer: [90, 80, 45, 70] };
-const ANIM_FRAMES = { idle: 1, walk: 6, attack: 4, work: 4 };
+const ANIM_FRAMES = { idle: 4, walk: 6, attack: 4, work: 4 };
 
 export function unitSprite(sprite, colorIdx, dir, anim, frame, extra = {}) {
   const frames = ANIM_FRAMES[anim] || 1; frame = frame % frames;
@@ -532,7 +532,7 @@ function constructionSite(ctx, w, h, progress, era) {
   const [mx, my] = iso(w - 0.5, h - 0.4, 2); for (let i = 0; i < 3; i++) rrect(ctx, mx - 8 + i * 2, my - 3 - i * 3, 12, 3, 1, rgb(WOOD), OUT, 0.5);
 }
 
-const BUILDING_BOX = { 3: [200, 200, 100, 150], 1: [80, 110, 40, 90] };
+const BUILDING_BOX = { 3: [230, 250, 115, 130], 1: [96, 140, 48, 100] };
 /** Returns cached building sprite. mask: wall neighbor mask. stage: 'done' | construction progress bucket */
 export function buildingSprite(sprite, w, h, colorIdx, built, progress, mask = 0, era = 'antiquity') {
   const bucket = built ? 'done' : Math.floor(progress * 10);
@@ -550,7 +550,7 @@ export function treeSprite(variant, era, sway = 0) {
   const key = `tree|${era}|${variant}|${sway}`;
   return cached(key, 56, 72, 28, 66, ctx => {
     ellipse(ctx, 0, 0, 12, 6, 'rgba(0,0,0,0.3)');
-    if (era === 'ww2' && variant >= 2) { // scrap piles for ww2 secondary resource
+    if (era === 'scrap' && variant >= 2) { // (unused) scrap piles
       const rust = [130, 80, 50], rustD = [90, 55, 35], grey = [110, 112, 115];
       ellipse(ctx, 0, -3, 15, 8, rgb([90, 80, 70]), OUT, 0.8);
       for (let i = 0; i < 7; i++) { const a = i * 1.7 + variant, r = 4 + (i % 3) * 3; const x = Math.cos(a) * r, y = -4 + Math.sin(a) * r * 0.5 - (i % 2) * 5; ctx.save(); ctx.translate(x, y); ctx.rotate(a * 0.7); rrect(ctx, -6, -3, 12, 6, 1, rgb(i % 2 ? rust : grey), OUT, 0.6); ctx.restore(); }
@@ -578,7 +578,7 @@ export function treeSprite(variant, era, sway = 0) {
 }
 export function mineSprite(era, depleted = 0) {
   const key = `mine|${era}|${depleted}`;
-  return cached(key, 150, 130, 75, 100, ctx => {
+  return cached(key, 160, 160, 80, 115, ctx => {
     // 2x2 footprint, anchored at center (x=1,y=1 in tile units -> iso(0,0))
     ctx.translate(...iso(-1, -1, 0).map(v => v));
     if (era === 'ww2') {
@@ -643,16 +643,17 @@ export function buildingPortrait(sprite, w, h, colorIdx, size, era) {
     ctx.translate(s / 2, s / 2); ctx.scale(scale, scale); ctx.drawImage(spr.canvas, -spr.w / 2, -spr.h / 2, spr.w, spr.h);
   }, size);
 }
-export function actionIcon(kind, size = 64) {
+export function actionIcon(kind, size = 64, color = '#e8c04a') {
   return iconCanvas((ctx, s) => {
     ctx.translate(s / 2, s / 2); const r = s * 0.32;
     switch (kind) {
+      case 'demolish': ctx.fillStyle = '#8a8078'; ctx.beginPath(); ctx.moveTo(-r, r * 0.6); ctx.lineTo(-r * 0.6, -r * 0.2); ctx.lineTo(0, r * 0.1); ctx.lineTo(r * 0.5, -r * 0.5); ctx.lineTo(r, r * 0.6); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#e04040'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-r * 0.8, -r * 0.9); ctx.lineTo(r * 0.2, -r * 0.1); ctx.moveTo(r * 0.2, -r * 0.9); ctx.lineTo(-r * 0.8, -r * 0.1); ctx.stroke(); break;
       case 'move': ctx.strokeStyle = '#8fdc7a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-r, r * 0.6); ctx.lineTo(r * 0.6, -r * 0.6); ctx.stroke(); ctx.beginPath(); ctx.moveTo(r * 0.6, -r * 0.6); ctx.lineTo(r * 0.6, r * 0.1); ctx.moveTo(r * 0.6, -r * 0.6); ctx.lineTo(-r * 0.1, -r * 0.6); ctx.stroke(); break;
       case 'stop': ctx.fillStyle = '#e06060'; ctx.beginPath(); ctx.roundRect(-r * 0.7, -r * 0.7, r * 1.4, r * 1.4, 4); ctx.fill(); break;
       case 'hold': ctx.strokeStyle = '#e0c060'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, r * 0.8, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = '#e0c060'; ctx.beginPath(); ctx.roundRect(-r * 0.15, -r * 0.5, r * 0.3, r); ctx.fill(); break;
       case 'attack': ctx.strokeStyle = '#e04040'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-r, r); ctx.lineTo(r * 0.7, -r * 0.7); ctx.moveTo(-r * 0.6, r * 0.4); ctx.lineTo(-r * 0.2, r * 0.8); ctx.stroke(); ctx.strokeStyle = '#ddd'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-r * 0.5, r * 0.5); ctx.lineTo(r * 0.8, -r * 0.8); ctx.stroke(); break;
       case 'amove': ctx.strokeStyle = '#e07040'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-r, r * 0.8); ctx.lineTo(r * 0.5, -r * 0.5); ctx.stroke(); ctx.fillStyle = '#e07040'; ctx.beginPath(); ctx.moveTo(r * 0.8, -r * 0.8); ctx.lineTo(r * 0.8, -r * 0.1); ctx.lineTo(r * 0.1, -r * 0.8); ctx.fill(); break;
-      case 'gather': ctx.fillStyle = '#e8c04a'; ctx.beginPath(); ctx.arc(-r * 0.3, r * 0.2, r * 0.55, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(r * 0.2, r * 0.8); ctx.lineTo(r * 0.8, -r * 0.8); ctx.stroke(); break;
+      case 'gather': ctx.fillStyle = color; ctx.beginPath(); ctx.arc(-r * 0.3, r * 0.2, r * 0.55, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(r * 0.2, r * 0.8); ctx.lineTo(r * 0.8, -r * 0.8); ctx.stroke(); break;
       case 'build': ctx.strokeStyle = '#d8b07a'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-r * 0.6, r * 0.8); ctx.lineTo(r * 0.4, -r * 0.3); ctx.stroke(); ctx.fillStyle = '#aaa'; ctx.beginPath(); ctx.roundRect(r * 0.1, -r * 0.9, r * 0.8, r * 0.5, 3); ctx.fill(); break;
       case 'cancel': ctx.strokeStyle = '#e04040'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-r * 0.7, -r * 0.7); ctx.lineTo(r * 0.7, r * 0.7); ctx.moveTo(r * 0.7, -r * 0.7); ctx.lineTo(-r * 0.7, r * 0.7); ctx.stroke(); break;
       case 'rally': ctx.strokeStyle = '#ddd'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-r * 0.5, r); ctx.lineTo(-r * 0.5, -r); ctx.stroke(); ctx.fillStyle = '#e0c060'; ctx.beginPath(); ctx.moveTo(-r * 0.5, -r); ctx.lineTo(r * 0.8, -r * 0.6); ctx.lineTo(-r * 0.5, -r * 0.2); ctx.fill(); break;
