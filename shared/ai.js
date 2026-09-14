@@ -74,18 +74,29 @@ export class AIPlayer {
       }
     }
 
-    // 3. Army production
+    // 3. Army production (uses tier units once unlocked)
     const reserve = this.buildStep < this.plan.length ? 120 : 0;
     for (const b of buildings) {
       if (!b.built || b.queue.length >= 2) continue;
-      const trains = p.tech.buildings[b.type].trains.filter(t => t !== 'worker');
-      if (!trains.length) continue;
+      const trains = sim.availableTrains(p, b).filter(t => t !== 'worker' && !p.tech.units[t].unique);
+      if (!trains.length) { if (b.type === 'hall' && sim.availableTrains(p, b).includes('hero') && !units.some(u => u.type === 'hero') && p.res.p > 700) sim.command(this.pid, { t: 'train', id: b.id, type: 'hero' }); continue; }
       let type;
-      if (b.type === 'barracks') type = (army.filter(u => u.role === 'infantry').length <= army.filter(u => u.role === 'ranged').length * 1.2) ? 'infantry' : 'ranged';
-      else if (b.type === 'siege') { if (tick < 20 * 60 * 5 && !hard) continue; type = 'siege'; }
-      else type = trains[0];
+      if (b.type === 'barracks') { const melee = trains.filter(t => p.tech.units[t].role === 'infantry'), rng = trains.filter(t => p.tech.units[t].role === 'ranged'); const wantMelee = army.filter(u => u.role === 'infantry').length <= army.filter(u => u.role === 'ranged').length * 1.2; const pool = wantMelee && melee.length ? melee : (rng.length ? rng : trains); type = pool[Math.floor(this.rng() * pool.length)]; }
+      else if (b.type === 'siege') { if (tick < 20 * 60 * 5 && !hard) continue; type = trains[Math.floor(this.rng() * trains.length)]; }
+      else type = trains[Math.floor(this.rng() * trains.length)];
       const ud = p.tech.units[type];
       if (p.res.p - ud.cost.p >= reserve && p.res.s - ud.cost.s >= reserve * 0.5) sim.command(this.pid, { t: 'train', id: b.id, type });
+    }
+    // 3b. Upgrades: hall first, then military buildings, when resources allow
+    if (tick % 100 === 0 && !easy) {
+      const order = [...halls, ...buildings.filter(b => b.built && b.type !== 'hall' && b.type !== 'tower' && b.type !== 'wall' && b.type !== 'gate')];
+      for (const b of order) {
+        const up = sim.nextUpgrade(p, b); if (!up || b.queue.some(q => q.type === '__up')) continue;
+        if (up.hall && sim.hallLevel(this.pid) < up.hall) continue;
+        const minAge = b.type === 'hall' ? 20 * 60 * (hard ? 3 : 5) * (b.level || 1) : 20 * 60 * 2;
+        if (tick < minAge) continue;
+        if (p.res.p >= up.cost.p + 150 && p.res.s >= up.cost.s + 100) { sim.command(this.pid, { t: 'upgrade', id: b.id }); break; }
+      }
     }
     // rally military buildings in front of the hall
     if (!this.rallyPoint) this.rallyPoint = this.frontOfBase(hall);

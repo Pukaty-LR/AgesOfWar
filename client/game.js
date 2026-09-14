@@ -45,7 +45,7 @@ export class Game {
   gameTime() { return this.tick / TICK_RATE; }
   unitDef(e) { return this.techs[e.o]?.units[e.t] || this.eraDef.units[e.t]; }
   buildingDef(e) { return this.techs[e.o]?.buildings[e.t] || this.eraDef.buildings[e.t]; }
-  entName(e) { if (e.k === 'u') return this.unitDef(e)?.name; if (e.k === 'b') return this.buildingDef(e)?.name; if (e.k === 't') return this.eraDef.nodes.secondary.name; if (e.k === 'm') return this.eraDef.nodes.mine.name; return '?'; }
+  entName(e) { if (e.k === 'u') return this.unitDef(e)?.name; if (e.k === 'b') return this.buildingName(e); if (e.k === 't') return this.eraDef.nodes.secondary.name; if (e.k === 'm') return this.eraDef.nodes.mine.name; return '?'; }
 
   // ---------- snapshots ----------
   applyEntity(d, full) {
@@ -72,8 +72,14 @@ export class Game {
   setBlocked(e, on) {
     const w = this.map.w; const ew = e.w || (e.k === 'm' ? 2 : 1), eh = e.h || (e.k === 'm' ? 2 : 1);
     for (let y = e.ty; y < e.ty + eh; y++) for (let x = e.tx; x < e.tx + ew; x++) { if (x < 0 || y < 0 || x >= w || y >= this.map.h) continue; this.blocked[y * w + x] = on ? 1 : 0; }
-    if (e.k === 'b' && e.t === 'wall') { const key = e.tx + ',' + e.ty; if (on) this.wallGrid.set(key, e.o); else this.wallGrid.delete(key); }
+    if (e.k === 'b' && (e.t === 'wall' || e.t === 'gate')) { const key = e.tx + ',' + e.ty; if (on) this.wallGrid.set(key, e.o); else this.wallGrid.delete(key); }
   }
+  availableTrains(b) { const def = this.tech.buildings[b.t]; const out = [...(def.trains || [])]; for (const up of def.upgrades || []) if (up.level <= (b.lv || 1)) out.push(...up.unlocks); return out; }
+  nextUpgrade(b) { const def = this.tech.buildings[b.t]; return (def.upgrades || []).find(u => u.level === (b.lv || 1) + 1) || null; }
+  hallLevel() { let lv = 0; for (const e of this.ents.values()) if (e.k === 'b' && e.o === this.me && e.t === 'hall' && e.bl) lv = Math.max(lv, e.lv || 1); return lv; }
+  upgrade(bid) { const b = this.ents.get(bid); if (!b) return; const up = this.nextUpgrade(b); if (!up) return; const p = this.players[this.me]; if (up.hall && this.hallLevel() < up.hall) { this.ui.alert(`Vyžaduje ${this.eraDef.hallNames[up.hall - 1]} (radnice úrovně ${up.hall}).`, true); this.audio.sfx('error'); return; } if (p.res.p < up.cost.p || p.res.s < up.cost.s) { this.ui.alert('Nedostatek surovin.', true); this.audio.sfx('error'); return; } this.send({ t: 'upgrade', id: bid }); this.audio.sfx('click'); }
+  toggleGate() { const ids = this.selectedIds(e => e.k === 'b' && e.o === this.me && (e.t === 'wall' || e.t === 'gate')); if (!ids.length) return; this.send({ t: 'gate', ids }); this.audio.sfx('placed', 0.5); }
+  buildingName(e) { const def = this.buildingDef(e); if (!def) return '?'; if (e.t === 'hall' && this.eraDef.hallNames) return this.eraDef.hallNames[Math.min(this.eraDef.hallNames.length, e.lv || 1) - 1]; return def.name + ((e.lv || 1) > 1 ? ` (úroveň ${e.lv})` : ''); }
   wallAt(tx, ty, owner) { const o = this.wallGrid.get(tx + ',' + ty); return o !== undefined && this.players[o].team === this.players[owner].team; }
   tileBuildable(tx, ty) { const w = this.map.w; if (tx < 0 || ty < 0 || tx >= w || ty >= this.map.h) return false; const t = this.map.tiles[ty * w + tx]; return (t === T.GRASS || t === T.DIRT || t === T.SAND) && !this.blocked[ty * w + tx]; }
   canPlace(type, tx, ty) {
@@ -133,6 +139,7 @@ export class Game {
       case 'hammer': this.soundAt('hammer', ev.x, ev.y, 0.5); if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(2, ev.x + (Math.random() - 0.5), ev.y + (Math.random() - 0.5), 14, { colors: [[255, 230, 150]], speed: 0.8, vz: 25, life: 0.3, size: 1.2 }); break;
       case 'built': if (mine && ev.ty !== 'wall') { this.audio.sfx('buildingDone', 0.8); this.ui.alert(`${this.tech.buildings[ev.ty]?.name}: stavba dokončena`, false); } break;
       case 'spawn': if (mine) this.audio.sfx('unitReady', 0.5); break;
+      case 'upgraded': if (mine) { this.audio.sfx('buildingDone', 0.8); const b = this.ents.get(ev.id); if (b) b.lv = ev.level; this.ui.alert(`${this.tech.buildings[ev.ty]?.name}: vylepšeno na úroveň ${ev.level}`, false); this.ui.lastSig = ''; this.ui.dirty = true; } break;
       case 'place': if (mine) this.audio.sfx('placed', 0.6); break;
       case 'msg': if (ev.owner === this.me || ev.owner === -1) { this.ui.alert(ev.text, ev.owner === this.me); if (ev.owner === this.me) this.audio.sfx('error', 0.6); } break;
       case 'alert': if (ev.owner === this.me) { this.lastAlert = { x: ev.x, y: ev.y, t: performance.now() }; this.ui.alert(ev.k === 'building' ? 'Naše budova je pod útokem!' : 'Naše jednotky jsou pod útokem!', true); this.audio.sfx('alarm', 0.6); this.ui.minimapPing(ev.x, ev.y); } break;

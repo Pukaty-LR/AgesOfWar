@@ -377,8 +377,10 @@ export class Renderer {
       case 'bullet': ctx.strokeStyle = 'rgba(255,230,150,0.9)'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(3, 0); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.fillRect(1, -1, 3, 2); break;
       case 'rock': ctx.fillStyle = '#7a7268'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, 7); ctx.fill(); ctx.fillStyle = '#a49a8e'; ctx.beginPath(); ctx.arc(-1.5, -1.5, 2, 0, 7); ctx.fill(); if (k < 0.9) { ctx.fillStyle = 'rgba(255,200,120,0.5)'; ctx.beginPath(); ctx.arc(-6, 0, 3, 0, 7); ctx.fill(); } break;
       case 'shell': ctx.fillStyle = '#4a4a44'; ctx.beginPath(); ctx.ellipse(0, 0, 5, 2.5, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,200,120,0.6)'; ctx.beginPath(); ctx.ellipse(-7, 0, 4, 2, 0, 0, 7); ctx.fill(); break;
+      case 'flame': { const k2 = Math.random(); ctx.fillStyle = `rgba(255,${120 + k2 * 100 | 0},30,0.75)`; ctx.beginPath(); ctx.ellipse(0, 0, 6 + k2 * 3, 4, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,240,170,0.8)'; ctx.beginPath(); ctx.ellipse(-2, 0, 3, 2, 0, 0, 7); ctx.fill(); break; }
     }
     ctx.restore();
+    if (e.t === 'flame' && Math.random() < 0.8) this.particles.push({ x: x + (Math.random() - 0.5) * 0.3, y: y + (Math.random() - 0.5) * 0.3, z: 12, vx: 0, vy: 0, vz: 14, life: 0, max: 0.4, color: [255, 140 + Math.random() * 80, 40], size: 3, g: -10, drag: 0.9, grow: -3, alpha: 0.8 });
     if (e.t === 'shell' || e.t === 'rock') { if (Math.random() < 0.6) this.particles.push({ x, y, z: 14 + arcH, vx: 0, vy: 0, vz: 5, life: 0, max: 0.35, color: [120, 120, 120], size: 2.5, g: 0, drag: 0.9, grow: 3, alpha: 0.5 }); }
   }
   drawGroundEffect(ctx, ef, z) {

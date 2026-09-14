@@ -4,8 +4,9 @@ import { generateMap, mulberry32 } from './mapgen.js';
 import { astar, smoothPath, nearestTile } from './pathfinding.js';
 
 const DT = 1 / TICK_RATE;
-const PROJ_SPEED = { arrow: 14, bolt: 16, bullet: 30, rock: 8, shell: 11 };
-const PROJ_ARC = { arrow: 0.35, bolt: 0.2, bullet: 0, rock: 0.9, shell: 0.7 };
+const PROJ_SPEED = { arrow: 14, bolt: 16, bullet: 30, rock: 8, shell: 11, flame: 9 };
+const PROJ_ARC = { arrow: 0.35, bolt: 0.2, bullet: 0, rock: 0.9, shell: 0.7, flame: 0.05 };
+const MAX_TEAMS = 8;
 
 export class Sim {
   constructor({ seed = 1, size = 96, eraId = 'antiquity', players = [] }) {
@@ -26,6 +27,7 @@ export class Sim {
     this.passLand = new Uint8Array(w * h);
     this.passSea = new Uint8Array(w * h);
     this.buildable = new Uint8Array(w * h);
+    this.passTeam = []; for (let t = 0; t < MAX_TEAMS; t++) this.passTeam.push(new Uint8Array(w * h)); // land passability incl. own-team gates
     for (let i = 0; i < w * h; i++) this.recomputeTile(i);
     this.players = players.map((p, idx) => {
       const tech = makeTechTable(eraId, p.faction);
@@ -50,10 +52,17 @@ export class Sim {
   recomputeTile(i) {
     const t = this.map.tiles[i];
     const b = this.blockId[i] !== 0;
-    this.passLand[i] = (this.isLandTerrain(t) && !b) ? 1 : 0;
+    const land = this.isLandTerrain(t);
+    this.passLand[i] = (land && !b) ? 1 : 0;
     this.passSea[i] = (this.isWaterTerrain(t) && !b) ? 1 : 0;
-    this.buildable[i] = (this.isLandTerrain(t) && !b) ? 1 : 0;
+    this.buildable[i] = (land && !b) ? 1 : 0;
+    // gates: passable for the owner's team only
+    let gateTeam = -1;
+    if (b) { const e = this.ents.get(this.blockId[i]); if (e && e.kind === 'building' && e.type === 'gate' && e.built) gateTeam = this.players[e.owner].team; }
+    for (let tm = 0; tm < MAX_TEAMS; tm++) this.passTeam[tm][i] = (land && (!b || gateTeam === tm)) ? 1 : 0;
   }
+  passFor(domain, team = -1) { if (domain === 'sea') return this.passSea; return team >= 0 ? this.passTeam[team] : this.passLand; }
+  teamOf(e) { return e && e.owner !== undefined ? this.players[e.owner].team : -1; }
   block(tx, ty, w, h, id) {
     for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) {
       if (x < 0 || y < 0 || x >= this.w || y >= this.h) continue;
@@ -66,7 +75,6 @@ export class Sim {
       const i = y * this.w + x; if (this.blockId[i] === id) { this.blockId[i] = 0; this.recomputeTile(i); }
     }
   }
-  passFor(domain) { return domain === 'sea' ? this.passSea : this.passLand; }
   inBounds(tx, ty) { return tx >= 0 && ty >= 0 && tx < this.w && ty < this.h; }
   footprintFree(tx, ty, w, h, requireLand = true) {
     for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) {
@@ -131,7 +139,7 @@ export class Sim {
     const e = this.add({
       kind: 'building', type, owner: p.id, tx, ty, w: def.w, h: def.h, x: tx + def.w / 2, y: ty + def.h / 2,
       hp: instant ? def.hp : Math.max(1, def.hp * 0.1), maxHp: def.hp, built: instant, progress: instant ? 1 : 0,
-      queue: [], rally: null, cooldown: 0, builders: 0, lastAttackTick: -100, dead: false,
+      queue: [], rally: null, cooldown: 0, builders: 0, lastAttackTick: -100, dead: false, level: 1,
     });
     this.block(tx, ty, def.w, def.h, e.id);
     // Push out units standing inside
@@ -157,7 +165,7 @@ export class Sim {
   }
 
   findSpawnTile(b, domain) {
-    const pass = this.passFor(domain);
+    const pass = this.passFor(domain, this.teamOf(b));
     for (let r = 1; r < 8; r++) {
       const cands = [];
       for (let y = b.ty - r; y <= b.ty + b.h - 1 + r; y++) for (let x = b.tx - r; x <= b.tx + b.w - 1 + r; x++) {
@@ -180,7 +188,7 @@ export class Sim {
     for (const e of this.ents.values()) {
       if (e.owner !== p.id) continue;
       if (e.kind === 'unit') pop += p.tech.units[e.type].pop;
-      else if (e.kind === 'building' && e.built && p.tech.buildings[e.type].popCap) cap += p.tech.buildings[e.type].popCap;
+      else if (e.kind === 'building' && e.built && p.tech.buildings[e.type].popCap) { cap += p.tech.buildings[e.type].popCap; for (const up of p.tech.buildings[e.type].upgrades || []) if (up.level <= (e.level || 1) && up.popCap) cap += up.popCap; }
     }
     p.pop = pop; p.popCap = Math.min(200, cap); p.dirty = true;
   }
@@ -300,9 +308,10 @@ export class Sim {
       }
       case 'train': {
         const b = this.ents.get(c.id); if (!b || b.kind !== 'building' || b.owner !== pid || !b.built) break;
-        const bdef = p.tech.buildings[b.type]; if (!bdef.trains.includes(c.type)) break;
+        if (!this.availableTrains(p, b).includes(c.type)) break;
         const udef = p.tech.units[c.type];
         if (b.queue.length >= 7) break;
+        if (udef.unique) { let exists = false; for (const e of this.ents.values()) { if (e.owner === pid && ((e.kind === 'unit' && e.type === c.type) || (e.kind === 'building' && e.queue && e.queue.some(q => q.type === c.type)))) { exists = true; break; } } if (exists) { this.events.push({ t: 'msg', owner: pid, text: `${udef.name} může být jen jeden.` }); break; } }
         if (p.res.p < udef.cost.p || p.res.s < udef.cost.s) { this.events.push({ t: 'msg', owner: pid, text: 'Nedostatek surovin.' }); break; }
         if (p.pop + udef.pop > p.popCap) { this.events.push({ t: 'msg', owner: pid, text: 'Nedostatek populace – postav další radnici.' }); break; }
         p.res.p -= udef.cost.p; p.res.s -= udef.cost.s; p.dirty = true;
@@ -313,8 +322,29 @@ export class Sim {
         const b = this.ents.get(c.id); if (!b || b.kind !== 'building' || b.owner !== pid) break;
         const idx = c.index ?? b.queue.length - 1;
         if (idx < 0 || idx >= b.queue.length) break;
-        const q = b.queue.splice(idx, 1)[0]; const udef = p.tech.units[q.type];
-        p.res.p += udef.cost.p; p.res.s += udef.cost.s; p.dirty = true; b.dirty = true;
+        const q = b.queue.splice(idx, 1)[0]; const cost = this.queueCost(p, b, q);
+        p.res.p += cost.p; p.res.s += cost.s; p.dirty = true; b.dirty = true;
+        break;
+      }
+      case 'upgrade': {
+        const b = this.ents.get(c.id); if (!b || b.kind !== 'building' || b.owner !== pid || !b.built) break;
+        const up = this.nextUpgrade(p, b); if (!up) break;
+        if (b.queue.some(q => q.type === '__up')) break;
+        if (up.hall && this.hallLevel(pid) < up.hall) { this.events.push({ t: 'msg', owner: pid, text: `Vyžaduje radnici úrovně ${up.hall}.` }); break; }
+        if (p.res.p < up.cost.p || p.res.s < up.cost.s) { this.events.push({ t: 'msg', owner: pid, text: 'Nedostatek surovin.' }); break; }
+        p.res.p -= up.cost.p; p.res.s -= up.cost.s; p.dirty = true;
+        b.queue.push({ type: '__up', progress: 0 }); b.dirty = true;
+        break;
+      }
+      case 'gate': { // toggle wall <-> gate for selected wall segments
+        for (const b of units.filter(e => e.kind === 'building' && e.built && (e.type === 'wall' || e.type === 'gate'))) {
+          const to = b.type === 'wall' ? 'gate' : 'wall';
+          const def = p.tech.buildings[to];
+          if (to === 'gate') { if (p.res.s < def.cost.s) { this.events.push({ t: 'msg', owner: pid, text: 'Nedostatek surovin.' }); break; } p.res.s -= def.cost.s; }
+          b.type = to; b.maxHp = def.hp; b.hp = Math.min(b.hp, b.maxHp); b.dirty = true;
+          this.block(b.tx, b.ty, 1, 1, b.id); // recompute team passability
+        }
+        p.dirty = true;
         break;
       }
       case 'rally': for (const b of units.filter(e => e.kind === 'building')) this.setRally(b, c.x, c.y, c.targetId || 0); break;
@@ -350,6 +380,25 @@ export class Sim {
   }
 
   setRally(b, x, y, targetId) { b.rally = { x, y, targetId }; b.dirty = true; }
+
+  // ---------- tiers / upgrades ----------
+  availableTrains(p, b) {
+    const def = p.tech.buildings[b.type]; const out = [...(def.trains || [])];
+    for (const up of def.upgrades || []) if (up.level <= (b.level || 1)) out.push(...up.unlocks);
+    return out;
+  }
+  nextUpgrade(p, b) { const def = p.tech.buildings[b.type]; return (def.upgrades || []).find(u => u.level === (b.level || 1) + 1) || null; }
+  hallLevel(pid) { let lv = 0; for (const e of this.ents.values()) if (e.kind === 'building' && e.owner === pid && e.type === 'hall' && e.built && !e.dead) lv = Math.max(lv, e.level || 1); return lv; }
+  queueCost(p, b, q) { if (q.type === '__up') { const up = this.nextUpgrade(p, b); return up ? up.cost : { p: 0, s: 0 }; } const ud = p.tech.units[q.type]; return ud ? ud.cost : { p: 0, s: 0 }; }
+  auraMult(u) {
+    let m = 1; const p = this.players[u.owner];
+    for (const e of this.ents.values()) {
+      if (e.kind !== 'unit' || e.dead || e.owner === undefined || this.players[e.owner].team !== p.team) continue;
+      const d = this.players[e.owner].tech.units[e.type]; if (!d.aura) continue;
+      if (Math.hypot(e.x - u.x, e.y - u.y) <= d.aura.range) m = Math.max(m, d.aura.dmg);
+    }
+    return m;
+  }
 
   setOrder(u, order, queue = false) {
     if (queue && u.order.type !== 'idle') { u.queue.push(order); return; }
@@ -467,7 +516,7 @@ export class Sim {
   }
 
   tryMove(u, nx, ny) {
-    const pass = this.passFor(u.domain);
+    const pass = this.passFor(u.domain, this.teamOf(u));
     const tx0 = u.x | 0, ty0 = u.y | 0;
     const clampX = Math.min(this.w - 0.05, Math.max(0.05, nx)), clampY = Math.min(this.h - 0.05, Math.max(0.05, ny));
     const tx1 = clampX | 0, ty1 = clampY | 0;
@@ -490,7 +539,7 @@ export class Sim {
       if (u.path && u.path.length === 0) { return false; }
       if (this.pathBudget <= 0) { return true; } // wait for next tick
       this.pathBudget--;
-      const pass = this.passFor(u.domain);
+      const pass = this.passFor(u.domain, this.teamOf(u));
       const gt = goalTest || ((tx, ty) => tx === (x | 0) && ty === (y | 0));
       let raw = astar(pass, this.w, this.h, u.x | 0, u.y | 0, gt, hx | 0, hy | 0, 9000);
       if (raw === null) { u.path = []; return false; }
@@ -546,13 +595,19 @@ export class Sim {
   }
 
   fire(u, def, t) {
+    const dmg = def.dmg * this.auraMult(u);
     if (def.projectile) {
       const speed = PROJ_SPEED[def.projectile] || 12;
-      this.add({ kind: 'proj', type: def.projectile, x: u.x, y: u.y, sx: u.x, sy: u.y, tx: t.x, ty: t.y, targetId: t.id, speed, dmg: def.dmg, owner: u.owner, attackerType: u.type, attackerRole: u.role, bonus: def.bonus || {}, splash: def.splash || 0, arc: PROJ_ARC[def.projectile] || 0, total: Math.hypot(t.x - u.x, t.y - u.y), travelled: 0 });
+      this.add({ kind: 'proj', type: def.projectile, x: u.x, y: u.y, sx: u.x, sy: u.y, tx: t.x, ty: t.y, targetId: t.id, speed, dmg, owner: u.owner, attackerType: u.type, attackerRole: u.role, bonus: def.bonus || {}, splash: def.splash || 0, arc: PROJ_ARC[def.projectile] || 0, total: Math.hypot(t.x - u.x, t.y - u.y), travelled: 0 });
       this.events.push({ t: 'shot', k: def.projectile, x: u.x, y: u.y, o: u.owner });
     } else {
-      this.dealDamage(t, def.dmg, def.bonus || {}, u.owner, u.id, u.role);
+      this.dealDamage(t, dmg, def.bonus || {}, u.owner, u.id, u.role);
       this.events.push({ t: 'hit', k: 'melee', x: t.x, y: t.y, o: u.owner });
+      if (def.splash) { // sweeping melee (chariot): hit other enemies near the target
+        const team = this.players[u.owner].team; const near = [];
+        this.unitsNear(t.x, t.y, def.splash, e => { if (e !== t && e.owner !== undefined && this.players[e.owner].team !== team) near.push(e); });
+        for (const e of near) this.dealDamage(e, dmg * 0.6, def.bonus || {}, u.owner, u.id, u.role);
+      }
     }
   }
 
@@ -630,8 +685,8 @@ export class Sim {
       if (killerOwner !== null && killerOwner !== undefined && this.players[killerOwner]) this.players[killerOwner].stats.buildingsRazed++;
       this.events.push({ t: 'death', x: b.x, y: b.y, o: b.owner, k: 'building', ty: b.type, w: b.w, h: b.h });
     }
-    // refund queued units
-    for (const q of b.queue) { const ud = p.tech.units[q.type]; p.res.p += ud.cost.p; p.res.s += ud.cost.s; }
+    // refund queued units / upgrades
+    for (const q of b.queue) { const cost = this.queueCost(p, b, q); p.res.p += cost.p; p.res.s += cost.s; }
     b.queue = [];
     this.remove(b);
     for (const u of this.ents.values()) if (u.kind === 'unit' && u.order.type === 'build' && u.order.targetId === b.id) this.nextOrder(u);
@@ -771,8 +826,20 @@ export class Sim {
     const def = p.tech.buildings[b.type];
     b.builders = 0; // recounted by builders each tick (before they act next tick) - use decay
     if (!b.built) return;
-    // training
-    if (b.queue.length) {
+    // training / upgrading
+    if (b.queue.length && b.queue[0].type === '__up') {
+      const q = b.queue[0]; const up = this.nextUpgrade(p, b);
+      if (!up) { b.queue.shift(); }
+      else {
+        q.progress += DT / up.time; b.dirty = true;
+        if (q.progress >= 1) {
+          b.queue.shift(); b.level = up.level;
+          if (up.hp) { b.maxHp = Math.round(b.maxHp * up.hp); b.hp = Math.min(b.maxHp, b.hp + Math.round(b.maxHp * (1 - 1 / up.hp))); }
+          this.events.push({ t: 'upgraded', x: b.x, y: b.y, o: b.owner, ty: b.type, level: b.level, id: b.id });
+          this.recountPop(p);
+        }
+      }
+    } else if (b.queue.length) {
       const q = b.queue[0];
       const udef = p.tech.units[q.type];
       q.progress += DT / udef.trainTime;
@@ -841,7 +908,7 @@ export class Sim {
   serializeEntity(e) {
     switch (e.kind) {
       case 'unit': return { i: e.id, k: 'u', t: e.type, o: e.owner, x: +e.x.toFixed(2), y: +e.y.toFixed(2), hp: Math.ceil(e.hp), m: e.maxHp, f: +e.facing.toFixed(2), a: e.anim, at: e.lastAttackTick, hd: e.hidden ? 1 : 0, c: e.carry ? e.carry.res : '', o2: e.order.type, tg: e.order.targetId || e.engage || 0, dx: e.order.x, dy: e.order.y };
-      case 'building': return { i: e.id, k: 'b', t: e.type, o: e.owner, x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: e.w, h: e.h, hp: Math.ceil(e.hp), m: e.maxHp, bl: e.built ? 1 : 0, pr: +e.progress.toFixed(3), q: e.queue.map(q => ({ t: q.type, p: +q.progress.toFixed(3) })), r: e.rally, at: e.lastAttackTick };
+      case 'building': return { i: e.id, k: 'b', t: e.type, o: e.owner, x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: e.w, h: e.h, hp: Math.ceil(e.hp), m: e.maxHp, bl: e.built ? 1 : 0, pr: +e.progress.toFixed(3), q: e.queue.map(q => ({ t: q.type, p: +q.progress.toFixed(3) })), r: e.rally, at: e.lastAttackTick, lv: e.level || 1 };
       case 'tree': return { i: e.id, k: 't', x: e.x, y: e.y, tx: e.tx, ty: e.ty, a: e.amount, v: e.v };
       case 'mine': return { i: e.id, k: 'm', x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: 2, h: 2, a: e.amount };
       case 'proj': return { i: e.id, k: 'p', t: e.type, x: +e.x.toFixed(2), y: +e.y.toFixed(2), sx: e.sx, sy: e.sy, tx: +e.tx.toFixed(2), ty: +e.ty.toFixed(2), arc: e.arc, o: e.owner };

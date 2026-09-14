@@ -29,14 +29,43 @@ const commonUnits = {
   ship:     { role: 'ship',     hp: 320, armor: 3, dmg: 24, range: 6.5, cooldown: 1.5, speed: 3.4, sight: 9, pop: 3, size: 0.6,  trainTime: 28, cost: { p: 130, s: 160 }, building: 'dock',     domain: 'sea',  projectile: 'bolt', bonus: { building: 1.5 } },
 };
 
+// Tier 2+ units (unlocked by building upgrades)
+const tierUnits = {
+  spearman:  { role: 'infantry', hp: 115, armor: 3, dmg: 10, range: 0.9, cooldown: 1.0, speed: 2.4, sight: 7, pop: 2, size: 0.34, trainTime: 16, cost: { p: 65, s: 25 },  building: 'barracks', domain: 'land', projectile: null, bonus: { cavalry: 2.2 } },
+  skirmisher:{ role: 'ranged',   hp: 60,  armor: 0, dmg: 9,  range: 4,   cooldown: 1.0, speed: 3.2, sight: 8, pop: 2, size: 0.32, trainTime: 15, cost: { p: 55, s: 30 },  building: 'barracks', domain: 'land', projectile: 'arrow', bonus: { ranged: 1.5 } },
+  veteran:   { role: 'infantry', hp: 190, armor: 4, dmg: 19, range: 0.85, cooldown: 1.0, speed: 2.5, sight: 7, pop: 3, size: 0.36, trainTime: 22, cost: { p: 115, s: 40 }, building: 'barracks', domain: 'land', projectile: null, bonus: { cavalry: 1.3, infantry: 1.15 } },
+  longbow:   { role: 'ranged',   hp: 75,  armor: 1, dmg: 15, range: 6.5, cooldown: 1.3, speed: 2.6, sight: 9, pop: 2, size: 0.32, trainTime: 20, cost: { p: 90, s: 60 },  building: 'barracks', domain: 'land', projectile: 'arrow', bonus: { infantry: 1.3 } },
+  heavycav:  { role: 'cavalry',  hp: 270, armor: 6, dmg: 27, range: 0.95, cooldown: 1.1, speed: 3.8, sight: 8, pop: 4, size: 0.44, trainTime: 28, cost: { p: 185, s: 70 }, building: 'stable', domain: 'land', projectile: null, bonus: { ranged: 1.6, siege: 1.8 } },
+  chariot:   { role: 'cavalry',  hp: 230, armor: 3, dmg: 22, range: 1.0, cooldown: 1.2, speed: 4.0, sight: 8, pop: 4, size: 0.5, trainTime: 30, cost: { p: 200, s: 120 }, building: 'stable', domain: 'land', projectile: null, splash: 0.9, bonus: { infantry: 1.4 } },
+  ballista:  { role: 'siege',    hp: 110, armor: 1, dmg: 45, range: 9,   cooldown: 2.5, speed: 1.8, sight: 10, pop: 3, size: 0.5, trainTime: 28, cost: { p: 140, s: 110 }, building: 'siege', domain: 'land', projectile: 'bolt', minRange: 1.5, bonus: { infantry: 1.6, cavalry: 1.6, building: 1.5 } },
+  heavyship: { role: 'ship',     hp: 520, armor: 5, dmg: 40, range: 7,   cooldown: 1.6, speed: 3.0, sight: 10, pop: 5, size: 0.7, trainTime: 36, cost: { p: 220, s: 260 }, building: 'dock', domain: 'sea', projectile: 'bolt', bonus: { building: 1.6, ship: 1.3 } },
+  hero:      { role: 'cavalry',  hp: 620, armor: 6, dmg: 42, range: 1.0, cooldown: 1.0, speed: 3.6, sight: 10, pop: 6, size: 0.46, trainTime: 60, cost: { p: 500, s: 200 }, building: 'hall', domain: 'land', projectile: null, unique: true, aura: { range: 5, dmg: 1.2 }, bonus: {} },
+  // ww2 variants
+  sniper:    { role: 'ranged',   hp: 60,  armor: 0, dmg: 32, range: 8,   cooldown: 2.2, speed: 2.6, sight: 10, pop: 2, size: 0.32, trainTime: 20, cost: { p: 90, s: 40 },  building: 'barracks', domain: 'land', projectile: 'bullet', bonus: { infantry: 1.5, ranged: 1.6 } },
+  flamer:    { role: 'infantry', hp: 105, armor: 1, dmg: 7,  range: 2.2, cooldown: 0.25, speed: 2.5, sight: 7, pop: 2, size: 0.34, trainTime: 18, cost: { p: 80, s: 40 },  building: 'barracks', domain: 'land', projectile: 'flame', splash: 0.8, bonus: { building: 2.2, infantry: 1.2 } },
+  para:      { role: 'infantry', hp: 135, armor: 3, dmg: 12, range: 3.5, cooldown: 0.5, speed: 3.0, sight: 8, pop: 3, size: 0.34, trainTime: 22, cost: { p: 120, s: 50 }, building: 'barracks', domain: 'land', projectile: 'bullet', bonus: { ranged: 1.3 } },
+  atgun:     { role: 'ranged',   hp: 90,  armor: 2, dmg: 46, range: 6,   cooldown: 2.5, speed: 2.2, sight: 8, pop: 3, size: 0.4, trainTime: 24, cost: { p: 110, s: 70 }, building: 'barracks', domain: 'land', projectile: 'shell', bonus: { cavalry: 3.0 } },
+  heavytank: { role: 'cavalry',  hp: 560, armor: 10, dmg: 56, range: 5,  cooldown: 2.2, speed: 2.6, sight: 8, pop: 5, size: 0.56, trainTime: 40, cost: { p: 300, s: 180 }, building: 'stable', domain: 'land', projectile: 'shell', bonus: { infantry: 1.3, building: 1.8 } },
+  tankdestroyer: { role: 'cavalry', hp: 380, armor: 8, dmg: 72, range: 6.5, cooldown: 2.5, speed: 3.0, sight: 9, pop: 4, size: 0.5, trainTime: 34, cost: { p: 280, s: 160 }, building: 'stable', domain: 'land', projectile: 'shell', bonus: { cavalry: 2.2 } },
+  rocketart: { role: 'siege',    hp: 120, armor: 1, dmg: 36, range: 11,  cooldown: 4.5, speed: 2.4, sight: 10, pop: 4, size: 0.5, trainTime: 34, cost: { p: 220, s: 160 }, building: 'siege', domain: 'land', projectile: 'shell', splash: 2.0, minRange: 3, bonus: { building: 2.0, infantry: 1.5 } },
+  cruiser:   { role: 'ship',     hp: 660, armor: 6, dmg: 50, range: 8.5, cooldown: 1.8, speed: 2.8, sight: 11, pop: 6, size: 0.8, trainTime: 44, cost: { p: 280, s: 320 }, building: 'dock', domain: 'sea', projectile: 'shell', bonus: { building: 1.6, ship: 1.3 } },
+  hero2:     { role: 'cavalry',  hp: 520, armor: 7, dmg: 24, range: 4,   cooldown: 0.6, speed: 3.6, sight: 11, pop: 6, size: 0.5, trainTime: 60, cost: { p: 500, s: 200 }, building: 'hall', domain: 'land', projectile: 'bullet', unique: true, aura: { range: 5, dmg: 1.2 }, bonus: {} },
+};
+
 const commonBuildings = {
-  hall:     { hp: 1600, armor: 5, w: 3, h: 3, cost: { p: 350, s: 250 }, buildTime: 70, trains: ['worker'], dropoff: true, popCap: 40, hotkey: 'H' },
-  barracks: { hp: 950,  armor: 4, w: 3, h: 3, cost: { p: 130, s: 90 },  buildTime: 32, trains: ['infantry', 'ranged'], hotkey: 'B' },
-  stable:   { hp: 950,  armor: 4, w: 3, h: 3, cost: { p: 160, s: 110 }, buildTime: 36, trains: ['cavalry'], hotkey: 'S' },
-  siege:    { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 170, s: 140 }, buildTime: 38, trains: ['siege'], hotkey: 'W' },
-  dock:     { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 110, s: 140 }, buildTime: 32, trains: ['ship'], shore: true, hotkey: 'D' },
+  hall:     { hp: 1600, armor: 5, w: 3, h: 3, cost: { p: 350, s: 250 }, buildTime: 70, trains: ['worker'], dropoff: true, popCap: 40, hotkey: 'H',
+              upgrades: [ { level: 2, cost: { p: 300, s: 200 }, time: 60, unlocks: [], popCap: 10, hp: 1.2 }, { level: 3, cost: { p: 500, s: 350 }, time: 80, unlocks: [], popCap: 10, hp: 1.2 }, { level: 4, cost: { p: 800, s: 500 }, time: 100, unlocks: ['hero'], popCap: 20, hp: 1.25 } ] },
+  barracks: { hp: 950,  armor: 4, w: 3, h: 3, cost: { p: 130, s: 90 },  buildTime: 32, trains: ['infantry', 'ranged'], hotkey: 'B',
+              upgrades: [ { level: 2, cost: { p: 200, s: 150 }, time: 45, unlocks: ['spearman', 'skirmisher'], hall: 2 }, { level: 3, cost: { p: 350, s: 250 }, time: 60, unlocks: ['veteran', 'longbow'], hall: 3 } ] },
+  stable:   { hp: 950,  armor: 4, w: 3, h: 3, cost: { p: 160, s: 110 }, buildTime: 36, trains: ['cavalry'], hotkey: 'S',
+              upgrades: [ { level: 2, cost: { p: 220, s: 160 }, time: 45, unlocks: ['heavycav'], hall: 2 }, { level: 3, cost: { p: 380, s: 260 }, time: 60, unlocks: ['chariot'], hall: 3 } ] },
+  siege:    { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 170, s: 140 }, buildTime: 38, trains: ['siege'], hotkey: 'W',
+              upgrades: [ { level: 2, cost: { p: 240, s: 200 }, time: 50, unlocks: ['ballista'], hall: 2 } ] },
+  dock:     { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 110, s: 140 }, buildTime: 32, trains: ['ship'], shore: true, hotkey: 'D',
+              upgrades: [ { level: 2, cost: { p: 220, s: 240 }, time: 50, unlocks: ['heavyship'], hall: 2 } ] },
   tower:    { hp: 550,  armor: 6, w: 1, h: 1, cost: { p: 70,  s: 90 },  buildTime: 26, trains: [], attack: { dmg: 15, range: 6.5, cooldown: 1.0, projectile: 'arrow' }, hotkey: 'T' },
   wall:     { hp: 320,  armor: 12, w: 1, h: 1, cost: { p: 0,   s: 8 },   buildTime: 4,  trains: [], isWall: true, hotkey: 'L' },
+  gate:     { hp: 420,  armor: 9,  w: 1, h: 1, cost: { p: 0,   s: 25 },  buildTime: 6,  trains: [], isWall: true, isGate: true, hotkey: 'G', noBuildMenu: true },
 };
 
 function era(base) { return base; }
@@ -72,6 +101,15 @@ export const ERAS = {
       cavalry:  { ...commonUnits.cavalry,  name: 'Jezdec',      sprite: 'ant_cavalry' },
       siege:    { ...commonUnits.siege,    name: 'Katapult',    sprite: 'ant_siege' },
       ship:     { ...commonUnits.ship,     name: 'Válečná loď', sprite: 'ant_ship' },
+      spearman: { ...tierUnits.spearman,   name: 'Kopiník',     sprite: 'ant_spearman', desc: 'Protijezdecká pěchota.' },
+      skirmisher: { ...tierUnits.skirmisher, name: 'Harcovník', sprite: 'ant_skirmisher', desc: 'Rychlý vrhač oštěpů, dobrý proti střelcům.' },
+      veteran:  { ...tierUnits.veteran,    name: 'Veterán',     sprite: 'ant_veteran', desc: 'Těžká elitní pěchota.' },
+      longbow:  { ...tierUnits.longbow,    name: 'Elitní lučištník', sprite: 'ant_longbow', desc: 'Střelec s velkým dosahem.' },
+      heavycav: { ...tierUnits.heavycav,   name: 'Katafrakt',   sprite: 'ant_heavycav', desc: 'Obrněné těžké jezdectvo.' },
+      chariot:  { ...tierUnits.chariot,    name: 'Válečný vůz', sprite: 'ant_chariot', desc: 'Kosy na kolech zasahují více nepřátel najednou.' },
+      ballista: { ...tierUnits.ballista,   name: 'Balista',     sprite: 'ant_ballista', desc: 'Přesná dalekonosná zbraň proti jednotkám.' },
+      heavyship: { ...tierUnits.heavyship, name: 'Těžká loď',   sprite: 'ant_heavyship', desc: 'Velká válečná loď.' },
+      hero:     { ...tierUnits.hero,       name: 'Vojevůdce',   sprite: 'ant_hero', desc: 'Jediný hrdina. Spojenci v okolí +20 % útok.' },
     },
     buildings: {
       hall:     { ...commonBuildings.hall,     name: 'Radnice',         sprite: 'ant_hall',     desc: 'Hlavní budova. Cvičí dělníky, sklad surovin, +40 populace.' },
@@ -81,7 +119,9 @@ export const ERAS = {
       dock:     { ...commonBuildings.dock,     name: 'Přístav',         sprite: 'ant_dock',     desc: 'Staví válečné lodě. Musí stát u vody.' },
       tower:    { ...commonBuildings.tower,    name: 'Strážní věž',     sprite: 'ant_tower',    desc: 'Automaticky střílí na nepřátele.' },
       wall:     { ...commonBuildings.wall,     name: 'Kamenná hradba',  sprite: 'ant_wall',     desc: 'Klikni na začátek a konec – hradba obejde překážky.' },
+      gate:     { ...commonBuildings.gate,     name: 'Brána',           sprite: 'ant_gate',     desc: 'Průchozí jen pro tvůj tým. Vznikne z hradby.' },
     },
+    hallNames: ['Radnice', 'Město', 'Metropole', 'Císařské město'],
   }),
 
   ww2: era({
@@ -116,6 +156,15 @@ export const ERAS = {
       cavalry:  { ...commonUnits.cavalry,  name: 'Tank',         sprite: 'ww2_tank', hp: 340, armor: 7, dmg: 38, range: 4.5, cooldown: 1.8, speed: 3.3, size: 0.5, cost: { p: 190, s: 110 }, projectile: 'shell', bonus: { infantry: 1.2, building: 1.5 } },
       siege:    { ...commonUnits.siege,    name: 'Dělostřelectvo', sprite: 'ww2_artillery', range: 10, projectile: 'shell', splash: 1.4, dmg: 60, minRange: 3 },
       ship:     { ...commonUnits.ship,     name: 'Torpédoborec', sprite: 'ww2_destroyer', hp: 380, range: 7.5, projectile: 'shell', dmg: 30 },
+      spearman: { ...tierUnits.flamer,     name: 'Plamenometčík', sprite: 'ww2_flamer', desc: 'Krátký dosah, zapaluje budovy i pěchotu.' },
+      skirmisher: { ...tierUnits.sniper,   name: 'Odstřelovač', sprite: 'ww2_sniper', desc: 'Velký dosah, smrtící proti pěchotě.' },
+      veteran:  { ...tierUnits.para,       name: 'Výsadkář',    sprite: 'ww2_para', desc: 'Rychlá elitní pěchota se samopalem.' },
+      longbow:  { ...tierUnits.atgun,      name: 'Protitankové dělo', sprite: 'ww2_atgun', desc: 'Ničí tanky.' },
+      heavycav: { ...tierUnits.heavytank,  name: 'Těžký tank',  sprite: 'ww2_heavytank', desc: 'Pomalý, silně pancéřovaný.' },
+      chariot:  { ...tierUnits.tankdestroyer, name: 'Stíhač tanků', sprite: 'ww2_td', desc: 'Dlouhé dělo, výborný proti tankům.' },
+      ballista: { ...tierUnits.rocketart,  name: 'Raketomet',   sprite: 'ww2_rockets', desc: 'Salva raket s velkým rozptylem.' },
+      heavyship: { ...tierUnits.cruiser,   name: 'Křižník',     sprite: 'ww2_cruiser', desc: 'Těžká válečná loď.' },
+      hero:     { ...tierUnits.hero2,      name: 'Polní maršál', sprite: 'ww2_hero', desc: 'Jediný hrdina. Spojenci v okolí +20 % útok.' },
     },
     buildings: {
       hall:     { ...commonBuildings.hall,     name: 'Velitelství',     sprite: 'ww2_hall',     desc: 'Hlavní budova. Cvičí ženisty, sklad surovin, +40 populace.' },
@@ -125,7 +174,9 @@ export const ERAS = {
       dock:     { ...commonBuildings.dock,     name: 'Loděnice',        sprite: 'ww2_shipyard', desc: 'Staví torpédoborce. Musí stát u vody.' },
       tower:    { ...commonBuildings.tower,    name: 'Bunkr',           sprite: 'ww2_bunker',   desc: 'Kulometné hnízdo, střílí automaticky.', attack: { dmg: 6, range: 6.5, cooldown: 0.3, projectile: 'bullet' } },
       wall:     { ...commonBuildings.wall,     name: 'Betonová zeď',    sprite: 'ww2_wall',     desc: 'Klikni na začátek a konec – zeď obejde překážky.' },
+      gate:     { ...commonBuildings.gate,     name: 'Závora',          sprite: 'ww2_gate',     desc: 'Průchozí jen pro tvůj tým. Vznikne ze zdi.' },
     },
+    hallNames: ['Velitelství', 'Štáb', 'Generální štáb', 'Hlavní stan'],
   }),
 
   scifi: era({

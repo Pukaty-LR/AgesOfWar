@@ -155,6 +155,7 @@ function weapon(ctx, o, fx, fy, y0, swing, tc) {
     case 'sling': ctx.rotate(ang + swing * 2); line(ctx, 0, 0, 0, -9, '#c9b28a', 0.9); ellipse(ctx, 0, -9, 1.6, 1.6, '#777', OUT, 0.4); break;
     case 'rifle': ctx.rotate(ang); line(ctx, -6, 0, 12, 0, rgb(WOOD_D), 2.4); line(ctx, 2, -0.3, 14, -0.3, rgb(METAL_D), 1.4); if (o.anim === 'attack' && o.frame % 4 === 1) { ellipse(ctx, 15.5, -0.3, 2.5, 1.8, 'rgba(255,220,120,0.9)'); } break;
     case 'mg': ctx.rotate(ang); line(ctx, -7, 0, 15, 0, rgb(METAL_D), 3); line(ctx, 4, 0, 16, 0, rgb([60, 60, 60]), 1.6); line(ctx, 8, 0, 6, 5, rgb(METAL_D), 1); line(ctx, 8, 0, 10, 5, rgb(METAL_D), 1); rrect(ctx, -2, -3, 5, 3, 0.5, rgb([70, 60, 40]), OUT, 0.5); if (o.anim === 'attack' && o.frame % 2 === 1) ellipse(ctx, 17, 0, 2.5, 1.8, 'rgba(255,220,120,0.9)'); break;
+    case 'flamer': ctx.rotate(ang); rrect(ctx, -9, -4, 6, 9, 2, rgb([80, 80, 76]), OUT, 0.6); line(ctx, -4, 0, 10, 0, rgb(METAL_D), 2.4); if (o.anim === 'attack') { const k = o.frame % 4; ellipse(ctx, 14 + k * 3, 0, 5 + k * 2, 3 + k, `rgba(255,${150 + k * 20},40,0.85)`); ellipse(ctx, 12 + k * 2, 0, 3, 2, 'rgba(255,240,180,0.9)'); } break;
     case 'wrench': ctx.rotate(swing * 1.4 - 0.4 + ang * 0.3); line(ctx, 0, 2, 0, -9, rgb(METAL_D), 2); ellipse(ctx, 0, -9.5, 2.5, 2, rgb(METAL), OUT, 0.5); break;
     case 'shovel': ctx.rotate(swing * 1.5 - 0.5 + ang * 0.3); line(ctx, 0, 4, 0, -10, rgb(WOOD), 1.6); poly(ctx, [[-2.5, -10], [2.5, -10], [2, -15], [-2, -15]], rgb(METAL_D), OUT, 0.5); break;
   }
@@ -295,8 +296,95 @@ const UNIT_DRAW = {
   ww2_tank: (ctx, o) => tank(ctx, o),
   ww2_artillery: (ctx, o) => artillery(ctx, o),
   ww2_destroyer: (ctx, o) => destroyer(ctx, o),
+  // ---- tier 2/3 antiquity ----
+  ant_spearman: (ctx, o) => humanoid(ctx, { ...o, helmet: 'cap', weapon: 'spear', shield: 'oval', torso: mix(o.team, [150, 140, 120], 0.3), sleeves: SKIN, belt: [90, 70, 40] }),
+  ant_skirmisher: (ctx, o) => humanoid(ctx, { ...o, helmet: 'band', weapon: 'spear', shield: null, torso: mix(o.team, [200, 190, 160], 0.35), legs: [90, 70, 50] }),
+  ant_veteran: (ctx, o) => humanoid(ctx, { ...o, scale: 1.14, helmet: o.faction === 'greece' ? 'greek' : 'roman', weapon: 'sword', shield: 'scutum', torso: mix(o.team, METAL, 0.35), sleeves: mix(SKIN, METAL, 0.4), belt: [140, 110, 60], emblem: [240, 220, 120] }),
+  ant_longbow: (ctx, o) => humanoid(ctx, { ...o, helmet: 'cap', weapon: 'bow', torso: mix(o.team, [60, 70, 50], 0.4), legs: [50, 45, 35], emblem: [240, 220, 120] }),
+  ant_heavycav: (ctx, o) => horse(ctx, { ...o, horseColor: [70, 60, 55] }, c => humanoid(c, { ...o, helmet: 'roman', weapon: 'spear', shield: 'round', torso: mix(o.team, METAL, 0.45), sleeves: METAL_D, anim: o.anim === 'walk' ? 'idle' : o.anim })),
+  ant_chariot: (ctx, o) => chariot(ctx, o),
+  ant_ballista: (ctx, o) => ballista(ctx, o),
+  ant_heavyship: (ctx, o) => { ctx.save(); ctx.scale(1.25, 1.25); shipAntiquity(ctx, o); ctx.restore(); },
+  ant_hero: (ctx, o) => horse(ctx, { ...o, horseColor: [245, 240, 230] }, c => { humanoid(c, { ...o, helmet: 'roman', weapon: 'sword', shield: 'round', torso: mix(o.team, [240, 200, 80], 0.4), sleeves: METAL, belt: [200, 170, 60], emblem: [255, 240, 160], anim: o.anim === 'walk' ? 'idle' : o.anim }); }),
+  // ---- tier 2/3 ww2 ----
+  ww2_flamer: (ctx, o) => { humanoid(ctx, { ...o, torso: mix([96, 100, 80], o.team, 0.5), helmet: 'stahlhelm', weapon: 'flamer', legs: [75, 78, 62], sleeves: mix([96, 100, 80], o.team, 0.4) }); },
+  ww2_sniper: (ctx, o) => humanoid(ctx, { ...o, torso: mix([70, 80, 55], o.team, 0.35), helmet: 'cap', weapon: 'rifle', legs: [60, 62, 50], sleeves: mix([70, 80, 55], o.team, 0.3) }),
+  ww2_para: (ctx, o) => humanoid(ctx, { ...o, torso: mix([80, 92, 70], o.team, 0.5), helmet: 'garrison', weapon: 'mg', legs: [70, 72, 58], sleeves: mix([80, 92, 70], o.team, 0.4), emblem: o.team }),
+  ww2_atgun: (ctx, o) => { ctx.save(); ctx.scale(0.8, 0.8); artillery(ctx, o); ctx.restore(); },
+  ww2_heavytank: (ctx, o) => { ctx.save(); ctx.scale(1.25, 1.25); tank(ctx, o); ctx.restore(); },
+  ww2_td: (ctx, o) => tankDestroyer(ctx, o),
+  ww2_rockets: (ctx, o) => rocketTruck(ctx, o),
+  ww2_cruiser: (ctx, o) => { ctx.save(); ctx.scale(1.3, 1.3); destroyer(ctx, o); ctx.restore(); },
+  ww2_hero: (ctx, o) => commandCar(ctx, o),
 };
-const UNIT_BOX = { default: [24, 44, 12, 40], ant_cavalry: [44, 56, 22, 50], ant_siege: [56, 70, 28, 62], ant_ship: [80, 80, 40, 70], ww2_tank: [64, 56, 32, 48], ww2_artillery: [56, 52, 28, 44], ww2_destroyer: [90, 80, 45, 70] };
+const UNIT_BOX = { default: [24, 44, 12, 40], ant_cavalry: [44, 56, 22, 50], ant_siege: [56, 70, 28, 62], ant_ship: [80, 80, 40, 70], ww2_tank: [64, 56, 32, 48], ww2_artillery: [56, 52, 28, 44], ww2_destroyer: [90, 80, 45, 70],
+  ant_veteran: [30, 52, 15, 46], ant_heavycav: [44, 56, 22, 50], ant_chariot: [64, 60, 32, 52], ant_ballista: [56, 60, 28, 52], ant_heavyship: [100, 100, 50, 88], ant_hero: [46, 58, 23, 52],
+  ww2_atgun: [48, 44, 24, 38], ww2_heavytank: [80, 70, 40, 60], ww2_td: [64, 56, 32, 48], ww2_rockets: [66, 66, 33, 56], ww2_cruiser: [118, 104, 59, 90], ww2_hero: [56, 50, 28, 42] };
+
+function chariot(ctx, o) {
+  const { dir, team } = o; const a = worldAngleForDir(dir);
+  // cart behind the horse
+  const cart = rot(isoRect(-0.75, -0.25, 0.45, 0.5), a);
+  for (const s of [-1, 1]) { const [wx, wy] = iso(-Math.cos(a) * 0.55 - Math.sin(a) * 0.3 * s, -Math.sin(a) * 0.55 + Math.cos(a) * 0.3 * s, 0); ellipse(ctx, wx, wy - 5, 5, 5.5, rgb(WOOD_D), OUT, 0.8); ellipse(ctx, wx, wy - 5, 1.6, 1.8, rgb(WOOD), OUT, 0.4); const [bx, by] = iso(-Math.cos(a) * 0.55 - Math.sin(a) * 0.42 * s, -Math.sin(a) * 0.55 + Math.cos(a) * 0.42 * s, 4); line(ctx, bx, by, bx + 4 * s, by + 3, rgb(METAL), 2); }
+  prism(ctx, cart, 4, 8, mix(WOOD, team, 0.5), WOOD_D);
+  ctx.save(); const [hx, hy] = iso(Math.cos(a) * 0.25, Math.sin(a) * 0.25, 0); ctx.translate(hx, hy);
+  horse(ctx, { ...o, horseColor: [120, 85, 50] }, c => humanoid(c, { ...o, helmet: 'greek', weapon: 'spear', torso: mix(team, [200, 180, 140], 0.3), anim: o.anim === 'walk' ? 'idle' : o.anim }));
+  ctx.restore();
+}
+function ballista(ctx, o) {
+  const { dir, team, anim, frame } = o; const a = worldAngleForDir(dir);
+  ellipse(ctx, 0, 0, 15, 7.5, 'rgba(0,0,0,0.35)');
+  for (const s of [-1, 1]) for (const f of [-1, 1]) { const [wx, wy] = iso(Math.cos(a) * 0.25 * f - Math.sin(a) * 0.3 * s, Math.sin(a) * 0.25 * f + Math.cos(a) * 0.3 * s, 0); ellipse(ctx, wx, wy - 3.5, 3.5, 4, rgb(WOOD_D), OUT, 0.7); }
+  const base = rot(isoRect(-0.35, -0.12, 0.7, 0.24), a); prism(ctx, base, 3, 6, WOOD, WOOD_D);
+  // bow arms perpendicular to facing
+  const [c0x, c0y] = iso(Math.cos(a) * 0.15 - Math.sin(a) * 0.45, Math.sin(a) * 0.15 + Math.cos(a) * 0.45, 12), [c1x, c1y] = iso(Math.cos(a) * 0.15 + Math.sin(a) * 0.45, Math.sin(a) * 0.15 - Math.cos(a) * 0.45, 12);
+  const [mx, my] = iso(Math.cos(a) * 0.15, Math.sin(a) * 0.15, 12);
+  ctx.beginPath(); ctx.moveTo(c0x, c0y); ctx.quadraticCurveTo(mx - (c0x - mx) * 0.1, my - 6, c1x, c1y); ctx.strokeStyle = rgb(WOOD); ctx.lineWidth = 2.5; ctx.stroke();
+  const pull = anim === 'attack' ? [0.25, 0.05, 0.15, 0.25][frame % 4] : 0.25;
+  const [sx, sy] = iso(Math.cos(a) * (0.15 - pull), Math.sin(a) * (0.15 - pull), 12); line(ctx, c0x, c0y, sx, sy, '#ddd', 0.8); line(ctx, c1x, c1y, sx, sy, '#ddd', 0.8);
+  const [r0x, r0y] = iso(-Math.cos(a) * 0.3, -Math.sin(a) * 0.3, 11), [r1x, r1y] = iso(Math.cos(a) * 0.5, Math.sin(a) * 0.5, 13); line(ctx, r0x, r0y, r1x, r1y, rgb(WOOD_D), 3);
+  if (pull > 0.1) line(ctx, sx, sy, r1x, r1y, rgb(METAL), 1.6);
+  const [fx, fy] = iso(-0.3, 0, 12); ctx.fillStyle = rgb(team); ctx.fillRect(fx - 2, fy - 8, 4, 5);
+}
+function tankDestroyer(ctx, o) {
+  const { dir, team, anim, frame } = o; const a = worldAngleForDir(dir);
+  const hullC = mix([96, 100, 84], team, 0.45), hullD = shade(hullC, 0.7);
+  ellipse(ctx, 0, 0, 22, 11, 'rgba(0,0,0,0.35)');
+  const trackL = rot(isoRect(-0.55, -0.4, 1.1, 0.14), a), trackR = rot(isoRect(-0.55, 0.26, 1.1, 0.14), a);
+  prism(ctx, trackL, 0, 5, [50, 50, 48], [35, 35, 33]); prism(ctx, trackR, 0, 5, [50, 50, 48], [35, 35, 33]);
+  prism(ctx, rot(isoRect(-0.5, -0.32, 1.0, 0.64), a), 3, 8, hullC, hullD);
+  prism(ctx, rot([[-0.35, -0.28], [0.3, -0.22], [0.3, 0.22], [-0.35, 0.28]], a), 11, 7, shade(hullC, 1.08), hullD); // sloped casemate
+  const recoil = anim === 'attack' && frame % 4 === 1 ? 0.1 : 0;
+  const [bx0, by0] = iso(Math.cos(a) * (0.2 - recoil), Math.sin(a) * (0.2 - recoil), 15), [bx1, by1] = iso(Math.cos(a) * (1.0 - recoil), Math.sin(a) * (1.0 - recoil), 15);
+  line(ctx, bx0, by0, bx1, by1, OUT, 4.5); line(ctx, bx0, by0, bx1, by1, rgb([70, 74, 66]), 2.8);
+  if (anim === 'attack' && frame % 4 === 1) ellipse(ctx, bx1, by1, 7, 4.5, 'rgba(255,210,110,0.9)');
+  const [sx, sy] = iso(0, 0, 19); ctx.fillStyle = rgb(team); ctx.fillRect(sx - 3, sy - 1.5, 6, 3);
+}
+function rocketTruck(ctx, o) {
+  const { dir, team, anim, frame } = o; const a = worldAngleForDir(dir);
+  const body = mix([90, 96, 78], team, 0.4);
+  ellipse(ctx, 0, 0, 20, 10, 'rgba(0,0,0,0.35)');
+  for (const f of [-0.35, 0.4]) for (const s of [-1, 1]) { const [wx, wy] = iso(Math.cos(a) * f - Math.sin(a) * 0.3 * s, Math.sin(a) * f + Math.cos(a) * 0.3 * s, 0); ellipse(ctx, wx, wy - 4, 4, 4.5, rgb([45, 45, 42]), OUT, 0.7); }
+  prism(ctx, rot(isoRect(-0.55, -0.28, 1.1, 0.56), a), 4, 7, body, shade(body, 0.7));
+  prism(ctx, rot(isoRect(0.25, -0.26, 0.3, 0.52), a), 11, 9, shade(body, 1.1), shade(body, 0.7)); // cab
+  // rocket rack (angled)
+  const t = anim === 'attack' ? frame % 4 : -1;
+  for (let i = 0; i < 4; i++) { const off = (i - 1.5) * 0.11; const [r0x, r0y] = iso(-Math.cos(a) * 0.45 - Math.sin(a) * off, -Math.sin(a) * 0.45 + Math.cos(a) * off, 12), [r1x, r1y] = iso(Math.cos(a) * 0.15 - Math.sin(a) * off, Math.sin(a) * 0.15 + Math.cos(a) * off, 30); line(ctx, r0x, r0y, r1x, r1y, rgb([60, 62, 58]), 2.6); if (t < 0 || i > t) { ctx.fillStyle = '#b04030'; ellipse(ctx, r1x, r1y, 1.8, 1.8, '#b04030'); } else ellipse(ctx, r1x, r1y, 4, 3, 'rgba(255,200,100,0.8)'); }
+  const [sx, sy] = iso(0.4, 0, 21); ctx.fillStyle = rgb(team); ctx.fillRect(sx - 3, sy - 1.5, 6, 3);
+}
+function commandCar(ctx, o) {
+  const { dir, team, anim, frame } = o; const a = worldAngleForDir(dir);
+  const body = mix([100, 104, 84], team, 0.45);
+  ellipse(ctx, 0, 0, 17, 8.5, 'rgba(0,0,0,0.35)');
+  for (const f of [-0.3, 0.3]) for (const s of [-1, 1]) { const [wx, wy] = iso(Math.cos(a) * f - Math.sin(a) * 0.26 * s, Math.sin(a) * f + Math.cos(a) * 0.26 * s, 0); ellipse(ctx, wx, wy - 3.5, 3.5, 4, rgb([45, 45, 42]), OUT, 0.7); }
+  prism(ctx, rot(isoRect(-0.45, -0.24, 0.9, 0.48), a), 3, 6, body, shade(body, 0.7));
+  prism(ctx, rot(isoRect(0.1, -0.22, 0.28, 0.44), a), 9, 6, shade(body, 1.1), shade(body, 0.7));
+  // officer standing in the back with binoculars
+  ctx.save(); const [px, py] = iso(-Math.cos(a) * 0.15, -Math.sin(a) * 0.15, 9); ctx.translate(px, py); ctx.scale(0.85, 0.85);
+  humanoid(ctx, { ...o, torso: mix([70, 80, 60], team, 0.5), helmet: 'garrison', weapon: anim === 'attack' ? 'rifle' : null, sleeves: mix([70, 80, 60], team, 0.4), emblem: [240, 220, 120], anim: o.anim === 'walk' ? 'idle' : o.anim }); ctx.restore();
+  // pennant
+  const [fx, fy] = iso(0.3, -0.2, 15); line(ctx, fx, fy, fx, fy - 16, '#333', 1); poly(ctx, [[fx, fy - 16], [fx + 9, fy - 13], [fx, fy - 10]], rgb(team), OUT, 0.5);
+}
 const ANIM_FRAMES = { idle: 4, walk: 6, attack: 4, work: 4 };
 
 export function unitSprite(sprite, colorIdx, dir, anim, frame, extra = {}) {
@@ -434,6 +522,30 @@ const BUILDING_DRAW = {
     else if (m === 10) { for (const x of [0.15, 0.5, 0.85]) prism(ctx, isoRect(x - 0.08, 0.5 - 0.1, 0.16, 0.2), h, 4, STONE, STONE_D); }
     // stone lines
     ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 0.6; for (let z = 5; z < h; z += 5) { const [ax, ay] = iso(0, 1, z), [bx, by] = iso(1, 1, z); if (m & 4 || m & 8) { ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); } }
+  },
+  ant_gate: (ctx, o) => {
+    const M = o.mask; const h = 20; const cw = 0.5;
+    const horiz = (M & 2) || (M & 8) || !((M & 1) || (M & 4)); // opening runs along the wall direction
+    const segs = wallSegs(M & (horiz ? 10 : 5), cw); for (const s of segs) prism(ctx, s, 0, h, STONE, STONE_D);
+    // two pillars with an arch/beam over the passage
+    const p = horiz ? [[0.5 - 0.42, 0.5], [0.5 + 0.42, 0.5]] : [[0.5, 0.5 - 0.42], [0.5, 0.5 + 0.42]];
+    for (const [px, py] of p) prism(ctx, isoRect(px - 0.13, py - 0.13, 0.26, 0.26), 0, h + 10, shade(STONE, 1.05), STONE_D);
+    const beam = horiz ? isoRect(0.08, 0.5 - 0.12, 0.84, 0.24) : isoRect(0.5 - 0.12, 0.08, 0.24, 0.84); prism(ctx, beam, h + 4, 6, [120, 88, 46], WOOD_D);
+    // open wooden doors leaning inward
+    const [dx, dy] = iso(0.5, 0.5, 0); ctx.fillStyle = rgb(WOOD); ctx.fillRect(dx - 12, dy - 14, 4, 14); ctx.fillRect(dx + 8, dy - 14, 4, 14);
+    const [fx, fy] = iso(0.5, 0.5, h + 10); line(ctx, fx, fy, fx, fy - 12, '#3a2a1a', 1.2); poly(ctx, [[fx, fy - 12], [fx + 8, fy - 9.5], [fx, fy - 7]], rgb(o.team), OUT, 0.5);
+  },
+  ww2_gate: (ctx, o) => {
+    const M = o.mask; const h = 16; const cw = 0.4;
+    const horiz = (M & 2) || (M & 8) || !((M & 1) || (M & 4));
+    const segs = wallSegs(M & (horiz ? 10 : 5), cw); for (const s of segs) prism(ctx, s, 0, h, CONCRETE, CONCRETE_D);
+    const p = horiz ? [[0.5 - 0.42, 0.5], [0.5 + 0.42, 0.5]] : [[0.5, 0.5 - 0.42], [0.5, 0.5 + 0.42]];
+    for (const [px, py] of p) prism(ctx, isoRect(px - 0.12, py - 0.12, 0.24, 0.24), 0, h + 4, shade(CONCRETE, 1.05), CONCRETE_D);
+    // striped barrier pole, raised
+    const [a0x, a0y] = iso(p[0][0], p[0][1], h + 4), [a1x, a1y] = iso(p[1][0], p[1][1], h + 4);
+    const ex = a0x + (a1x - a0x) * 0.15, ey = a0y + (a1y - a0y) * 0.15 - 22;
+    line(ctx, a0x, a0y, ex, ey, '#c8c8c8', 3); ctx.setLineDash([4, 4]); line(ctx, a0x, a0y, ex, ey, '#c0392b', 3); ctx.setLineDash([]);
+    sandbags(ctx, horiz ? [[0.05, 0.15], [0.95, 0.15]] : [[0.15, 0.05], [0.15, 0.95]], 0);
   },
   ww2_hall: (ctx, o) => {
     prism(ctx, isoRect(0.05, 0.05, 2.9, 2.9), 0, 3, shade(CONCRETE, 0.85), CONCRETE_D);
@@ -647,6 +759,8 @@ export function actionIcon(kind, size = 64, color = '#e8c04a') {
   return iconCanvas((ctx, s) => {
     ctx.translate(s / 2, s / 2); const r = s * 0.32;
     switch (kind) {
+      case 'upgrade': ctx.strokeStyle = '#f1d36a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-r * 0.7, r * 0.5); ctx.lineTo(0, -r * 0.3); ctx.lineTo(r * 0.7, r * 0.5); ctx.moveTo(-r * 0.7, r * 1.0); ctx.lineTo(0, r * 0.2); ctx.lineTo(r * 0.7, r * 1.0); ctx.stroke(); ctx.fillStyle = '#f1d36a'; ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.35, -r * 0.45); ctx.lineTo(-r * 0.35, -r * 0.45); ctx.fill(); break;
+      case 'gate': ctx.fillStyle = '#b8a98a'; ctx.fillRect(-r, -r * 0.6, r * 0.45, r * 1.6); ctx.fillRect(r * 0.55, -r * 0.6, r * 0.45, r * 1.6); ctx.fillRect(-r, -r * 0.9, r * 2, r * 0.35); ctx.fillStyle = '#5a3a1a'; ctx.beginPath(); ctx.moveTo(-r * 0.5, r); ctx.lineTo(-r * 0.5, -r * 0.1); ctx.quadraticCurveTo(0, -r * 0.7, r * 0.5, -r * 0.1); ctx.lineTo(r * 0.5, r); ctx.fill(); ctx.strokeStyle = '#2a1a0a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, -r * 0.4); ctx.lineTo(0, r); ctx.stroke(); break;
       case 'demolish': ctx.fillStyle = '#8a8078'; ctx.beginPath(); ctx.moveTo(-r, r * 0.6); ctx.lineTo(-r * 0.6, -r * 0.2); ctx.lineTo(0, r * 0.1); ctx.lineTo(r * 0.5, -r * 0.5); ctx.lineTo(r, r * 0.6); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#e04040'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-r * 0.8, -r * 0.9); ctx.lineTo(r * 0.2, -r * 0.1); ctx.moveTo(r * 0.2, -r * 0.9); ctx.lineTo(-r * 0.8, -r * 0.1); ctx.stroke(); break;
       case 'move': ctx.strokeStyle = '#8fdc7a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-r, r * 0.6); ctx.lineTo(r * 0.6, -r * 0.6); ctx.stroke(); ctx.beginPath(); ctx.moveTo(r * 0.6, -r * 0.6); ctx.lineTo(r * 0.6, r * 0.1); ctx.moveTo(r * 0.6, -r * 0.6); ctx.lineTo(-r * 0.1, -r * 0.6); ctx.stroke(); break;
       case 'stop': ctx.fillStyle = '#e06060'; ctx.beginPath(); ctx.roundRect(-r * 0.7, -r * 0.7, r * 1.4, r * 1.4, 4); ctx.fill(); break;

@@ -156,7 +156,7 @@ export class UI {
       else if (e.k === 't' || e.k === 'm') stat('left', 'Zbývá', e.a);
       const q = $('sel-queue'); q.innerHTML = '';
       if (e.k === 'b' && e.o === game.me && e.q && e.q.length) {
-        e.q.forEach((qi, idx) => { const d = document.createElement('div'); d.className = 'qi'; d.title = `${game.tech.units[qi.t].name} – klik zruší`; const c = unitPortrait(game.tech.units[qi.t].sprite, game.players[game.me].color, 44, { faction: game.players[game.me].faction }); d.appendChild(c); const pr = document.createElement('div'); pr.className = 'prog'; pr.style.width = (idx === 0 ? qi.p * 100 : 0) + '%'; d.appendChild(pr); d.onclick = () => game.cancelTrain(e.i, idx); q.appendChild(d); });
+        e.q.forEach((qi, idx) => { const d = document.createElement('div'); d.className = 'qi'; const isUp = qi.t === '__up'; d.title = `${isUp ? 'Vylepšení budovy' : game.tech.units[qi.t].name} – klik zruší`; const c = isUp ? buildingPortrait(game.buildingDef(e).sprite, e.w, e.h, game.players[game.me].color, 44, game.era) : unitPortrait(game.tech.units[qi.t].sprite, game.players[game.me].color, 44, { faction: game.players[game.me].faction }); d.appendChild(c); const pr = document.createElement('div'); pr.className = 'prog'; pr.style.width = (idx === 0 ? qi.p * 100 : 0) + '%'; d.appendChild(pr); d.onclick = () => game.cancelTrain(e.i, idx); q.appendChild(d); });
       }
     } else {
       single.classList.add('hidden'); multi.classList.remove('hidden');
@@ -200,10 +200,14 @@ export class UI {
       const b = blds[0]; const def = game.tech.buildings[b.t];
       if (!b.bl) { btn(11, { label: 'Zrušit stavbu', key: 'X', icon: () => actionIcon('cancel'), cls: 'cancel', desc: 'Zruší stavbu, vrátí 75 % surovin.', act: () => game.cancelBuild(b.i) }); }
       else {
-        const keys = ['Q', 'W', 'E', 'R'];
-        def.trains.forEach((u, i) => { const ud = game.tech.units[u]; btn(i, { label: ud.name, key: keys[i], icon: () => unitPortrait(ud.sprite, p.color, 64, { faction: p.faction }), cost: ud.cost, desc: `${ud.genericName}. Útok ${ud.dmg}, pancíř ${ud.armor}, HP ${ud.hp}, dosah ${ud.range >= 1 ? ud.range.toFixed(1) : 'na blízko'}. Populace ${ud.pop}. Výcvik ${Math.round(ud.trainTime)} s.`, act: () => game.train(u), canAfford: () => p.res.p >= ud.cost.p && p.res.s >= ud.cost.s }); });
-        if (def.trains.length) btn(4, { label: 'Shromaždiště', key: 'Y', icon: () => actionIcon('rally'), desc: 'Klikni na místo (nebo pravým tlačítkem). Na důl/les = dělníci jdou rovnou těžit.', act: () => { game.state.mode = 'rally'; }, active: () => game.state.mode === 'rally' });
-        if (b.q && b.q.length) btn(10, { label: 'Zrušit výcvik', key: 'X', icon: () => actionIcon('cancel'), cls: 'cancel', desc: 'Zruší poslední jednotku ve frontě.', act: () => game.cancelTrain(b.i, b.q.length - 1) });
+        const keys = ['Q', 'W', 'E', 'R', 'T', 'Z'];
+        const trains = game.availableTrains(b);
+        trains.forEach((u, i) => { const ud = game.tech.units[u]; btn(i, { label: ud.name, key: keys[i], icon: () => unitPortrait(ud.sprite, p.color, 64, { faction: p.faction }), cost: ud.cost, desc: `${ud.desc ? ud.desc + ' ' : ''}Útok ${ud.dmg}, pancíř ${ud.armor}, HP ${ud.hp}, dosah ${ud.range >= 1 ? ud.range.toFixed(1) : 'na blízko'}. Populace ${ud.pop}. Výcvik ${Math.round(ud.trainTime)} s.${ud.unique ? ' Jen jeden.' : ''}`, act: () => game.train(u), canAfford: () => p.res.p >= ud.cost.p && p.res.s >= ud.cost.s }); });
+        const up = game.nextUpgrade(b);
+        if (up) { const need = up.hall && game.hallLevel() < up.hall; const unlockNames = up.unlocks.map(u => game.tech.units[u]?.name).filter(Boolean); btn(8, { label: `Vylepšit (${up.level})`, key: 'U', icon: () => actionIcon('upgrade'), cost: up.cost, desc: `Vylepší budovu na úroveň ${up.level} (${Math.round(up.time)} s).${unlockNames.length ? ' Odemkne: ' + unlockNames.join(', ') + '.' : ''}${up.popCap ? ` +${up.popCap} populace.` : ''}${need ? ` Vyžaduje radnici úrovně ${up.hall}.` : ''}`, act: () => game.upgrade(b.i), canAfford: () => !need && p.res.p >= up.cost.p && p.res.s >= up.cost.s && !(b.q || []).some(q => q.t === '__up') }); }
+        if (def.isWall) btn(9, { label: b.t === 'gate' ? 'Zazdít' : 'Udělat bránu', key: 'G', icon: () => actionIcon('gate'), cost: b.t === 'gate' ? null : game.tech.buildings.gate.cost, desc: b.t === 'gate' ? 'Změní bránu zpět na hradbu.' : 'Změní segment na bránu, kterou projdou jen tvoje jednotky a spojenci.', act: () => game.toggleGate() });
+        if (trains.length) btn(4 + (trains.length > 4 ? 2 : 0), { label: 'Shromaždiště', key: 'Y', icon: () => actionIcon('rally'), desc: 'Klikni na místo (nebo pravým tlačítkem). Na důl/les = dělníci jdou rovnou těžit.', act: () => { game.state.mode = 'rally'; }, active: () => game.state.mode === 'rally' });
+        if (b.q && b.q.length) btn(10, { label: 'Zrušit', key: 'X', icon: () => actionIcon('cancel'), cls: 'cancel', desc: 'Zruší poslední položku ve frontě.', act: () => game.cancelTrain(b.i, b.q.length - 1) });
         btn(11, { label: 'Zbourat', key: 'Delete', icon: () => actionIcon('demolish'), cls: 'cancel', desc: 'Zbourá vybrané budovy (vrátí 25 % surovin).', act: () => game.demolish() });
       }
     }
