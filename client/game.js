@@ -136,7 +136,7 @@ export class Game {
       case 'place': if (mine) this.audio.sfx('placed', 0.6); break;
       case 'msg': if (ev.owner === this.me || ev.owner === -1) { this.ui.alert(ev.text, ev.owner === this.me); if (ev.owner === this.me) this.audio.sfx('error', 0.6); } break;
       case 'alert': if (ev.owner === this.me) { this.lastAlert = { x: ev.x, y: ev.y, t: performance.now() }; this.ui.alert(ev.k === 'building' ? 'Naše budova je pod útokem!' : 'Naše jednotky jsou pod útokem!', true); this.audio.sfx('alarm', 0.6); this.ui.minimapPing(ev.x, ev.y); } break;
-      case 'eliminated': { const p = this.players[ev.owner]; this.ui.chat('', `${p?.name} byl vyřazen ze hry.`, true); if (ev.owner !== this.me) this.audio.sfx('horn', 0.6); break; }
+      case 'eliminated': { const p = this.players[ev.owner]; this.ui.chat('', `${p?.name} byl vyřazen ze hry.`, true); if (ev.owner !== this.me) this.audio.sfx('horn', 0.6); else if (!this.gameOver) { this.audio.sfx('defeat', 1); this.eliminated = true; setTimeout(() => { if (!this.gameOver) this.ui.showEnd(this, false, true); }, 1200); } break; }
       case 'gameover': break;
     }
   }
@@ -238,6 +238,7 @@ export class Game {
       if (e.button === 0) {
         if (st.placing) { this.confirmPlacement(); return; }
         if (st.mode === 'move') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.orderMove(wx, wy); if (!st.shift) st.mode = null; return; }
+        if (st.mode === 'gather' || st.mode === 'repair') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); const t = this.renderer.pick(sx, sy); if (t) this.smartCommand(wx, wy, t); else this.audio.sfx('error'); st.mode = null; return; }
         if (st.mode === 'amove' || st.mode === 'attack') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.orderAttackMove(wx, wy, this.renderer.pick(sx, sy)); if (!st.shift) st.mode = null; return; }
         if (st.mode === 'rally') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); const t = this.renderer.pick(sx, sy); this.send({ t: 'rally', ids: this.myBuildingsSelected(), x: wx, y: wy, targetId: t ? t.i : 0 }); st.mode = null; this.audio.sfx('click'); return; }
         st.drag = { x0: sx, y0: sy, x1: sx, y1: sy }; st.dragMoved = false;

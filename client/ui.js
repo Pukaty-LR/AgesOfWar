@@ -167,9 +167,9 @@ export class UI {
         btn(2, { label: 'Držet', key: 'H', icon: () => actionIcon('hold'), desc: 'Držet pozici, nepronásledovat.', act: () => game.orderHold() });
         if (hasMil || hasWorker) btn(3, { label: 'Útok', key: 'A', icon: () => actionIcon('amove'), desc: 'Útočný pochod: útočí na vše cestou. Klik na nepřítele = útok na cíl.', act: () => { game.state.mode = 'amove'; }, active: () => game.state.mode === 'amove' });
         if (hasWorker) {
-          btn(4, { label: 'Těžit', key: 'G', icon: () => actionIcon('gather'), desc: 'Klikni pravým na důl nebo strom.', act: () => { this.alert('Klikni pravým tlačítkem na důl / les.', false); } });
+          btn(4, { label: 'Těžit', key: 'G', icon: () => actionIcon('gather'), desc: 'Klikni na důl nebo strom (nebo rovnou pravým tlačítkem).', act: () => { game.state.mode = 'gather'; }, active: () => game.state.mode === 'gather' });
           btn(5, { label: 'Stavět', key: 'B', icon: () => actionIcon('build'), desc: 'Otevře nabídku staveb.', act: () => { this.buildMenu = true; this.selectionChanged = true; this.dirty = true; this.lastSig = ''; } });
-          btn(6, { label: 'Opravit', key: 'R', icon: () => actionIcon('repair'), desc: 'Klikni pravým na poškozenou vlastní budovu.', act: () => { this.alert('Klikni pravým na poškozenou budovu.', false); } });
+          btn(6, { label: 'Opravit', key: 'R', icon: () => actionIcon('repair'), desc: 'Klikni na poškozenou vlastní budovu (nebo rovnou pravým tlačítkem).', act: () => { game.state.mode = 'repair'; }, active: () => game.state.mode === 'repair' });
         }
       }
     } else if (blds.length) {
@@ -205,11 +205,12 @@ export class UI {
   }
 
   // ---------- end screen ----------
-  showEnd(game, win) {
+  showEnd(game, win, eliminatedOnly = false) {
     $('end-title').textContent = win ? 'VÍTĚZSTVÍ' : 'PORÁŽKA'; $('end-title').classList.toggle('defeat', !win);
-    const t = Math.floor(game.gameTime()); $('end-sub').textContent = `${win ? 'Nepřítel byl rozdrcen.' : 'Naše říše padla.'} Délka hry ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} · ${game.eraDef.name}`;
+    const t = Math.floor(game.gameTime()); $('end-sub').textContent = `${win ? 'Nepřítel byl rozdrcen.' : (eliminatedOnly ? 'Byli jsme vyřazeni, ostatní bojují dál.' : 'Naše říše padla.')} Délka hry ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} · ${game.eraDef.name}`;
+    const winner = game.gameOver ? game.gameOver.winnerTeam : -2;
     const tbl = $('end-stats'); tbl.innerHTML = '<tr><th>Hráč</th><th>Frakce</th><th>Tým</th><th>Jednotky</th><th>Ztráty</th><th>Zabito</th><th>Budovy</th><th>Zničeno</th><th>Suroviny</th></tr>';
-    for (const p of game.players) { const tr = document.createElement('tr'); const s = p.stats; const fname = ERAS[game.era].factions.find(f => f.id === p.faction)?.name || p.faction; tr.innerHTML = `<td style="color:${TEAM_COLORS[p.color].hex}">${p.name}${p.isAI ? ' (AI)' : ''}${p.team === game.gameOver.winnerTeam ? ' 🏆' : ''}</td><td>${fname}</td><td>${p.team + 1}</td><td>${s.unitsBuilt}</td><td>${s.unitsLost}</td><td>${s.unitsKilled}</td><td>${s.buildingsBuilt}</td><td>${s.buildingsRazed}</td><td>${s.gatheredP + s.gatheredS}</td>`; tbl.appendChild(tr); }
+    for (const p of game.players) { const tr = document.createElement('tr'); const s = p.stats; const fname = ERAS[game.era].factions.find(f => f.id === p.faction)?.name || p.faction; tr.innerHTML = `<td style="color:${TEAM_COLORS[p.color].hex}">${p.name}${p.isAI ? ' (AI)' : ''}${p.team === winner ? ' 🏆' : ''}</td><td>${fname}</td><td>${p.team + 1}</td><td>${s.unitsBuilt}</td><td>${s.unitsLost}</td><td>${s.unitsKilled}</td><td>${s.buildingsBuilt}</td><td>${s.buildingsRazed}</td><td>${s.gatheredP + s.gatheredS}</td>`; tbl.appendChild(tr); }
     $('endscreen').classList.remove('hidden');
   }
 }
