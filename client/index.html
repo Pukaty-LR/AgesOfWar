@@ -134,8 +134,19 @@
     <label class="field"><span>Rychlost kamery</span><input type="range" id="scroll-speed2" min="20" max="100"></label>
     <label class="field check"><input type="checkbox" id="opt-edge2"><span>Posun kamery okrajem obrazovky</span></label>
     <label class="field check"><input type="checkbox" id="opt-hp2"><span>Zobrazovat životy vždy</span></label>
+    <button id="btn-help" class="big">Nápověda a ovládání</button>
     <button id="btn-surrender" class="big">Vzdát se a odejít</button></div></div>
-  <div id="endscreen" class="overlay hidden"><div class="panel wide"><h1 id="end-title">VÍTĚZSTVÍ</h1><div id="end-sub"></div><table class="stats" id="end-stats"></table><button id="btn-end-menu" class="big primary">Zpět do menu</button></div></div>
+  <div id="help-overlay" class="overlay hidden"><div class="panel wide"><div class="panel-head"><h2>Ovládání</h2><button id="btn-help-close">← Zpět</button></div>
+    <div class="help-grid">
+      <div><h3>Výběr</h3><div>Levé tlačítko / tažení rámečku · Shift = přidat · dvojklik nebo Ctrl+klik = všechny stejného typu na obrazovce · Tab = přepnout podskupinu · Ctrl+1–9 uložit skupinu, 1–9 vybrat (2× = kamera) · F1 = celá armáda · . = nečinný dělník · Backspace = radnice</div></div>
+      <div><h3>Rozkazy</h3><div>Pravé tlačítko = chytrý rozkaz (jdi / útoč / těž / stav / oprav) · Shift = zařadit do fronty · A + klik = útočný pochod · P + klik = hlídkovat · S = stop · H = držet pozici · M = přesun · skupina se pohybuje ve formaci</div></div>
+      <div><h3>Dělník</h3><div>G = těžit hlavní surovinu · F = těžit dřevo / houbu · B = nabídka staveb (H radnice, E dům, B kasárna, S stáje, W dílna, D přístav, T věž, L hradba) · R = opravit · Hradba: klik na začátek a konec, Shift = pokračovat</div></div>
+      <div><h3>Budova</h3><div>Q W E R T Z = výcvik · U = vylepšit (tier) · I / O = výzkum útoku / pancíře · Y = shromaždiště (na důl/les = dělníci rovnou těží) · X = zrušit poslední položku fronty · Delete = zbourat (2× pro důležité budovy) · G = brána / zazdít u hradby</div></div>
+      <div><h3>Kamera a ostatní</h3><div>Šipky, okraj obrazovky, střední tlačítko = posun · kolečko = zoom · minimapa: levé = kamera, pravé = rozkaz, Alt+klik = označit spoluhráčům · Space = poslední útok / označení · Enter = chat · Alt = zobrazit životy · Esc = zrušit / menu</div></div>
+      <div><h3>Cíl</h3><div>Znič všechny nepřátelské budovy (kromě hradeb). Radnice úrovně 4 odemkne hrdinu. Vylepšuj věže, budovy a výzkumy, stav domy pro populaci.</div></div>
+    </div></div></div>
+  <div id="endscreen" class="overlay hidden"><div class="panel wide"><h1 id="end-title">VÍTĚZSTVÍ</h1><div id="end-sub"></div><table class="stats" id="end-stats"></table><div class="end-btns"><button id="btn-end-spectate" class="big hidden">Sledovat dál</button><button id="btn-end-menu" class="big primary">Zpět do menu</button></div></div></div>
+  <div id="vignette"></div>
 </div>
 
 <div id="toast" class="hidden"></div>

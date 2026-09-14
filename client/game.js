@@ -30,6 +30,7 @@ export class Game {
     this.techs = this.players.map(p => makeTechTable(this.era, p.faction));
     this.ents.clear(); this.selection.clear(); this.groups = {};
     this.blocked = new Uint8Array(this.map.w * this.map.h); this.wallGrid.clear();
+    delete this.renderer.updateFog; // undo the end-of-game map reveal from a previous match
     this.renderer.setMap(this.map, this.era); this.renderer.prebuild();
     const s = this.map.spawns[this.me]; this.renderer.cam.x = s.x; this.renderer.cam.y = s.y; this.renderer.cam.zoom = 1;
     this.gameOver = null; this.running = true; this.startedAt = performance.now(); this.tick = 0; this.lastSnapAt = performance.now();
@@ -153,6 +154,9 @@ export class Game {
   heat(x, y) { const R = this.renderer; if (Math.hypot(x - R.cam.x, y - R.cam.y) < 40) this.combatHeat = Math.min(1, this.combatHeat + 0.12); }
   onGameOver() {
     const win = this.gameOver.winnerTeam === this.myTeam;
+    // reveal the whole map like Warcraft 3 does after the game ends
+    this.renderer.updateFog = function () { this.expF.fill(1); this.visF.fill(1); this.explored.fill(1); this.visible.fill(1); this.fogCtx.clearRect(0, 0, this.fw, this.fh); };
+    this.lastFogAt = 0;
     this.audio.sfx(win ? 'victory' : 'defeat', 1);
     this.audio.setIntensity(0);
     setTimeout(() => this.ui.showEnd(this, win), 1200);
@@ -183,7 +187,12 @@ export class Game {
     this.audio.sfx('attackOrder', 0.7); this.renderer.addEffect({ kind: 'marker', x: wx, y: wy, color: 'rgba(255,80,80,0.9)' });
   }
   gatherKind(kind) { const ids = this.selectedIds(e => e.k === 'u' && e.o === this.me && this.unitDef(e).role === 'worker'); if (!ids.length) return; this.send({ t: 'gatherKind', ids, kind, queue: this.state.shift }); this.audio.sfx('ack', 0.7); }
-  demolish() { const ids = this.myBuildingsSelected(); if (!ids.length) return; this.send({ t: 'demolish', ids }); this.audio.sfx('click'); this.select([]); }
+  demolish() {
+    const ids = this.myBuildingsSelected(); if (!ids.length) return;
+    const important = ids.some(id => { const e = this.ents.get(id); return e && e.t !== 'wall' && e.t !== 'gate' && e.bl; });
+    if (important && !(this.demolishArm && performance.now() - this.demolishArm < 2500)) { this.demolishArm = performance.now(); this.ui.alert('Opravdu zbourat? Stiskni Delete znovu do 2 s.', true); this.audio.sfx('error', 0.5); return; }
+    this.demolishArm = 0; this.send({ t: 'demolish', ids }); this.audio.sfx('click'); this.select([]);
+  }
   orderPatrol(wx, wy) { const ids = this.selectedIds(e => e.k === 'u' && e.o === this.me && this.unitDef(e).role !== 'worker'); if (!ids.length) return; this.send({ t: 'patrol', ids, x: wx, y: wy, queue: this.state.shift }); this.audio.sfx('ack', 0.7); this.renderer.addEffect({ kind: 'marker', x: wx, y: wy, color: 'rgba(120,200,255,0.9)' }); }
   /** WC3-style subgroups: the command card follows one unit type at a time; Tab cycles. */
   subgroupTypes() { const types = []; for (const id of this.selection) { const e = this.ents.get(id); if (e && e.k === 'u' && e.o === this.me && !types.includes(e.t)) types.push(e.t); } return types; }
@@ -310,6 +319,7 @@ export class Game {
       if (e.key === ' ') { if (this.lastAlert) this.centerOn(this.lastAlert.x, this.lastAlert.y); return; }
       if (e.key === 'F1') { e.preventDefault(); this.selectArmy(); return; }
       if (e.key === 'Tab') { e.preventDefault(); this.cycleSubgroup(); return; }
+      if (e.key === 'Backspace') { e.preventDefault(); const halls = [...this.ents.values()].filter(o => o.k === 'b' && o.o === this.me && o.t === 'hall'); if (halls.length) { this.hallIdx = ((this.hallIdx || 0) + 1) % halls.length; const h = halls[this.hallIdx]; this.centerOn(h.x, h.y); this.select([h]); } return; }
       if (k === '.') { this.selectIdleWorker(); return; }
       if (/^[0-9]$/.test(k)) {
         if (e.ctrlKey || e.shiftKey) { this.groups[k] = [...this.selection]; this.ui.alert(`Skupina ${k} uložena`, false); }

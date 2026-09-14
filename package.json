@@ -6,7 +6,8 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "node server/index.js"
+    "dev": "node server/index.js",
+    "test": "node tools/smoke.js 2000"
   },
   "license": "MIT",
   "dependencies": {
