@@ -240,6 +240,20 @@ export const ERAS = {
 
 export const ERA_ORDER = ['antiquity', 'ww2', 'scifi'];
 
+// Research (AoE blacksmith style). Cost scales with level. Names differ per era.
+export const RESEARCH = {
+  atk_inf:   { building: 'barracks', maxLevel: 3, cost: { p: 100, s: 60 }, time: 35, roles: ['infantry', 'ranged'], dmgAdd: 2, hotkey: 'I',
+               names: { antiquity: 'Ostřejší čepele', ww2: 'Lepší munice', scifi: 'Plazmové články' }, desc: 'Pěchota a střelci +2 útok za úroveň.' },
+  arm_inf:   { building: 'barracks', maxLevel: 3, cost: { p: 80, s: 90 }, time: 35, roles: ['infantry', 'ranged', 'worker'], armorAdd: 1, hotkey: 'O',
+               names: { antiquity: 'Lepší zbroj', ww2: 'Neprůstřelné vesty', scifi: 'Energetické štíty' }, desc: 'Pěchota, střelci a dělníci +1 pancíř za úroveň.' },
+  atk_veh:   { building: 'stable', maxLevel: 3, cost: { p: 140, s: 80 }, time: 40, roles: ['cavalry'], dmgAdd: 3, hotkey: 'I',
+               names: { antiquity: 'Chov válečných koní', ww2: 'Průbojné granáty', scifi: 'Zesílené kanóny' }, desc: 'Jezdectvo / vozidla +3 útok za úroveň.' },
+  arm_veh:   { building: 'stable', maxLevel: 3, cost: { p: 120, s: 110 }, time: 40, roles: ['cavalry'], armorAdd: 1, hotkey: 'O',
+               names: { antiquity: 'Koňská zbroj', ww2: 'Přídavné pancéřování', scifi: 'Nanopancíř' }, desc: 'Jezdectvo / vozidla +1 pancíř za úroveň.' },
+  atk_siege: { building: 'siege', maxLevel: 2, cost: { p: 160, s: 140 }, time: 45, roles: ['siege', 'ship'], dmgMul: 1.15, hotkey: 'I',
+               names: { antiquity: 'Obléhací inženýrství', ww2: 'Balistika', scifi: 'Přesné zaměřovače' }, desc: 'Obléhací stroje a lodě +15 % útok za úroveň.' },
+};
+
 // Build the effective (faction-modified) unit/building stats table for a player.
 export function makeTechTable(eraId, factionId) {
   const e = ERAS[eraId];

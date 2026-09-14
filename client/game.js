@@ -1,5 +1,5 @@
 // Client game state + input handling.
-import { ERAS, T, makeTechTable, TEAM_COLORS, TICK_RATE } from '../shared/data.js';
+import { ERAS, T, makeTechTable, TEAM_COLORS, TICK_RATE, RESEARCH } from '../shared/data.js';
 import { Renderer } from './render/renderer.js';
 import { TW, TH } from './render/sprites.js';
 
@@ -78,6 +78,8 @@ export class Game {
   nextUpgrade(b) { const def = this.tech.buildings[b.t]; return (def.upgrades || []).find(u => u.level === (b.lv || 1) + 1) || null; }
   hallLevel() { let lv = 0; for (const e of this.ents.values()) if (e.k === 'b' && e.o === this.me && e.t === 'hall' && e.bl) lv = Math.max(lv, e.lv || 1); return lv; }
   upgrade(bid) { const b = this.ents.get(bid); if (!b) return; const up = this.nextUpgrade(b); if (!up) return; const p = this.players[this.me]; if (up.hall && this.hallLevel() < up.hall) { this.ui.alert(`Vyžaduje ${this.eraDef.hallNames[up.hall - 1]} (radnice úrovně ${up.hall}).`, true); this.audio.sfx('error'); return; } if (p.res.p < up.cost.p || p.res.s < up.cost.s) { this.ui.alert('Nedostatek surovin.', true); this.audio.sfx('error'); return; } this.send({ t: 'upgrade', id: bid }); this.audio.sfx('click'); }
+  research(bid, rid) { this.send({ t: 'research', id: bid, rid }); this.audio.sfx('click'); }
+  pingMap(wx, wy) { this.net.send({ t: 'mping', x: wx, y: wy }); }
   toggleGate() { const ids = this.selectedIds(e => e.k === 'b' && e.o === this.me && (e.t === 'wall' || e.t === 'gate')); if (!ids.length) return; this.send({ t: 'gate', ids }); this.audio.sfx('placed', 0.5); }
   buildingName(e) { const def = this.buildingDef(e); if (!def) return '?'; if (e.t === 'hall' && this.eraDef.hallNames) return this.eraDef.hallNames[Math.min(this.eraDef.hallNames.length, e.lv || 1) - 1]; return def.name + ((e.lv || 1) > 1 ? ` (úroveň ${e.lv})` : ''); }
   wallAt(tx, ty, owner) { const o = this.wallGrid.get(tx + ',' + ty); return o !== undefined && this.players[o].team === this.players[owner].team; }
@@ -139,6 +141,7 @@ export class Game {
       case 'hammer': this.soundAt('hammer', ev.x, ev.y, 0.5); if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(2, ev.x + (Math.random() - 0.5), ev.y + (Math.random() - 0.5), 14, { colors: [[255, 230, 150]], speed: 0.8, vz: 25, life: 0.3, size: 1.2 }); break;
       case 'built': if (mine && ev.ty !== 'wall') { this.audio.sfx('buildingDone', 0.8); this.ui.alert(`${this.tech.buildings[ev.ty]?.name}: stavba dokončena`, false); } break;
       case 'spawn': if (mine) this.audio.sfx('unitReady', 0.5); break;
+      case 'researched': if (mine) { this.audio.sfx('buildingDone', 0.8); const rd = RESEARCH[ev.rid]; this.ui.alert(`Výzkum dokončen: ${rd ? rd.names[this.era] : ev.rid} ${['I', 'II', 'III'][ev.level - 1] || ev.level}`, false); this.ui.lastSig = ''; this.ui.dirty = true; } break;
       case 'upgraded': if (mine) { this.audio.sfx('buildingDone', 0.8); const b = this.ents.get(ev.id); if (b) b.lv = ev.level; this.ui.alert(`${this.tech.buildings[ev.ty]?.name}: vylepšeno na úroveň ${ev.level}`, false); this.ui.lastSig = ''; this.ui.dirty = true; } break;
       case 'place': if (mine) this.audio.sfx('placed', 0.6); break;
       case 'msg': if (ev.owner === this.me || ev.owner === -1) { this.ui.alert(ev.text, ev.owner === this.me); if (ev.owner === this.me) this.audio.sfx('error', 0.6); } break;
@@ -249,6 +252,7 @@ export class Game {
       const sx = e.offsetX, sy = e.offsetY; st.mouse = { x: sx, y: sy };
       if (e.button === 1) { st.midDrag = { x: sx, y: sy }; e.preventDefault(); return; }
       if (e.button === 0) {
+        if (e.altKey && !st.placing && !st.mode) { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.pingMap(wx, wy); return; }
         if (st.placing) { this.confirmPlacement(); return; }
         if (st.mode === 'move') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.orderMove(wx, wy); if (!st.shift) st.mode = null; return; }
         if (st.mode === 'patrol') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.orderPatrol(wx, wy); if (!st.shift) st.mode = null; return; }

@@ -1,5 +1,5 @@
 // Ages of War - authoritative simulation. Runs on the server (and can run headless for tests).
-import { ERAS, T, makeTechTable, TICK_RATE } from './data.js';
+import { ERAS, T, makeTechTable, TICK_RATE, RESEARCH } from './data.js';
 import { generateMap, mulberry32 } from './mapgen.js';
 import { astar, smoothPath, nearestTile } from './pathfinding.js';
 
@@ -33,7 +33,7 @@ export class Sim {
       const tech = makeTechTable(eraId, p.faction);
       return {
         id: idx, name: p.name, faction: tech.faction.id, team: p.team ?? idx, color: p.color ?? idx, isAI: !!p.isAI,
-        tech, res: { p: 450, s: 250 }, pop: 0, popCap: 0, alive: true,
+        tech, res: { p: 450, s: 250 }, pop: 0, popCap: 0, alive: true, research: Object.fromEntries(Object.keys(RESEARCH).map(k => [k, 0])),
         stats: { unitsBuilt: 0, unitsLost: 0, unitsKilled: 0, buildingsBuilt: 0, buildingsLost: 0, buildingsRazed: 0, gatheredP: 0, gatheredS: 0 },
         lastAlert: -1000, spawn: this.map.spawns[idx],
       };
@@ -339,6 +339,19 @@ export class Sim {
         b.queue.push({ type: '__up', progress: 0 }); b.dirty = true;
         break;
       }
+      case 'research': {
+        const b = this.ents.get(c.id); if (!b || b.kind !== 'building' || b.owner !== pid || !b.built) break;
+        const rd = RESEARCH[c.rid]; if (!rd || rd.building !== b.type) break;
+        const lvl = p.research[c.rid] || 0; if (lvl >= rd.maxLevel) break;
+        // one research of this kind at a time across all buildings
+        let busy = false; for (const e of this.ents.values()) if (e.kind === 'building' && e.owner === pid && e.queue && e.queue.some(q => q.type === '__res' && q.rid === c.rid)) busy = true;
+        if (busy) { this.events.push({ t: 'msg', owner: pid, text: 'Tento výzkum už probíhá.' }); break; }
+        const cost = this.researchCost(c.rid, lvl + 1);
+        if (p.res.p < cost.p || p.res.s < cost.s) { this.events.push({ t: 'msg', owner: pid, text: 'Nedostatek surovin.' }); break; }
+        p.res.p -= cost.p; p.res.s -= cost.s; p.dirty = true;
+        b.queue.push({ type: '__res', rid: c.rid, progress: 0 }); b.dirty = true;
+        break;
+      }
       case 'gate': { // toggle wall <-> gate for selected wall segments
         for (const b of units.filter(e => e.kind === 'building' && e.built && (e.type === 'wall' || e.type === 'gate'))) {
           const to = b.type === 'wall' ? 'gate' : 'wall';
@@ -423,7 +436,11 @@ export class Sim {
   buildingArmor(p, b) { const def = p.tech.buildings[b.type]; let armor = def.armor; for (const up of def.upgrades || []) if (up.level <= (b.level || 1) && up.armorAdd) armor += up.armorAdd; return armor; }
   nextUpgrade(p, b) { const def = p.tech.buildings[b.type]; return (def.upgrades || []).find(u => u.level === (b.level || 1) + 1) || null; }
   hallLevel(pid) { let lv = 0; for (const e of this.ents.values()) if (e.kind === 'building' && e.owner === pid && e.type === 'hall' && e.built && !e.dead) lv = Math.max(lv, e.level || 1); return lv; }
-  queueCost(p, b, q) { if (q.type === '__up') { const up = this.nextUpgrade(p, b); return up ? up.cost : { p: 0, s: 0 }; } const ud = p.tech.units[q.type]; return ud ? ud.cost : { p: 0, s: 0 }; }
+  queueCost(p, b, q) { if (q.type === '__up') { const up = this.nextUpgrade(p, b); return up ? up.cost : { p: 0, s: 0 }; } if (q.type === '__res') return this.researchCost(q.rid, (p.research[q.rid] || 0) + 1); const ud = p.tech.units[q.type]; return ud ? ud.cost : { p: 0, s: 0 }; }
+  researchCost(rid, level) { const rd = RESEARCH[rid]; return { p: rd.cost.p * level, s: rd.cost.s * level }; }
+  /** effective unit damage / armor incl. research */
+  unitDmg(p, def) { let d = def.dmg; for (const [rid, rd] of Object.entries(RESEARCH)) { const l = p.research[rid] || 0; if (!l || !rd.roles.includes(def.role)) continue; if (rd.dmgAdd) d += rd.dmgAdd * l; if (rd.dmgMul) d *= Math.pow(rd.dmgMul, l); } return d; }
+  unitArmor(p, def) { let a = def.armor; for (const [rid, rd] of Object.entries(RESEARCH)) { const l = p.research[rid] || 0; if (!l || !rd.roles.includes(def.role)) continue; if (rd.armorAdd) a += rd.armorAdd * l; } return a; }
   auraMult(u) {
     let m = 1; const p = this.players[u.owner];
     for (const e of this.ents.values()) {
@@ -638,7 +655,7 @@ export class Sim {
   }
 
   fire(u, def, t) {
-    const dmg = def.dmg * this.auraMult(u);
+    const dmg = this.unitDmg(this.players[u.owner], def) * this.auraMult(u);
     if (def.projectile) {
       const speed = PROJ_SPEED[def.projectile] || 12;
       this.add({ kind: 'proj', type: def.projectile, x: u.x, y: u.y, sx: u.x, sy: u.y, tx: t.x, ty: t.y, targetId: t.id, speed, dmg, owner: u.owner, attackerType: u.type, attackerRole: u.role, bonus: def.bonus || {}, splash: def.splash || 0, arc: PROJ_ARC[def.projectile] || 0, total: Math.hypot(t.x - u.x, t.y - u.y), travelled: 0 });
@@ -692,7 +709,7 @@ export class Sim {
     if (t.dead || t.hp <= 0) return;
     const p = this.players[t.owner];
     let armor = 0, mult = 1;
-    if (t.kind === 'unit') { const d = p.tech.units[t.type]; armor = d.armor; mult = bonus[t.role] || 1; }
+    if (t.kind === 'unit') { const d = p.tech.units[t.type]; armor = this.unitArmor(p, d); mult = bonus[t.role] || 1; }
     else if (t.kind === 'building') { armor = t.built ? this.buildingArmor(p, t) : 0; mult = (t.type === 'wall' || t.type === 'gate') ? (bonus.wall || bonus.building || 0.5) : (bonus.building || 1); }
     const final = Math.max(1, dmg * mult - armor);
     t.hp -= final; t.dirty = true; t.lastDamageTick = this.tick;
@@ -869,8 +886,12 @@ export class Sim {
     const def = p.tech.buildings[b.type];
     b.builders = 0; // recounted by builders each tick (before they act next tick) - use decay
     if (!b.built) return;
-    // training / upgrading
-    if (b.queue.length && b.queue[0].type === '__up') {
+    // training / upgrading / research
+    if (b.queue.length && b.queue[0].type === '__res') {
+      const q = b.queue[0]; const rd = RESEARCH[q.rid];
+      q.progress += DT / rd.time; b.dirty = true;
+      if (q.progress >= 1) { b.queue.shift(); p.research[q.rid] = (p.research[q.rid] || 0) + 1; p.dirty = true; this.events.push({ t: 'researched', o: b.owner, rid: q.rid, level: p.research[q.rid], x: b.x, y: b.y }); }
+    } else if (b.queue.length && b.queue[0].type === '__up') {
       const q = b.queue[0]; const up = this.nextUpgrade(p, b);
       if (!up) { b.queue.shift(); }
       else {
@@ -952,7 +973,7 @@ export class Sim {
   serializeEntity(e) {
     switch (e.kind) {
       case 'unit': return { i: e.id, k: 'u', t: e.type, o: e.owner, x: +e.x.toFixed(2), y: +e.y.toFixed(2), hp: Math.ceil(e.hp), m: e.maxHp, f: +e.facing.toFixed(2), a: e.anim, at: e.lastAttackTick, hd: e.hidden ? 1 : 0, c: e.carry ? e.carry.res : '', o2: e.order.type, tg: e.order.targetId || e.engage || 0, dx: e.order.x, dy: e.order.y };
-      case 'building': return { i: e.id, k: 'b', t: e.type, o: e.owner, x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: e.w, h: e.h, hp: Math.ceil(e.hp), m: e.maxHp, bl: e.built ? 1 : 0, pr: +e.progress.toFixed(3), q: e.queue.map(q => ({ t: q.type, p: +q.progress.toFixed(3) })), r: e.rally, at: e.lastAttackTick, lv: e.level || 1 };
+      case 'building': return { i: e.id, k: 'b', t: e.type, o: e.owner, x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: e.w, h: e.h, hp: Math.ceil(e.hp), m: e.maxHp, bl: e.built ? 1 : 0, pr: +e.progress.toFixed(3), q: e.queue.map(q => ({ t: q.type, p: +q.progress.toFixed(3), rid: q.rid })), r: e.rally, at: e.lastAttackTick, lv: e.level || 1 };
       case 'tree': return { i: e.id, k: 't', x: e.x, y: e.y, tx: e.tx, ty: e.ty, a: e.amount, v: e.v };
       case 'mine': return { i: e.id, k: 'm', x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: 2, h: 2, a: e.amount };
       case 'proj': return { i: e.id, k: 'p', t: e.type, x: +e.x.toFixed(2), y: +e.y.toFixed(2), sx: e.sx, sy: e.sy, tx: +e.tx.toFixed(2), ty: +e.ty.toFixed(2), arc: e.arc, o: e.owner };
@@ -960,7 +981,7 @@ export class Sim {
     return null;
   }
   serializePlayer(p) {
-    return { id: p.id, name: p.name, faction: p.faction, team: p.team, color: p.color, isAI: p.isAI, res: { p: Math.floor(p.res.p), s: Math.floor(p.res.s) }, pop: p.pop, popCap: p.popCap, alive: p.alive, stats: p.stats };
+    return { id: p.id, name: p.name, faction: p.faction, team: p.team, color: p.color, isAI: p.isAI, res: { p: Math.floor(p.res.p), s: Math.floor(p.res.s) }, pop: p.pop, popCap: p.popCap, alive: p.alive, stats: p.stats, research: p.research };
   }
   fullSnapshot() {
     return { t: 'full', tick: this.tick, players: this.players.map(p => this.serializePlayer(p)), ents: Array.from(this.ents.values()).map(e => this.serializeEntity(e)), gameOver: this.gameOver };

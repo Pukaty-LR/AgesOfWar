@@ -236,6 +236,13 @@ wss.on('connection', (ws, req) => {
         for (const s of l.slots) if (!s.isAI) { const o = clients.get(s.id); if (o) send(o.ws, { t: 'chat', from: c.name, text, color: l.slots.find(x => x.id === c.id)?.color }); }
         break;
       }
+      case 'mping': { // map ping to teammates
+        if (!l || !l.game) return;
+        const me = l.slots.find(s => s.id === c.id); if (!me) return;
+        const now = Date.now(); if (c.lastPing && now - c.lastPing < 1500) return; c.lastPing = now;
+        for (const s of l.slots) if (!s.isAI && s.team === me.team) { const o = clients.get(s.id); if (o && o.lobby === l) send(o.ws, { t: 'mping', x: +m.x, y: +m.y, from: c.name, color: me.color }); }
+        break;
+      }
       case 'wallPreview': { // ask the server for a wall path preview (uses sim's buildable grid)
         if (!l || !l.game) return;
         const tiles = l.game.sim.wallPath(m.x0, m.y0, m.x1, m.y1);

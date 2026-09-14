@@ -1,5 +1,6 @@
 // Simple but complete AI opponent. Works purely through sim.command(), like a human player.
 import { mulberry32 } from './mapgen.js';
+import { RESEARCH } from './data.js';
 
 export class AIPlayer {
   constructor(sim, pid, difficulty = 'normal') {
@@ -94,6 +95,13 @@ export class AIPlayer {
       else type = trains[Math.floor(this.rng() * trains.length)];
       const ud = p.tech.units[type];
       if (p.res.p - ud.cost.p >= reserve && p.res.s - ud.cost.s >= reserve * 0.5) sim.command(this.pid, { t: 'train', id: b.id, type });
+    }
+    // 3a. Research when rich
+    if (tick % 140 === 70 && !easy) {
+      for (const b of buildings) {
+        if (!b.built || b.queue.length >= 2) continue;
+        for (const [rid, rd] of Object.entries(RESEARCH)) { if (rd.building !== b.type) continue; const lvl = p.research[rid] || 0; if (lvl >= rd.maxLevel) continue; const cost = sim.researchCost(rid, lvl + 1); if (p.res.p >= cost.p + 250 && p.res.s >= cost.s + 150) { sim.command(this.pid, { t: 'research', id: b.id, rid }); break; } }
+      }
     }
     // 3b. Upgrades: hall first, then military buildings, when resources allow
     if (tick % 100 === 0 && !easy) {
