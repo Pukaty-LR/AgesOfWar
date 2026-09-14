@@ -24,6 +24,9 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - Budovy: Radnice, Kasárna, Stáje / Tanková továrna, Obléhací dílna / Dělostřelecký park, Přístav / Loděnice, Věž / Bunkr, Hradba (+ Brána).
 - **Tiery**: každou vojenskou budovu lze vylepšit (klávesa U) – každá úroveň odemkne nové jednotky. Radnici lze vylepšit až na úroveň 4 (Radnice → Město → Metropole → Císařské město), vyšší úroveň je podmínkou pro tiery ostatních budov a úroveň 4 odemkne **hrdinu** (jen jeden, spojenci v okolí +20 % útok).
 - **Hradby** se pokládají klikem na začátek a konec – cesta obejde stromy, budovy i vodu. Vybraný segment lze změnit na **bránu** (G), kterou projdou jen tvé jednotky a spojenci.
+- **Věže / bunkry** mají 3 úrovně (U): víc útoku, dosahu i pancíře, a jiný vzhled.
+- Když ti spadne prohlížeč nebo obnovíš stránku, hra běží dál a po načtení se **automaticky připojíš zpět** do své rozehrané hry (server ji drží 3 minuty).
+- Hudbu lze ztlumit tlačítkem v horní liště, ostatní nastavení jsou v menu (Esc).
 - Cíl: zničit všechny nepřátelské budovy (kromě hradeb).
 
 ## Ovládání
