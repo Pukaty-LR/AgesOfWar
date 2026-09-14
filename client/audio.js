@@ -64,8 +64,16 @@ export class Audio {
     const v = 1;
     switch (name) {
       case 'click': this.osc('square', 1800, t, 0.03, 0.08 * v, dest, { lp: 3000 }); break;
-      case 'select': this.osc('triangle', 880, t, 0.08, 0.15 * v, dest); this.osc('triangle', 1320, t + 0.05, 0.08, 0.12 * v, dest); break;
-      case 'ack': this.osc('triangle', 660, t, 0.07, 0.14 * v, dest); this.osc('triangle', 990, t + 0.06, 0.09, 0.12 * v, dest); break;
+      case 'select':
+        if (this.era === 'scifi') { this.osc('sine', 1400, t, 0.05, 0.12 * v, dest, { slide: 2200 }); this.osc('square', 2600, t + 0.05, 0.04, 0.05 * v, dest, { lp: 5000 }); }
+        else if (this.era === 'ww2') { this.noiseBurst(t, 0.03, 0.12 * v, dest, { f: 3000, q: 2 }); this.osc('square', 1100, t + 0.03, 0.05, 0.07 * v, dest, { lp: 2500 }); }
+        else { this.osc('triangle', 880, t, 0.08, 0.15 * v, dest); this.osc('triangle', 1320, t + 0.05, 0.08, 0.12 * v, dest); }
+        break;
+      case 'ack':
+        if (this.era === 'scifi') { this.osc('sine', 900, t, 0.06, 0.12 * v, dest, { slide: 1500 }); this.osc('sine', 1800, t + 0.06, 0.07, 0.08 * v, dest); }
+        else if (this.era === 'ww2') { this.noiseBurst(t, 0.03, 0.1 * v, dest, { f: 3000, q: 2 }); this.osc('square', 740, t + 0.03, 0.06, 0.07 * v, dest, { lp: 2200 }); this.osc('square', 990, t + 0.1, 0.05, 0.05 * v, dest, { lp: 2200 }); }
+        else { this.osc('triangle', 660, t, 0.07, 0.14 * v, dest); this.osc('triangle', 990, t + 0.06, 0.09, 0.12 * v, dest); }
+        break;
       case 'attackOrder': this.osc('sawtooth', 330, t, 0.12, 0.12 * v, dest, { lp: 1500, slide: 220 }); this.noiseBurst(t, 0.1, 0.08 * v, dest, { f: 2500 }); break;
       case 'error': this.osc('square', 220, t, 0.12, 0.12 * v, dest, { lp: 900 }); this.osc('square', 180, t + 0.12, 0.16, 0.12 * v, dest, { lp: 900 }); break;
       case 'swordHit': this.noiseBurst(t, 0.12, 0.35 * v, dest, { f: 3200 + Math.random() * 1500, q: 6, type: 'bandpass' }); this.osc('triangle', 1900 + Math.random() * 600, t, 0.08, 0.12 * v, dest, { slide: 900 }); break;

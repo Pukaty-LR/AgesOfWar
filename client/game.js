@@ -36,7 +36,7 @@ export class Game {
     this.gameOver = null; this.running = true; this.startedAt = performance.now(); this.tick = 0; this.lastSnapAt = performance.now();
     this.state.mode = null; this.state.placing = null; this.state.drag = null; this.state.mouse = { x: -1, y: -1 }; this.keys = {};
     this.ui.onGameStart(this);
-    this.audio.startMusic(this.eraDef.music);
+    this.audio.era = this.era; this.audio.startMusic(this.eraDef.music);
     this.renderer.resize();
     this.lastFrame = performance.now();
     requestAnimationFrame(t => this.loop(t));

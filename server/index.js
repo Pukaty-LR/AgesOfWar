@@ -52,6 +52,7 @@ function freeTeam(l) { const used = new Set(l.slots.map(s => s.team)); for (let 
 function defaultFaction(era) { return ERAS[era].factions[0].id; }
 function validDiff(d) { return ['easy', 'normal', 'hard', 'impossible'].includes(d) ? d : 'normal'; }
 
+function abandonRooms(c) { if (!c.token) return; for (const lb of lobbies.values()) if (lb.game && lb !== c.lobby) for (const s of lb.slots) if (s.token === c.token && clients.get(s.id) !== c) s.token = null; }
 function connectedHumans(l) { return l.slots.filter(s => !s.isAI && clients.get(s.id)?.lobby === l && clients.get(s.id)?.ws.readyState === 1); }
 function leaveLobby(c, silent = false, explicit = false) {
   const l = c.lobby; if (!l) return;
@@ -137,10 +138,12 @@ wss.on('connection', (ws, req) => {
         c.token = typeof m.token === 'string' ? m.token.slice(0, 40) : null;
         // rejoin a running game after a page refresh / connection drop
         if (c.token && !c.lobby) {
-          for (const lobby of lobbies.values()) {
-            if (!lobby.game) continue;
+          const candidates = [...lobbies.values()].filter(lb => lb.game && lb.slots.some(s => !s.isAI && s.token === c.token && clients.get(s.id)?.lobby !== lb)).sort((a, b) => b.id - a.id);
+          for (const lobby of candidates) {
             const slot = lobby.slots.find(s => !s.isAI && s.token === c.token && clients.get(s.id)?.lobby !== lobby);
             if (!slot) continue;
+            // abandon older rooms held for this token
+            for (const other of candidates) if (other !== lobby) for (const s of other.slots) if (s.token === c.token) s.token = null;
             const idx = lobby.slots.indexOf(slot); slot.id = c.id; slot.name = c.name; slot.connected = true; c.lobby = lobby; lobby.emptySince = null;
             const sim = lobby.game.sim;
             send(ws, { t: 'start', game: { era: lobby.era, seed: lobby.game.seed, map: sim.mapData(), me: idx, players: sim.players.map(p => sim.serializePlayer(p)), lobbyName: lobby.name, rejoin: true } });
@@ -154,7 +157,7 @@ wss.on('connection', (ws, req) => {
       case 'ping': send(ws, { t: 'pong', ts: m.ts }); break;
       case 'list': send(ws, { t: 'lobbies', list: [...lobbies.values()].map(lobbySummary) }); break;
       case 'host': {
-        if (l) leaveLobby(c, true);
+        if (l) leaveLobby(c, true, true); abandonRooms(c);
         const era = ERAS[m.era] && ERAS[m.era].available ? m.era : 'antiquity';
         const lobby = { id: nextLobbyId++, name: String(m.name || `${c.name}ova hra`).slice(0, 28), hostId: c.id, era, max: Math.min(MAX_PLAYERS, Math.max(2, m.max | 0 || 4)), state: 'lobby', slots: [], game: null, mapStyle: 'continent', mapSize: 'medium' };
         lobby.slots.push({ id: c.id, name: c.name, faction: defaultFaction(era), team: 0, color: 0, ready: false, isAI: false, token: c.token });
@@ -167,7 +170,7 @@ wss.on('connection', (ws, req) => {
         if (!lobby) return send(ws, { t: 'error', msg: 'Server už neexistuje.' });
         if (lobby.state !== 'lobby') return send(ws, { t: 'error', msg: 'Hra už probíhá.' });
         if (lobby.slots.length >= lobby.max) return send(ws, { t: 'error', msg: 'Server je plný.' });
-        if (l) leaveLobby(c, true);
+        if (l) leaveLobby(c, true, true); abandonRooms(c);
         lobby.slots.push({ id: c.id, name: c.name, faction: defaultFaction(lobby.era), team: freeTeam(lobby), color: freeColor(lobby), ready: false, isAI: false, token: c.token });
         c.lobby = lobby; broadcastLobby(lobby); broadcastLobbyList();
         break;

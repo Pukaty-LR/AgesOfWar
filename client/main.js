@@ -30,13 +30,18 @@ class App {
 
   // ---------- menu background ----------
   startBackground() {
-    const canvas = $('bg'); const seed = (Math.random() * 1e9) | 0;
-    const map = generateMap(seed, 64, 2);
+    const canvas = $('bg');
     const stub = { ents: new Map(), selection: new Set(), players: [], myTeam: -1, me: -1, unitDef: () => null, buildingDef: () => null, tickNow: () => 0, tech: { buildings: {} } };
-    let id = 1;
-    for (const t of map.trees) stub.ents.set(id, { i: id++, k: 't', x: t.tx + 0.5, y: t.ty + 0.5, tx: t.tx, ty: t.ty, v: t.v });
-    for (const m of map.mines) stub.ents.set(id, { i: id++, k: 'm', x: m.tx, y: m.ty, tx: m.tx - 1, ty: m.ty - 1 });
-    const r = new Renderer(canvas, stub); r.setMap(map, 'antiquity'); r.explored.fill(1); r.visible.fill(1); r.updateFog = () => {}; r.fogCtx.clearRect(0, 0, r.fw, r.fh);
+    const r = new Renderer(canvas, stub); this.bgRenderer = r;
+    this.setBgEra = era => {
+      const seed = (Math.random() * 1e9) | 0; const map = generateMap(seed, 64, 2, 'continent');
+      stub.ents.clear(); let id = 1;
+      for (const t of map.trees) stub.ents.set(id, { i: id++, k: 't', x: t.tx + 0.5, y: t.ty + 0.5, tx: t.tx, ty: t.ty, v: t.v });
+      for (const m of map.mines) stub.ents.set(id, { i: id++, k: 'm', x: m.tx, y: m.ty, tx: m.tx - 1, ty: m.ty - 1 });
+      r.setMap(map, era); r.explored.fill(1); r.visible.fill(1); r.updateFog = () => {}; r.fogCtx.clearRect(0, 0, r.fw, r.fh); r.clouds = null;
+      document.body.className = 'era-' + era;
+    };
+    this.setBgEra(this.settings.era || 'antiquity');
     r.cam.zoom = 1.1; let t0 = performance.now(); let a = 0;
     const loop = t => { if (this.screen !== 'game') { const dt = Math.min(0.05, (t - t0) / 1000); a += dt * 0.05; r.cam.x = 32 + Math.cos(a) * 14; r.cam.y = 32 + Math.sin(a * 0.7) * 14; if (canvas.clientWidth !== r.W || canvas.clientHeight !== r.H) r.resize(); r.draw(dt, { mouse: { x: 0, y: 0 } }); const ctx = r.ctx; ctx.setTransform(r.dpr, 0, 0, r.dpr, 0, 0); ctx.fillStyle = 'rgba(8,6,4,0.35)'; ctx.fillRect(0, 0, r.W, r.H); } t0 = t; requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
@@ -46,7 +51,7 @@ class App {
   bindMenus() {
     $('name').value = this.settings.name;
     this.hostEra = this.settings.era || 'antiquity';
-    const pickEra = e => { this.hostEra = e; this.settings.era = e; this.save(); this.renderEraCards($('menu-eras'), e, pickEra, true); };
+    const pickEra = e => { this.hostEra = e; this.settings.era = e; this.save(); this.renderEraCards($('menu-eras'), e, pickEra, true); if (this.setBgEra) this.setBgEra(e); };
     this.renderEraCards($('menu-eras'), this.hostEra, pickEra, true);
     $('name').addEventListener('change', () => { this.settings.name = $('name').value.trim(); this.save(); });
     $('btn-quick').onclick = () => { if (!this.name()) return; this.quick = true; this.net.send({ t: 'host', name: `${this.settings.name} vs AI`, era: this.hostEra, max: 2 }); };
@@ -116,6 +121,18 @@ class App {
     n.on('wallPreview', m => this.game.onWallPreview(m));
     n.on('mping', m => { if (this.screen !== 'game') return; this.ui.minimapPing(m.x, m.y); this.game.renderer.addEffect({ kind: 'ring', x: m.x, y: m.y, color: 'rgba(255,230,90,0.9)' }); this.game.lastAlert = { x: m.x, y: m.y, t: performance.now() }; this.ui.alert(`${m.from} označil místo na mapě (Space = kamera)`, false); this.audio.sfx('select', 0.6); });
   }
+  drawMapPreview(style, sizeKey, era) {
+    const key = style + '|' + sizeKey + '|' + era; if (this.previewKey === key) return; this.previewKey = key;
+    const c = $('map-preview'); const ctx = c.getContext('2d'); const size = (MAP_SIZES[sizeKey] || MAP_SIZES.medium).size;
+    const map = generateMap(4242, size, 4, style); const pal = ERAS[era].palette;
+    const img = ctx.createImageData(size, size);
+    for (let i = 0; i < size * size; i++) { const t = map.tiles[i]; let col; switch (t) { case 0: col = pal.grass; break; case 1: col = pal.dirt; break; case 2: col = pal.sand; break; case 3: col = pal.water.map((v, k) => v * 0.7 + pal.sand[k] * 0.3); break; case 4: col = pal.deep; break; default: col = pal.rock; } const k = 0.8 + (map.height[i] - 0.5) * 0.5; img.data[i * 4] = col[0] * k; img.data[i * 4 + 1] = col[1] * k; img.data[i * 4 + 2] = col[2] * k; img.data[i * 4 + 3] = 255; }
+    const tmp = document.createElement('canvas'); tmp.width = size; tmp.height = size; tmp.getContext('2d').putImageData(img, 0, 0);
+    const tc = tmp.getContext('2d'); tc.fillStyle = '#1e4d22'; for (const t of map.trees) tc.fillRect(t.tx, t.ty, 1, 1); tc.fillStyle = '#f2c94c'; for (const m of map.mines) tc.fillRect(m.tx - 1, m.ty - 1, 2, 2);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, c.width, c.height); const s = c.width / (2 * size); ctx.setTransform(s, s, -s, s, c.width / 2, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(tmp, 0, 0);
+    map.spawns.forEach((sp, i) => { ctx.fillStyle = TEAM_COLORS[i].hex; ctx.fillRect(sp.x - 2, sp.y - 2, 4, 4); });
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
   renderServerList(list) {
     const tb = $('server-list'); tb.innerHTML = ''; $('server-empty').classList.toggle('hidden', list.length > 0);
     for (const l of list) {
@@ -128,7 +145,9 @@ class App {
   renderLobby() {
     const l = this.lobby; if (!l) return;
     const isHost = l.hostId === this.myId; const era = ERAS[l.era];
+    if (this.bgEra !== l.era && this.setBgEra) { this.bgEra = l.era; this.setBgEra(l.era); }
     $('lobby-title').textContent = `${l.name} · ${era.name}`;
+    this.drawMapPreview(l.mapStyle || 'continent', l.mapSize || 'medium', l.era);
     this.renderEraCards($('lobby-eras'), l.era, isHost ? e => this.net.send({ t: 'setEra', era: e }) : null, true);
     $('lobby-era-desc').textContent = `${era.tagline} Suroviny: ${era.resources.p.name} (${era.nodes.mine.name}) a ${era.resources.s.name} (${era.nodes.secondary.name}).`;
     const ms = $('map-style'), mz = $('map-size');
