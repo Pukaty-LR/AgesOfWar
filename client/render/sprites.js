@@ -925,6 +925,16 @@ const BUILDING_DRAW = {
 };
 
 function constructionSite(ctx, w, h, progress, era) {
+  if (era === 'scifi') { // holographic frame that materializes
+    prism(ctx, isoRect(0.05, 0.05, w - 0.1, h - 0.1), 0, 2, shade(HULL_SF, 0.8), HULL_SF_D);
+    const hh = 6 + progress * 26;
+    const corners = [[0.15, 0.15], [w - 0.15, 0.15], [w - 0.15, h - 0.15], [0.15, h - 0.15]];
+    for (const p of corners) { const [sx, sy] = iso(p[0], p[1], 2); line(ctx, sx, sy, sx, sy - hh, GLOW, 1.5); ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(sx, sy - hh, 2, 0, 7); ctx.fill(); }
+    for (let z = 8; z < hh; z += 8) { const pts = corners.map(p => iso(p[0], p[1], 2 + z)); ctx.strokeStyle = 'rgba(120,230,255,0.35)'; ctx.lineWidth = 0.8; ctx.beginPath(); pts.forEach((pt, i) => i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1])); ctx.closePath(); ctx.stroke(); }
+    if (progress > 0.2) { const k = (progress - 0.2) / 0.8; ctx.globalAlpha = 0.25 + k * 0.5; prism(ctx, isoRect(0.3, 0.3, w - 0.6, h - 0.6), 2, k * 18, HULL_SF, HULL_SF_D); ctx.globalAlpha = 1; }
+    const [mx, my] = iso(w - 0.5, h - 0.4, 2); rrect(ctx, mx - 6, my - 8, 12, 8, 2, rgb([90, 96, 110]), OUT, 0.6); ctx.fillStyle = 'rgba(197,106,255,0.9)'; ctx.fillRect(mx - 3, my - 6, 6, 2);
+    return;
+  }
   // foundation + scaffold that grows with progress
   prism(ctx, isoRect(0.05, 0.05, w - 0.1, h - 0.1), 0, 2, era === 'ww2' ? [120, 110, 90] : [150, 130, 100], [100, 85, 60]);
   const stage = progress;

@@ -4,6 +4,13 @@ import { Renderer } from './render/renderer.js';
 import { TW, TH } from './render/sprites.js';
 
 const SNAP_MS = 100;
+const cur = (svg, hx, hy, fb) => `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">' + svg + '</svg>')}") ${hx} ${hy}, ${fb}`;
+const CURSORS = {
+  attack: cur('<circle cx="16" cy="16" r="9" fill="none" stroke="#000" stroke-width="4"/><circle cx="16" cy="16" r="9" fill="none" stroke="#ff4a4a" stroke-width="2"/><path d="M16 3v6M16 23v6M3 16h6M23 16h6" stroke="#000" stroke-width="4"/><path d="M16 3v6M16 23v6M3 16h6M23 16h6" stroke="#ff4a4a" stroke-width="2"/>', 16, 16, 'crosshair'),
+  build: cur('<path d="M6 26l10-10" stroke="#000" stroke-width="6" stroke-linecap="round"/><path d="M6 26l10-10" stroke="#e0b070" stroke-width="3" stroke-linecap="round"/><rect x="15" y="5" width="12" height="8" rx="2" fill="#bbb" stroke="#000" stroke-width="2" transform="rotate(45 21 9)"/>', 6, 26, 'crosshair'),
+  gather: cur('<path d="M6 26l11-11" stroke="#000" stroke-width="6" stroke-linecap="round"/><path d="M6 26l11-11" stroke="#b7863f" stroke-width="3" stroke-linecap="round"/><path d="M12 8c5-4 12-3 15 3" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round"/><path d="M12 8c5-4 12-3 15 3" fill="none" stroke="#ddd" stroke-width="3" stroke-linecap="round"/>', 6, 26, 'crosshair'),
+  patrol: cur('<path d="M5 20h16M27 12H11" stroke="#000" stroke-width="5" stroke-linecap="round"/><path d="M5 20h16M27 12H11" stroke="#8fd0ff" stroke-width="2.5" stroke-linecap="round"/><path d="M21 20l-4-4M21 20l-4 4M11 12l4-4M11 12l4 4" stroke="#8fd0ff" stroke-width="2.5" stroke-linecap="round"/>', 16, 16, 'crosshair'),
+};
 
 export class Game {
   constructor(canvas, net, audio, ui) {
@@ -337,11 +344,16 @@ export class Game {
   updateCursor() {
     const st = this.state;
     let cur = 'default';
-    if (st.placing) cur = 'crosshair';
+    if (st.placing) cur = CURSORS.build;
+    else if (st.mode === 'amove' || st.mode === 'attack') cur = CURSORS.attack;
+    else if (st.mode === 'patrol') cur = CURSORS.patrol;
+    else if (st.mode === 'gather') cur = CURSORS.gather;
+    else if (st.mode === 'repair') cur = CURSORS.build;
     else if (st.mode) cur = 'crosshair';
-    else if (this.hover && this.hover.o !== undefined && this.players[this.hover.o].team !== this.myTeam && this.myUnitsSelected().length) cur = 'crosshair';
+    else if (this.hover && this.hover.o !== undefined && this.players[this.hover.o].team !== this.myTeam && this.myUnitsSelected().length) cur = CURSORS.attack;
+    else if (this.hover && (this.hover.k === 't' || this.hover.k === 'm') && this.selectedIds(e => e.k === 'u' && e.o === this.me && this.unitDef(e).role === 'worker').length) cur = CURSORS.gather;
     else if (this.hover) cur = 'pointer';
-    this.canvas.style.cursor = cur;
+    if (this.canvas.style.cursor !== cur) this.canvas.style.cursor = cur;
   }
   panPixels(dx, dy) {
     const R = this.renderer; const z = R.cam.zoom;
