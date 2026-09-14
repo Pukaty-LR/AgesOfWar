@@ -138,9 +138,9 @@ export class UI {
 
   // ---------- selection panel & command card ----------
   portrait(game, e) {
-    const key = e.k + '|' + e.t + '|' + game.players[e.o].color;
+    const key = e.k + '|' + e.t + '|' + game.players[e.o].color + '|' + (e.lv || 1);
     let c = this.portraitCache.get(key);
-    if (!c) { c = e.k === 'u' ? unitPortrait(game.unitDef(e).sprite, game.players[e.o].color, 96, { faction: game.players[e.o].faction }) : buildingPortrait(game.buildingDef(e).sprite, e.w, e.h, game.players[e.o].color, 96, game.era); this.portraitCache.set(key, c); }
+    if (!c) { c = e.k === 'u' ? unitPortrait(game.unitDef(e).sprite, game.players[e.o].color, 96, { faction: game.players[e.o].faction }) : buildingPortrait(game.buildingDef(e).sprite, e.w, e.h, game.players[e.o].color, 96, game.era, e.lv || 1); this.portraitCache.set(key, c); }
     return c;
   }
   updateSelection(game) {

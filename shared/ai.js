@@ -11,8 +11,8 @@ export class AIPlayer {
     this.lastAttackTick = 0;
     this.buildStep = 0;
     this.lastBuildTick = -1000;
-    this.plan = ['barracks', 'tower', 'barracks', 'stable', 'tower', 'siege', 'dock', 'hall', 'tower', 'stable'];
-    if (difficulty === 'hard' || difficulty === 'impossible') this.plan.splice(5, 0, 'wall'); // fortify the front after the second tower
+    this.plan = ['barracks', 'tower', 'barracks', 'stable', 'siege', 'tower', 'dock', 'hall', 'tower', 'stable'];
+    if (difficulty === 'hard' || difficulty === 'impossible') { this.plan = ['barracks', 'tower', 'barracks', 'siege', 'stable', 'tower', 'wall', 'dock', 'hall', 'tower', 'stable']; }
     this.rallyPoint = null;
   }
 
@@ -100,13 +100,16 @@ export class AIPlayer {
     }
     // 3. Army production (uses tier units once unlocked)
     const reserve = this.buildStep < this.plan.length ? 120 : 0;
+    const siegeCount = army.filter(u => u.role === 'siege').length + buildings.filter(b => b.type === 'siege').reduce((s, b) => s + b.queue.filter(q => q.type !== '__up' && q.type !== '__res').length, 0);
+    const hasSiegeB = buildings.some(b => b.type === 'siege' && b.built);
     for (const b of buildings) {
       if (!b.built || b.queue.length >= 2) continue;
+      if (hasSiegeB && b.type !== 'siege' && siegeCount < 3 && p.res.s < 260 && tick > 20 * 60 * 3) continue; // save wood for siege engines
       const trains = sim.availableTrains(p, b).filter(t => t !== 'worker' && !p.tech.units[t].unique);
       if (!trains.length) { if (b.type === 'hall' && sim.availableTrains(p, b).includes('hero') && !units.some(u => u.type === 'hero') && p.res.p > 700) sim.command(this.pid, { t: 'train', id: b.id, type: 'hero' }); continue; }
       let type;
       if (b.type === 'barracks') { const melee = trains.filter(t => p.tech.units[t].role === 'infantry'), rng = trains.filter(t => p.tech.units[t].role === 'ranged'); const wantMelee = army.filter(u => u.role === 'infantry').length <= army.filter(u => u.role === 'ranged').length * 1.2; const pool = wantMelee && melee.length ? melee : (rng.length ? rng : trains); type = pool[Math.floor(this.rng() * pool.length)]; }
-      else if (b.type === 'siege') { if (tick < 20 * 60 * 5 && !hard) continue; type = trains[Math.floor(this.rng() * trains.length)]; }
+      else if (b.type === 'siege') { if (tick < 20 * 60 * 4 && !hard) continue; type = trains[Math.floor(this.rng() * trains.length)]; }
       else type = trains[Math.floor(this.rng() * trains.length)];
       const ud = p.tech.units[type];
       if (p.res.p - ud.cost.p >= reserve && p.res.s - ud.cost.s >= reserve * 0.5) sim.command(this.pid, { t: 'train', id: b.id, type });
@@ -147,10 +150,11 @@ export class AIPlayer {
     }
 
     // 5. Attack waves
-    const threshold = (hard ? 6 : (easy ? 14 : 10)) + this.wave * 3;
+    const threshold = Math.min(hard ? 18 : 20, (hard ? 8 : (easy ? 14 : 10)) + this.wave * 4); // waves grow, but never beyond what the population allows
     const idleArmy = army.filter(u => u.order.type === 'idle');
     const minTick = hard ? 20 * 60 * 2.5 : (easy ? 20 * 60 * 9 : 20 * 60 * 5);
-    if (!threat && idleArmy.length >= threshold && tick - this.lastAttackTick > 20 * 45 && tick > minTick) {
+    const popMaxed = p.pop >= p.popCap - 4 && idleArmy.length >= 6; // army is capped: push now
+    if (!threat && (idleArmy.length >= threshold || popMaxed) && tick - this.lastAttackTick > 20 * 45 && tick > minTick) {
       const target = this.pickEnemyTarget(hall);
       if (target) {
         sim.command(this.pid, { t: 'amove', ids: idleArmy.map(u => u.id), x: target.x, y: target.y });

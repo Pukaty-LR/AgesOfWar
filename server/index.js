@@ -239,6 +239,8 @@ wss.on('connection', (ws, req) => {
       case 'cmd': {
         if (!l || !l.game) return;
         const idx = l.slots.findIndex(s => s.id === c.id); if (idx < 0) return;
+        // rate limit: at most 40 commands per second per client
+        const nowMs = Date.now(); if (!c.cmdWin || nowMs - c.cmdWin > 1000) { c.cmdWin = nowMs; c.cmdCount = 0; } if (++c.cmdCount > 40) return;
         try { l.game.sim.command(idx, m.c); } catch (err) { console.error('cmd error', err, m.c); }
         break;
       }

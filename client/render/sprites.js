@@ -1089,9 +1089,9 @@ export function unitPortrait(sprite, colorIdx, size, extra = {}) {
     ctx.translate(s / 2, s / 2 + spr.h * scale * 0.35); ctx.scale(scale, scale); ctx.drawImage(spr.canvas, -spr.ax, -spr.ay, spr.w, spr.h);
   }, size);
 }
-export function buildingPortrait(sprite, w, h, colorIdx, size, era) {
+export function buildingPortrait(sprite, w, h, colorIdx, size, era, level = 1) {
   return iconCanvas((ctx, s) => {
-    const spr = buildingSprite(sprite, w, h, colorIdx, true, 1, w === 1 ? 10 : 0, era);
+    const spr = buildingSprite(sprite, w, h, colorIdx, true, 1, w === 1 ? 10 : 0, era, level);
     const scale = Math.min((s * 0.95) / spr.w, (s * 0.95) / spr.h);
     ctx.translate(s / 2, s / 2); ctx.scale(scale, scale); ctx.drawImage(spr.canvas, -spr.w / 2, -spr.h / 2, spr.w, spr.h);
   }, size);
