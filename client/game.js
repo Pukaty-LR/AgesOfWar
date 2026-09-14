@@ -161,6 +161,7 @@ export class Game {
       case 'msg': if (ev.owner === this.me || ev.owner === -1) { this.ui.alert(ev.text, ev.owner === this.me); if (ev.owner === this.me) this.audio.sfx('error', 0.6); } break;
       case 'alert': if (ev.owner === this.me) { this.lastAlert = { x: ev.x, y: ev.y, t: performance.now() }; this.ui.alert(ev.k === 'building' ? 'Naše budova je pod útokem!' : 'Naše jednotky jsou pod útokem!', true); this.audio.sfx('alarm', 0.6); this.ui.minimapPing(ev.x, ev.y); } break;
       case 'eliminated': { const p = this.players[ev.owner]; this.ui.chat('', `${p?.name} byl vyřazen ze hry.`, true); if (ev.owner !== this.me) this.audio.sfx('horn', 0.6); else if (!this.gameOver) { this.audio.sfx('defeat', 1); this.eliminated = true; setTimeout(() => { if (!this.gameOver) this.ui.showEnd(this, false, true); }, 1200); } break; }
+      case 'chat': this.ui.chat(ev.from, ev.text, false, ev.color); break;
       case 'gameover': break;
     }
   }

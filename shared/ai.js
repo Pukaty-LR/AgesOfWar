@@ -162,6 +162,8 @@ export class AIPlayer {
       if (target) {
         sim.command(this.pid, { t: 'amove', ids: idleArmy.map(u => u.id), x: target.x, y: target.y });
         this.wave++; this.lastAttackTick = tick;
+        const TAUNTS = { antiquity: ['Alea iacta est!', 'Legie, vpřed!', 'Dnes padnou vaše hradby.', 'Bohové jsou s námi!'], ww2: ['Vpřed, útok!', 'Tanky, jeďte!', 'Dělostřelectvo, pal!', 'Bez milosti.'], scifi: ['Aktivuji útočné jednotky.', 'Vaše základna bude asimilována.', 'Hover flotila vyráží.', 'Odpor je zbytečný.'] }[sim.eraId] || [];
+        if (TAUNTS.length && this.wave <= 4) sim.events.push({ t: 'chat', from: p.name, text: TAUNTS[(this.wave - 1) % TAUNTS.length], color: p.color });
       }
     }
     // ships raid enemy shore buildings
