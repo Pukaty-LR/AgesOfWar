@@ -79,8 +79,8 @@ export const ERAS = {
     available: true,
     year: '~50 př. n. l.',
     resources: {
-      p: { id: 'gold', name: 'Zlato', short: 'Zl', color: '#f2c94c' },
-      s: { id: 'wood', name: 'Dřevo', short: 'Dř', color: '#b7863f' },
+      p: { id: 'gold', name: 'Zlato', acc: 'zlato', short: 'Zl', color: '#f2c94c' },
+      s: { id: 'wood', name: 'Dřevo', acc: 'dřevo', short: 'Dř', color: '#b7863f' },
     },
     nodes: { mine: { name: 'Zlatý důl', amount: 12000, perTrip: 10, tripTicks: 22 }, secondary: { name: 'Les', kind: 'trees', amount: 150, perTrip: 10, chopTicks: 8, chopHits: 5 } },
     palette: { grass: [92, 140, 58], grass2: [78, 122, 50], dirt: [150, 120, 78], sand: [214, 196, 140], water: [36, 96, 150], deep: [22, 62, 112], rock: [120, 118, 110] },
@@ -132,8 +132,8 @@ export const ERAS = {
     available: true,
     year: '1939–1945',
     resources: {
-      p: { id: 'oil', name: 'Ropa', short: 'Ro', color: '#3a3a3a' },
-      s: { id: 'wood', name: 'Dřevo', short: 'Dř', color: '#b7863f' },
+      p: { id: 'oil', name: 'Ropa', acc: 'ropu', short: 'Ro', color: '#3a3a3a' },
+      s: { id: 'wood', name: 'Dřevo', acc: 'dřevo', short: 'Dř', color: '#b7863f' },
     },
     nodes: { mine: { name: 'Ropné pole', amount: 12000, perTrip: 10, tripTicks: 22 }, secondary: { name: 'Les', kind: 'trees', amount: 150, perTrip: 10, chopTicks: 8, chopHits: 5 } },
     palette: { grass: [96, 118, 64], grass2: [82, 102, 56], dirt: [122, 104, 80], sand: [186, 176, 140], water: [42, 84, 118], deep: [26, 54, 84], rock: [104, 104, 100] },

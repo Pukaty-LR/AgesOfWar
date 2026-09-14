@@ -160,10 +160,11 @@ export class UI {
       }
     } else {
       single.classList.add('hidden'); multi.classList.remove('hidden');
-      if (sig !== this.lastSig || multi.children.length !== sel.length) {
+      if (sig !== this.lastSig || multi.children.length !== sel.length + 1) {
         multi.innerHTML = '';
+        const head = document.createElement('div'); head.className = 'multi-head'; head.textContent = `${sel.length} ${sel.length < 5 ? 'jednotky' : 'jednotek'} vybráno`; multi.appendChild(head);
         for (const e of sel) { const d = document.createElement('div'); d.className = 'mi'; d.title = game.entName(e); const c = this.portrait(game, e); const cc = document.createElement('canvas'); cc.width = 44; cc.height = 44; cc.getContext('2d').drawImage(c, 0, 0, 44, 44); d.appendChild(cc); const hp = document.createElement('div'); hp.className = 'hp'; hp.style.width = (e.hp / e.m * 100) + '%'; d.appendChild(hp); d.onclick = ev => { if (ev.shiftKey) { game.selection.delete(e.i); game.ui.dirty = true; game.ui.selectionChanged = true; } else game.select([e]); }; multi.appendChild(d); }
-      } else { let i = 0; for (const e of sel) { const hp = multi.children[i++].querySelector('.hp'); if (hp) hp.style.width = (e.hp / e.m * 100) + '%'; } }
+      } else { let i = 1; for (const e of sel) { const hp = multi.children[i++]?.querySelector('.hp'); if (hp) hp.style.width = (e.hp / e.m * 100) + '%'; } }
     }
     if (sig !== this.lastSig) { this.lastSig = sig; this.buildCommandCard(game, sel); }
     else this.refreshCommandCardState(game);
@@ -190,8 +191,8 @@ export class UI {
         if (hasMil || hasWorker) btn(3, { label: 'Útok', key: 'A', icon: () => actionIcon('amove'), desc: 'Útočný pochod: útočí na vše cestou. Klik na nepřítele = útok na cíl.', act: () => { game.state.mode = 'amove'; }, active: () => game.state.mode === 'amove' });
         if (hasWorker) {
           const rp = game.eraDef.resources.p, rs = game.eraDef.resources.s;
-          btn(4, { label: 'Těžit ' + rp.name.toLowerCase(), key: 'G', icon: () => actionIcon('gather', 64, rp.color), desc: `Vybraní dělníci jdou těžit ${rp.name.toLowerCase()} z nejbližšího naleziště (${game.eraDef.nodes.mine.name.toLowerCase()}).`, act: () => game.gatherKind('mine') });
-          btn(5, { label: 'Těžit ' + rs.name.toLowerCase(), key: 'F', icon: () => actionIcon('gather', 64, rs.color), desc: `Vybraní dělníci jdou těžit ${rs.name.toLowerCase()} z nejbližšího lesa.`, act: () => game.gatherKind('tree') });
+          btn(4, { label: 'Těžit ' + (rp.acc || rp.name.toLowerCase()), key: 'G', icon: () => actionIcon('gather', 64, rp.color), desc: `Vybraní dělníci jdou těžit ${rp.acc || rp.name.toLowerCase()} z nejbližšího naleziště (${game.eraDef.nodes.mine.name.toLowerCase()}).`, act: () => game.gatherKind('mine') });
+          btn(5, { label: 'Těžit ' + (rs.acc || rs.name.toLowerCase()), key: 'F', icon: () => actionIcon('gather', 64, rs.color), desc: `Vybraní dělníci jdou těžit ${rs.acc || rs.name.toLowerCase()} z nejbližšího lesa.`, act: () => game.gatherKind('tree') });
           btn(6, { label: 'Stavět', key: 'B', icon: () => actionIcon('build'), desc: 'Otevře nabídku staveb.', act: () => { this.buildMenu = true; this.selectionChanged = true; this.dirty = true; this.lastSig = ''; } });
           btn(7, { label: 'Opravit', key: 'R', icon: () => actionIcon('repair'), desc: 'Klikni na poškozenou vlastní budovu (nebo rovnou pravým tlačítkem).', act: () => { game.state.mode = 'repair'; }, active: () => game.state.mode === 'repair' });
         }
