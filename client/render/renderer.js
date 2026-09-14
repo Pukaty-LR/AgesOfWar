@@ -278,6 +278,13 @@ export class Renderer {
       ctx.strokeStyle = e.o === g.me ? 'rgba(90,255,120,0.9)' : (g.players[e.o]?.team === g.myTeam ? 'rgba(255,230,90,0.9)' : 'rgba(255,80,80,0.9)');
       ctx.lineWidth = 1.5 * z; ctx.beginPath(); ctx.ellipse(sx, sy, r * TW / 2 * z, r * TH / 2 * z, 0, 0, Math.PI * 2); ctx.stroke();
     }
+    // hero aura rings (own team only)
+    for (const e of g.ents.values()) {
+      if (e.k !== 'u' || e.hd || g.players[e.o].team !== g.myTeam) continue;
+      const def = g.unitDef(e); if (!def || !def.aura) continue;
+      const [sx, sy] = this.worldToScreen(e.rx ?? e.x, e.ry ?? e.y); const r = def.aura.range; const pulse = 0.5 + Math.sin(this.time * 2) * 0.15;
+      ctx.strokeStyle = `rgba(255,220,120,${pulse * 0.5})`; ctx.lineWidth = 2 * z; ctx.setLineDash([6 * z, 6 * z]); ctx.beginPath(); ctx.ellipse(sx, sy, r * TW / 2 * z, r * TH / 2 * z, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    }
     // rally points of selected buildings
     for (const id of g.selection) {
       const e = g.ents.get(id); if (!e || e.k !== 'b' || !e.r || e.o !== g.me) continue;
