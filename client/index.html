@@ -19,10 +19,10 @@
     <div class="era-pick small" id="menu-eras"></div>
     <label class="field"><span>Obtížnost AI</span><select id="menu-diff"><option value="easy">Lehká</option><option value="normal" selected>Střední</option><option value="hard">Těžká</option><option value="impossible">Nemožná</option></select></label>
     <div class="menu-buttons">
-      <button id="btn-quick" class="big primary">⚔ Rychlá hra proti AI</button>
-      <button id="btn-host" class="big">🏰 Hostovat hru</button>
-      <button id="btn-join" class="big">🌍 Připojit se · seznam serverů</button>
-      <button id="btn-settings" class="big">⚙ Nastavení</button>
+      <button id="btn-quick" class="big primary">Rychlá hra proti AI</button>
+      <button id="btn-host" class="big">Hostovat hru</button>
+      <button id="btn-join" class="big">Připojit se · seznam serverů</button>
+      <button id="btn-settings" class="big">Nastavení</button>
     </div>
     <div class="conn-status" id="conn-status">Připojuji se k serveru…</div>
   </div>
@@ -102,22 +102,25 @@
   <canvas id="game"></canvas>
   <div id="hud">
     <div id="topbar">
-      <div class="res" id="res-p"><span class="ico ico-p"></span><span class="val">0</span></div>
-      <div class="res" id="res-s"><span class="ico ico-s"></span><span class="val">0</span></div>
-      <div class="res" id="res-pop"><span class="ico ico-pop"></span><span class="val">0/0</span></div>
+      <div class="res" id="res-p"><span class="ico"></span><span class="val">0</span><span class="lbl"></span></div>
+      <div class="res" id="res-s"><span class="ico"></span><span class="val">0</span><span class="lbl"></span></div>
+      <div class="res" id="res-pop"><span class="ico"></span><span class="val">0/0</span><span class="lbl">Populace</span></div>
       <div class="spacer"></div>
       <div id="game-clock">00:00</div>
       <div id="game-info"></div>
-      <button id="btn-menu-ingame">☰</button>
+      <button id="btn-menu-ingame">MENU</button>
     </div>
     <div id="alerts"></div>
     <div id="chatlog"></div>
     <input id="chat-input" class="hidden" placeholder="Zpráva… (Enter odešle, Esc zruší)" maxlength="200">
     <div id="tooltip" class="hidden"></div>
     <div id="bottombar">
-      <div id="minimap-wrap"><canvas id="minimap" width="236" height="236"></canvas><div id="minimap-btns"><button id="btn-idle-worker" title="Nečinný dělník (.)">👷<span id="idle-count" class="badge hidden">0</span></button><button id="btn-army" title="Vybrat armádu (F1)">⚔</button></div></div>
-      <div id="selpanel"><div id="sel-empty">Nic není vybráno</div><div id="sel-single" class="hidden"><canvas id="portrait" width="96" height="96"></canvas><div id="sel-info"><div id="sel-name"></div><div id="sel-owner"></div><div class="hpbar"><div id="sel-hp"></div><span id="sel-hp-text"></span></div><div id="sel-stats"></div><div id="sel-queue"></div></div></div><div id="sel-multi" class="hidden"></div></div>
-      <div id="cmdcard"></div>
+      <div id="minimap-wrap" class="inset"><canvas id="minimap" width="236" height="236"></canvas><div id="minimap-btns">
+        <button id="btn-idle-worker" title="Nečinný dělník (.)"><svg viewBox="0 0 24 24"><path d="M6 21v-4a6 6 0 0 1 12 0v4"/><circle cx="12" cy="8" r="4"/><path d="M8 5.5h8"/></svg><span id="idle-count" class="badge hidden">0</span></button>
+        <button id="btn-army" title="Vybrat armádu (F1)"><svg viewBox="0 0 24 24"><path d="M4 20l6-6M20 20l-6-6M4 4l9 9M20 4l-9 9M13 4h7v7M11 4H4v7"/></svg></button>
+      </div></div>
+      <div id="selpanel" class="inset"><div id="sel-empty">Nic není vybráno</div><div id="sel-single" class="hidden"><div class="portrait-frame"><canvas id="portrait" width="96" height="96"></canvas></div><div id="sel-info"><div id="sel-name"></div><div id="sel-owner"></div><div class="hpbar"><div id="sel-hp"></div><span id="sel-hp-text"></span></div><div id="sel-stats"></div><div id="sel-queue"></div></div></div><div id="sel-multi" class="hidden"></div></div>
+      <div id="cmdcard" class="inset"></div>
     </div>
     <div id="placement-hint" class="hidden"></div>
   </div>

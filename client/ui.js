@@ -3,6 +3,24 @@ import { TEAM_COLORS, T, ERAS } from '../shared/data.js';
 import { unitPortrait, buildingPortrait, actionIcon, TW, TH } from './render/sprites.js';
 
 const $ = id => document.getElementById(id);
+const svgUri = s => `url("data:image/svg+xml,${encodeURIComponent(s)}")`;
+const RES_SVG = {
+  gold: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><radialGradient id="g" cx="35%" cy="35%"><stop offset="0" stop-color="#fff3b8"/><stop offset=".5" stop-color="#e8b93a"/><stop offset="1" stop-color="#8a5f0e"/></radialGradient></defs><circle cx="12" cy="12" r="10" fill="url(#g)" stroke="#3a2708" stroke-width="1.2"/><circle cx="12" cy="12" r="6.5" fill="none" stroke="#7a5410" stroke-width="1"/><path d="M12 8v8M9.5 10.5c0-1 1-1.6 2.5-1.6s2.5.6 2.5 1.6-1 1.4-2.5 1.6-2.5.6-2.5 1.6 1 1.6 2.5 1.6 2.5-.6 2.5-1.6" fill="none" stroke="#5a3d0a" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  wood: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 8h13a3 3 0 0 1 0 6H4z" fill="#a7743a" stroke="#3a2408" stroke-width="1.2"/><ellipse cx="4" cy="11" rx="2.2" ry="3" fill="#e0b67a" stroke="#3a2408" stroke-width="1.2"/><ellipse cx="4" cy="11" rx="1" ry="1.4" fill="none" stroke="#7a4e1c" stroke-width=".8"/><path d="M7 16h12a3 3 0 0 1 0 6H7z" fill="#8f5f2b" stroke="#3a2408" stroke-width="1.2"/><ellipse cx="7" cy="19" rx="2.2" ry="3" fill="#e0b67a" stroke="#3a2408" stroke-width="1.2"/><path d="M8 9.5h8M11 17.5h7" stroke="#6a4218" stroke-width=".8"/></svg>',
+  oil: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><radialGradient id="o" cx="35%" cy="30%"><stop offset="0" stop-color="#8a8ea8"/><stop offset=".6" stop-color="#2a2a34"/><stop offset="1" stop-color="#0c0c12"/></radialGradient></defs><path d="M12 2c3 5 7 8.5 7 13a7 7 0 0 1-14 0c0-4.5 4-8 7-13z" fill="url(#o)" stroke="#000" stroke-width="1.2"/><path d="M8.5 14.5a3.5 4 0 0 0 2.5 4" fill="none" stroke="#b0b4c8" stroke-width="1.2" stroke-linecap="round"/></svg>',
+  pop: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="9" cy="7" r="3.5" fill="#f0c8a0" stroke="#3a2408" stroke-width="1.2"/><path d="M3 21v-3.5a6 6 0 0 1 12 0V21z" fill="#c9a227" stroke="#3a2408" stroke-width="1.2"/><circle cx="17" cy="8" r="2.8" fill="#f0c8a0" stroke="#3a2408" stroke-width="1"/><path d="M14.5 21v-3a4.5 4.5 0 0 1 8 0v3z" fill="#a17a1a" stroke="#3a2408" stroke-width="1"/></svg>',
+};
+const resIcon = id => svgUri(RES_SVG[id] || RES_SVG.gold);
+const STAT_SVG = {
+  attack: '<svg viewBox="0 0 24 24"><path d="M4 20l11-11M14 6l4 4M5 15l4 4"/></svg>',
+  armor: '<svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg>',
+  range: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>',
+  speed: '<svg viewBox="0 0 24 24"><path d="M3 12h10M3 7h14M3 17h7M15 4l6 8-6 8"/></svg>',
+  pop: '<svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="3.5"/><path d="M5 21v-3a7 7 0 0 1 14 0v3"/></svg>',
+  build: '<svg viewBox="0 0 24 24"><path d="M4 20V10l8-6 8 6v10M10 20v-6h4v6"/></svg>',
+  carry: '<svg viewBox="0 0 24 24"><path d="M5 9h14l-1.5 11h-11z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>',
+  left: '<svg viewBox="0 0 24 24"><path d="M12 3v18M5 8l7-5 7 5M7 14l5 7 5-7"/></svg>',
+};
 
 export class UI {
   constructor(app) {
@@ -26,9 +44,11 @@ export class UI {
     this.buildMiniTerrain(game);
     const era = game.eraDef; const p = game.players[game.me];
     $('game-info').textContent = `${era.name} · ${game.tech.faction.name} · ${p.name}`;
+    document.body.className = 'era-' + game.era;
     $('res-p').title = era.resources.p.name; $('res-s').title = era.resources.s.name;
-    $('res-p').querySelector('.ico').style.background = `radial-gradient(circle at 35% 35%, #fff, ${era.resources.p.color} 45%, #000)`;
-    $('res-s').querySelector('.ico').style.background = `radial-gradient(circle at 35% 35%, #fff, ${era.resources.s.color} 50%, #000)`;
+    $('res-p').querySelector('.ico').style.backgroundImage = resIcon(era.resources.p.id); $('res-p').querySelector('.lbl').textContent = era.resources.p.name;
+    $('res-s').querySelector('.ico').style.backgroundImage = resIcon(era.resources.s.id); $('res-s').querySelector('.lbl').textContent = era.resources.s.name;
+    $('res-pop').querySelector('.ico').style.backgroundImage = resIcon('pop');
     this.placementHint(null);
   }
   onPlayers(game) { this.dirty = true; }
@@ -130,10 +150,10 @@ export class UI {
       if (e.k === 'u' || e.k === 'b') { hpWrap.style.display = ''; const f = e.hp / e.m; hpEl.style.width = (f * 100) + '%'; hpEl.style.background = f > 0.6 ? 'linear-gradient(#7fe07a,#2f9c2c)' : f > 0.3 ? 'linear-gradient(#f0d060,#c09a20)' : 'linear-gradient(#f07060,#b03020)'; hpT.textContent = `${e.hp} / ${e.m}`; }
       else { hpWrap.style.display = 'none'; }
       const st = $('sel-stats'); st.innerHTML = '';
-      const stat = (l, v) => { const s = document.createElement('span'); s.innerHTML = `${l} <b>${v}</b>`; st.appendChild(s); };
-      if (e.k === 'u') { const d = game.unitDef(e); stat('Útok', d.dmg); stat('Pancíř', d.armor); stat('Dosah', d.range >= 1 ? d.range.toFixed(1) : 'na blízko'); stat('Rychlost', d.speed.toFixed(1)); if (e.c) stat('Nese', e.c === 'p' ? game.eraDef.resources.p.name : game.eraDef.resources.s.name); }
-      else if (e.k === 'b') { const d = game.buildingDef(e); stat('Pancíř', d.armor); if (d.attack) { stat('Útok', d.attack.dmg); stat('Dosah', d.attack.range); } if (d.popCap) stat('Populace', '+' + d.popCap); if (!e.bl) stat('Stavba', Math.round(e.pr * 100) + ' %'); }
-      else if (e.k === 't' || e.k === 'm') stat('Zbývá', e.a);
+      const stat = (icon, l, v) => { const s = document.createElement('span'); s.title = l; s.innerHTML = `${STAT_SVG[icon] || ''}${l} <b>${v}</b>`; st.appendChild(s); };
+      if (e.k === 'u') { const d = game.unitDef(e); stat('attack', 'Útok', d.dmg); stat('armor', 'Pancíř', d.armor); stat('range', 'Dosah', d.range >= 1 ? d.range.toFixed(1) : 'blízko'); stat('speed', 'Rychlost', d.speed.toFixed(1)); if (e.c) stat('carry', 'Nese', e.c === 'p' ? game.eraDef.resources.p.name : game.eraDef.resources.s.name); }
+      else if (e.k === 'b') { const d = game.buildingDef(e); stat('armor', 'Pancíř', d.armor); if (d.attack) { stat('attack', 'Útok', d.attack.dmg); stat('range', 'Dosah', d.attack.range); } if (d.popCap) stat('pop', 'Populace', '+' + d.popCap); if (!e.bl) stat('build', 'Stavba', Math.round(e.pr * 100) + ' %'); }
+      else if (e.k === 't' || e.k === 'm') stat('left', 'Zbývá', e.a);
       const q = $('sel-queue'); q.innerHTML = '';
       if (e.k === 'b' && e.o === game.me && e.q && e.q.length) {
         e.q.forEach((qi, idx) => { const d = document.createElement('div'); d.className = 'qi'; d.title = `${game.tech.units[qi.t].name} – klik zruší`; const c = unitPortrait(game.tech.units[qi.t].sprite, game.players[game.me].color, 44, { faction: game.players[game.me].faction }); d.appendChild(c); const pr = document.createElement('div'); pr.className = 'prog'; pr.style.width = (idx === 0 ? qi.p * 100 : 0) + '%'; d.appendChild(pr); d.onclick = () => game.cancelTrain(e.i, idx); q.appendChild(d); });
@@ -215,7 +235,7 @@ export class UI {
     const t = Math.floor(game.gameTime()); $('end-sub').textContent = `${win ? 'Nepřítel byl rozdrcen.' : (eliminatedOnly ? 'Byli jsme vyřazeni, ostatní bojují dál.' : 'Naše říše padla.')} Délka hry ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} · ${game.eraDef.name}`;
     const winner = game.gameOver ? game.gameOver.winnerTeam : -2;
     const tbl = $('end-stats'); tbl.innerHTML = '<tr><th>Hráč</th><th>Frakce</th><th>Tým</th><th>Jednotky</th><th>Ztráty</th><th>Zabito</th><th>Budovy</th><th>Zničeno</th><th>Suroviny</th></tr>';
-    for (const p of game.players) { const tr = document.createElement('tr'); const s = p.stats; const fname = ERAS[game.era].factions.find(f => f.id === p.faction)?.name || p.faction; tr.innerHTML = `<td style="color:${TEAM_COLORS[p.color].hex}">${p.name}${p.isAI ? ' (AI)' : ''}${p.team === winner ? ' 🏆' : ''}</td><td>${fname}</td><td>${p.team + 1}</td><td>${s.unitsBuilt}</td><td>${s.unitsLost}</td><td>${s.unitsKilled}</td><td>${s.buildingsBuilt}</td><td>${s.buildingsRazed}</td><td>${s.gatheredP + s.gatheredS}</td>`; tbl.appendChild(tr); }
+    for (const p of game.players) { const tr = document.createElement('tr'); const s = p.stats; const fname = ERAS[game.era].factions.find(f => f.id === p.faction)?.name || p.faction; tr.innerHTML = `<td style="color:${TEAM_COLORS[p.color].hex}">${p.name}${p.isAI ? ' (AI)' : ''}${p.team === winner ? '<span class="winner">VÍTĚZ</span>' : ''}</td><td>${fname}</td><td>${p.team + 1}</td><td>${s.unitsBuilt}</td><td>${s.unitsLost}</td><td>${s.unitsKilled}</td><td>${s.buildingsBuilt}</td><td>${s.buildingsRazed}</td><td>${s.gatheredP + s.gatheredS}</td>`; tbl.appendChild(tr); }
     $('endscreen').classList.remove('hidden');
   }
 }
