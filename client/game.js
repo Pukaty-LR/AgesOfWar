@@ -329,6 +329,7 @@ export class Game {
       if (e.key === ' ') { if (this.lastAlert) this.centerOn(this.lastAlert.x, this.lastAlert.y); return; }
       if (e.key === 'F1') { e.preventDefault(); this.selectArmy(); return; }
       if (e.key === 'Tab') { e.preventDefault(); this.cycleSubgroup(); return; }
+      if (/^F[5-8]$/.test(e.key)) { e.preventDefault(); const k = e.key; this.bookmarks = this.bookmarks || {}; if (e.ctrlKey) { this.bookmarks[k] = { x: this.renderer.cam.x, y: this.renderer.cam.y, z: this.renderer.cam.zoom }; this.ui.alert(`Pozice kamery uložena (${k})`, false); } else if (this.bookmarks[k]) { const b = this.bookmarks[k]; this.renderer.cam.zoom = b.z; this.centerOn(b.x, b.y); } return; }
       if (e.key === 'Backspace') { e.preventDefault(); const halls = [...this.ents.values()].filter(o => o.k === 'b' && o.o === this.me && o.t === 'hall'); if (halls.length) { this.hallIdx = ((this.hallIdx || 0) + 1) % halls.length; const h = halls[this.hallIdx]; this.centerOn(h.x, h.y); this.select([h]); } return; }
       if (k === '.') { this.selectIdleWorker(); return; }
       if (/^[0-9]$/.test(k)) {
