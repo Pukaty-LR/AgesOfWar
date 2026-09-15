@@ -37,7 +37,7 @@ export class Sim {
         id: idx, name: p.name, faction: tech.faction.id, team: p.team ?? idx, color: p.color ?? idx, isAI: !!p.isAI, neutral: !!p.neutral,
         tech, res: { p: START.p, s: START.s }, pop: 0, popCap: 0, alive: true, research: Object.fromEntries(Object.keys(RESEARCH).map(k => [k, 0])),
         stats: { unitsBuilt: 0, unitsLost: 0, unitsKilled: 0, buildingsBuilt: 0, buildingsLost: 0, buildingsRazed: 0, gatheredP: 0, gatheredS: 0 },
-        lastAlert: -1000, spawn: this.map.spawns[idx],
+        lastAlert: -1000, spawn: this.map.spawns[idx], hist: [],
       };
     });
     this.cellSize = 2;
@@ -550,6 +550,7 @@ export class Sim {
       else if (e.kind === 'proj') this.stepProj(e);
     }
     if (this.tick % 10 === 5) this.updateExplored();
+    if (this.tick % 600 === 0) for (const p of this.players) if (!p.neutral) p.hist.push(this.scoreOf(p)); // military + economy strength every 30 s (end-screen graph)
     if (this.tick % 20 === 0) this.checkVictory();
   }
   /** Per-team explored map (tile level), kept on the server so fog memory survives reconnects and saves. */
@@ -1129,7 +1130,7 @@ export class Sim {
     const ents = [];
     for (const e of this.ents.values()) { const c = { ...e }; delete c._last; delete c.dirty; delete c.path; ents.push(c); }
     return { v: 1, seed: this.seed, size: this.w, eraId: this.eraId, mapStyle: this.mapStyle, startRes: this.startRes, tick: this.tick, nextId: this.nextId,
-      players: this.players.map(p => ({ name: p.name, faction: p.faction, team: p.team, color: p.color, isAI: p.isAI, neutral: p.neutral, res: p.res, alive: p.alive, stats: p.stats, research: p.research, lastAlert: p.lastAlert })),
+      players: this.players.map(p => ({ name: p.name, faction: p.faction, team: p.team, color: p.color, isAI: p.isAI, neutral: p.neutral, res: p.res, alive: p.alive, stats: p.stats, research: p.research, lastAlert: p.lastAlert, hist: p.hist })),
       ents, gameOver: this.gameOver, explored: Object.fromEntries(Object.entries(this.explored || {}).map(([t, a]) => [t, Buffer.from(a).toString('base64')])), ...extra };
   }
   static loadState(data) {
@@ -1140,7 +1141,7 @@ export class Sim {
     for (const e of data.ents) { e.dirty = true; e.path = null; sim.ents.set(e.id, e); if (e.kind === 'building' || e.kind === 'tree' || e.kind === 'mine') sim.block(e.tx, e.ty, e.w, e.h, e.id); }
     // gates need a second pass so team passability sees the built gate entities
     for (const e of sim.ents.values()) if (e.kind === 'building' && e.type === 'gate') sim.block(e.tx, e.ty, 1, 1, e.id);
-    data.players.forEach((p, i) => { const q = sim.players[i]; q.res = p.res; q.alive = p.alive; q.stats = p.stats; q.research = p.research || q.research; q.lastAlert = p.lastAlert || -1000; });
+    data.players.forEach((p, i) => { const q = sim.players[i]; q.res = p.res; q.alive = p.alive; q.stats = p.stats; q.research = p.research || q.research; q.lastAlert = p.lastAlert || -1000; q.hist = p.hist || []; });
     sim.tick = data.tick; sim.nextId = data.nextId; sim.gameOver = data.gameOver || null;
     if (data.explored) { sim.explored = {}; for (const [t, b] of Object.entries(data.explored)) sim.explored[t] = new Uint8Array(Buffer.from(b, 'base64')); }
     for (const p of sim.players) sim.recountPop(p);
@@ -1158,8 +1159,10 @@ export class Sim {
     }
     return null;
   }
+  /** army and building value of a player (unit and building costs currently on the map) */
+  scoreOf(p) { let s = 0; for (const e of this.ents.values()) { if (e.dead || e.owner !== p.id) continue; if (e.kind === 'unit') { const d = p.tech.units[e.type]; if (d && !d.creep) s += d.cost.p + d.cost.s; } else if (e.kind === 'building' && e.built) { const d = p.tech.buildings[e.type]; if (d) s += d.cost.p + d.cost.s; } } return Math.round(s); }
   serializePlayer(p) {
-    return { id: p.id, name: p.name, faction: p.faction, team: p.team, color: p.color, isAI: p.isAI, res: { p: Math.floor(p.res.p), s: Math.floor(p.res.s) }, pop: p.pop, popCap: p.popCap, alive: p.alive, stats: p.stats, research: p.research, neutral: !!p.neutral };
+    return { id: p.id, name: p.name, faction: p.faction, team: p.team, color: p.color, isAI: p.isAI, res: { p: Math.floor(p.res.p), s: Math.floor(p.res.s) }, pop: p.pop, popCap: p.popCap, alive: p.alive, stats: p.stats, research: p.research, neutral: !!p.neutral, hist: p.hist };
   }
   fullSnapshot() {
     return { t: 'full', tick: this.tick, players: this.players.map(p => this.serializePlayer(p)), ents: Array.from(this.ents.values()).map(e => this.serializeEntity(e)), gameOver: this.gameOver };

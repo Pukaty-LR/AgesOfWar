@@ -304,6 +304,18 @@ export class UI {
     $('btn-end-again').classList.toggle('hidden', !(this.app.lastSetup && this.app.lastSetup.sp));
     const tbl = $('end-stats'); tbl.innerHTML = t('<tr><th>Hráč</th><th>Frakce</th><th>Tým</th><th>Jednotky</th><th>Ztráty</th><th>Zabito</th><th>Budovy</th><th>Zničeno</th><th>Suroviny</th></tr>');
     for (const p of game.players) { if (p.neutral) continue; const tr = document.createElement('tr'); const s = p.stats; const fname = ERAS[game.era].factions.find(f => f.id === p.faction)?.name || p.faction; tr.innerHTML = `<td style="color:${TEAM_COLORS[p.color].hex}">${p.name}${p.isAI ? ' (AI)' : ''}${p.team === winner ? t('<span class="winner">VÍTĚZ</span>') : ''}</td><td>${fname}</td><td>${p.team + 1}</td><td>${s.unitsBuilt}</td><td>${s.unitsLost}</td><td>${s.unitsKilled}</td><td>${s.buildingsBuilt}</td><td>${s.buildingsRazed}</td><td>${s.gatheredP + s.gatheredS}</td>`; tbl.appendChild(tr); }
+    this.drawEndGraph(game);
     $('endscreen').classList.remove('hidden');
+  }
+  /** Age of Empires style timeline: army + building value per player over the match */
+  drawEndGraph(game) {
+    const cv = $('end-graph'); if (!cv) return; const ctx = cv.getContext('2d'); const W = cv.width, H = cv.height; ctx.clearRect(0, 0, W, H);
+    const ps = game.players.filter(p => !p.neutral && p.hist && p.hist.length > 1); if (!ps.length) { cv.style.display = 'none'; return; } cv.style.display = 'block';
+    const n = Math.max(...ps.map(p => p.hist.length)); const mx = Math.max(1, ...ps.map(p => Math.max(...p.hist)));
+    const L = 44, R = 12, T = 10, B = 22; const gw = W - L - R, gh = H - T - B;
+    ctx.strokeStyle = 'rgba(255,235,190,0.15)'; ctx.lineWidth = 1; for (let i = 0; i <= 4; i++) { const y = T + gh * i / 4; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(W - R, y); ctx.stroke(); }
+    ctx.fillStyle = '#cdbb95'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right'; ctx.fillText(String(mx), L - 4, T + 10); ctx.fillText('0', L - 4, T + gh); ctx.textAlign = 'center'; for (let m = 0; m < n; m += Math.max(1, Math.round(n / 8))) ctx.fillText(`${Math.round(m / 2)} min`, L + gw * m / Math.max(1, n - 1), H - 6);
+    for (const p of ps) { ctx.strokeStyle = TEAM_COLORS[p.color].hex; ctx.lineWidth = 2.2; ctx.beginPath(); p.hist.forEach((v, i) => { const x = L + gw * i / Math.max(1, n - 1), y = T + gh - gh * v / mx; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }); ctx.stroke(); }
+    ctx.textAlign = 'left'; let lx = L + 4; for (const p of ps) { ctx.fillStyle = TEAM_COLORS[p.color].hex; ctx.fillRect(lx, T + 2, 10, 10); ctx.fillStyle = '#eadfc4'; ctx.fillText(p.name, lx + 14, T + 11); lx += 14 + ctx.measureText(p.name).width + 16; }
   }
 }
