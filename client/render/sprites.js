@@ -211,8 +211,12 @@ function tank(ctx, o) {
   ctx.fillStyle = 'rgba(120,120,115,0.9)';
   for (const s of [-0.33, 0.33]) for (let k = 0; k < 6; k++) { const t = -0.5 + ((k + phase) % 6) / 6 * 1.0; const [px, py] = iso(Math.cos(a) * t - Math.sin(a) * s, Math.sin(a) * t + Math.cos(a) * s, 5.5); ctx.fillRect(px - 1.2, py - 0.8, 2.4, 1.6); }
   prism(ctx, hull, 3, 9, hullC, hullD);
+  // side skirts, fuel drums, commander hatch
+  for (const s of [-1, 1]) { const sk = rot(isoRect(-0.45, 0.3 * s - 0.03, 0.9, 0.06), a); prism(ctx, sk, 7, 3, shade(hullC, 0.85), hullD); }
+  const [dx, dy] = iso(-Math.cos(a) * 0.4, -Math.sin(a) * 0.4, 12); rrect(ctx, dx - 3, dy - 6, 6, 6, 1.5, rgb(shade(hullC, 0.75)), OUT, 0.5);
   const tur = rot(isoRect(-0.22, -0.2, 0.44, 0.4), a);
   prism(ctx, tur, 12, 7, shade(hullC, 1.1), hullD);
+  const [hx, hy] = iso(-Math.cos(a) * 0.08 - Math.sin(a) * 0.08, -Math.sin(a) * 0.08 + Math.cos(a) * 0.08, 19); ellipse(ctx, hx, hy, 3, 1.6, rgb(shade(hullC, 1.25)), OUT, 0.5);
   // barrel
   const recoil = anim === 'attack' && frame % 4 === 1 ? 0.08 : 0;
   const [bx0, by0] = iso(Math.cos(a) * (0.1 - recoil), Math.sin(a) * (0.1 - recoil), 16), [bx1, by1] = iso(Math.cos(a) * (0.75 - recoil), Math.sin(a) * (0.75 - recoil), 16);
