@@ -127,4 +127,5 @@ export default {
   'Hover flotila vyráží.': 'Flota poduszkowa wyrusza.',
   'Odpor je zbytečný.': 'Opór jest daremny.',
   'Žádný důl v dosahu – dělníci nemají co těžit.': 'Brak kopalni w zasięgu – robotnicy nie mają co zbierać.', 'Žádné stromy v dosahu – dělníci nemají co těžit.': 'Brak drzew w zasięgu – robotnicy nie mają co zbierać.',
+  'Mechaniky': 'Mechaniki',
 };
