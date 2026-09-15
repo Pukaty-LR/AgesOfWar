@@ -30,6 +30,7 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - **Ovládání jako ve Warcraftu 3**: skupina se přesouvá ve formaci (melee vpředu, střelci a obléhání vzadu), hlídkování (P), Tab přepíná podskupinu ve smíšeném výběru, Ctrl+klik vybere všechny stejného typu, Alt+klik označí místo spoluhráčům na minimapě.
 - **Hrdina** má kromě aury i aktivní schopnost (C): Válečný pokřik / Rozkaz k útoku / Přetížení zbraní – 12 s +35 % útok a +2 pancíř pro spojence v okolí, přebití 60 s.
 - Hrdina sbírá **zkušenosti** za zabité jednotky a budovy (úrovně 1–5: víc HP, útoku, širší aura). Neutrální **hlídači** (bandité / partyzáni / xeno šelmy) střeží vzdálené doly jako ve Warcraftu 3 – cenný zdroj zkušeností.
+- **Výsadkové lodě** (Nákladní loď / Výsadkový člun / Hover transportér) z přístavu převezou až 8 pozemních jednotek: pravým klikem na loď se nalodí, klávesa U a klik na břeh je vylodí – jak v Age of Empires, ideální pro Ostrovy.
 - Sci-fi **hover tanky** jsou vznášedla a projedou i mělkou vodou. Přehled hráčů se skóre je na F3, týmový chat začíná `/t `.
 - **Léčitelé** (Léčitel / Zdravotník / Opravný dron) se cvičí v radnici od úrovně 2 a léčí zraněné spojence v okolí.
 - Hru proti AI lze **uložit** (Esc → Uložit hru) a později **načíst** z hlavního menu; ukládá se celý stav včetně AI (soubory ve složce `saves/`).
