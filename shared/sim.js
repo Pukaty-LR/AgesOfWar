@@ -123,11 +123,11 @@ export class Sim {
   initWorld() {
     const m = this.map;
     for (const t of m.trees) {
-      const e = this.add({ kind: 'tree', tx: t.tx, ty: t.ty, w: 1, h: 1, x: t.tx + 0.5, y: t.ty + 0.5, amount: this.era.nodes.secondary.amount, v: t.v, hp: 1, maxHp: 1 });
+      const e = this.add({ kind: 'tree', tx: t.tx, ty: t.ty, w: 1, h: 1, x: t.tx + 0.5, y: t.ty + 0.5, amount: t.endless ? Infinity : this.era.nodes.secondary.amount, v: t.v, hp: 1, maxHp: 1, endless: !!t.endless });
       this.block(t.tx, t.ty, 1, 1, e.id);
     }
     for (const mn of m.mines) {
-      const e = this.add({ kind: 'mine', tx: mn.tx - 1, ty: mn.ty - 1, w: 2, h: 2, x: mn.tx, y: mn.ty, amount: mn.amount, hp: 1, maxHp: 1 });
+      const e = this.add({ kind: 'mine', tx: mn.tx - 1, ty: mn.ty - 1, w: 2, h: 2, x: mn.tx, y: mn.ty, amount: mn.endless ? Infinity : mn.amount, hp: 1, maxHp: 1, endless: !!mn.endless });
       this.block(e.tx, e.ty, 2, 2, e.id);
     }
     for (const p of this.players) {
@@ -147,7 +147,7 @@ export class Sim {
       for (const mn of m.mines) {
         const far = m.spawns.every(s => Math.hypot(s.x - mn.tx, s.y - mn.ty) > 14);
         if (!far) continue;
-        const n = 3 + Math.floor(this.rng() * 2);
+        const n = (mn.endless ? 5 : 3) + Math.floor(this.rng() * 2);
         for (let i = 0; i < n; i++) {
           const a = this.rng() * Math.PI * 2, d = 2.6 + this.rng() * 1.2;
           const x = mn.tx + Math.cos(a) * d, y = mn.ty + Math.sin(a) * d;
@@ -294,8 +294,8 @@ export class Sim {
         for (const b of units.filter(e => e.kind === 'building')) this.setRally(b, c.x, c.y, target ? target.id : 0);
         break;
       }
-      case 'move': { const f = this.formation(myUnits, c.x, c.y); myUnits.forEach((u, i) => this.setOrder(u, { type: 'move', x: f[i].x, y: f[i].y }, c.queue)); break; }
-      case 'amove': { const f = this.formation(myUnits, c.x, c.y); myUnits.forEach((u, i) => this.setOrder(u, { type: 'amove', x: f[i].x, y: f[i].y }, c.queue)); break; }
+      case 'move': { const f = this.formation(myUnits, c.x, c.y); const cap = this.groupSpeed(myUnits); myUnits.forEach((u, i) => this.setOrder(u, { type: 'move', x: f[i].x, y: f[i].y, cap }, c.queue)); break; }
+      case 'amove': { const f = this.formation(myUnits, c.x, c.y); const cap = this.groupSpeed(myUnits); myUnits.forEach((u, i) => this.setOrder(u, { type: 'amove', x: f[i].x, y: f[i].y, cap }, c.queue)); break; }
       case 'patrol': { const f = this.formation(myUnits, c.x, c.y); myUnits.forEach((u, i) => { if (u.role === 'worker' || u.hidden) return; this.setOrder(u, { type: 'patrol', x: f[i].x, y: f[i].y, x0: u.x, y0: u.y }, c.queue); }); break; }
       case 'attack': { const t = this.ents.get(c.targetId); if (!t || t.dead || !this.isEnemy({ owner: pid }, t)) break; for (const u of myUnits) this.setOrder(u, { type: 'attack', targetId: t.id }, c.queue); break; }
       case 'stop': for (const u of myUnits) { u.queue = []; this.setOrder(u, { type: 'idle' }); } break;
@@ -518,6 +518,8 @@ export class Sim {
     if (order.type === 'idle' || order.type === 'hold') u.anim = 'idle';
     if (order.type === 'move' || order.type === 'amove') u.home = null;
   }
+  /** slowest land unit of a group, so a mixed army walks together (undefined for single units / all-same speed) */
+  groupSpeed(units) { const land = units.filter(u => u.domain !== 'sea' && !u.hidden); if (land.length < 2) return undefined; let mn = Infinity, mx = 0; for (const u of land) { const s = this.players[u.owner].tech.units[u.type].speed; mn = Math.min(mn, s); mx = Math.max(mx, s); } return mx - mn > 0.05 ? mn : undefined; }
   nextOrder(u) {
     if (u.queue.length) { const o = u.queue.shift(); u.order = o; u.path = null; u.engage = 0; u.stuck = 0; u.dirty = true; }
     else if (u.resume && u.order.type === 'build') { const r = u.resume; u.resume = null; const node = this.ents.get(r.targetId); u.order = node && !node.dead ? { ...r } : { type: 'idle' }; if (u.order.type === 'gather') { u.order.kind = node.kind; } u.path = null; u.dirty = true; }
@@ -576,6 +578,12 @@ export class Sim {
     if (u.cooldown > 0) u.cooldown -= DT;
     const o = u.order;
     let moved = false;
+    if (o.type === 'idle' && (this.tick + u.id) % 20 === 0) {
+      if (u.role === 'worker' && !u.hidden) { const r = this.nextRepair(u, 10); if (r) { u.order = { type: 'build', targetId: r.id }; u.path = null; u.dirty = true; return; } }
+      if (def.heal) { let best = null, bf = 0.9; this.unitsNear(u.x, u.y, 14, e => { if (e === u || e.dead || e.owner === undefined || this.players[e.owner].team !== p.team) return; const f = e.hp / e.maxHp; if (f < bf) { bf = f; best = e; } }); if (best && Math.hypot(best.x - u.x, best.y - u.y) > def.heal.range * 0.8) { u.order = { type: 'move', x: best.x, y: best.y, thenIdle: true }; u.path = null; u.dirty = true; return; } }
+    }
+    // stuck inside a footprint (a building was raised around it): step to the nearest free tile
+    if ((this.tick + u.id) % 10 === 0 && !u.hidden && !u.inside) { const pass = this.passFor(u.domain, this.teamOf(u)); if (!pass[(u.y | 0) * this.w + (u.x | 0)]) { const t = nearestTile(pass, this.w, this.h, u.x | 0, u.y | 0, 6); if (t) { u.x = t.x + 0.5; u.y = t.y + 0.5; u.path = null; u.dirty = true; } } }
     switch (o.type) {
       case 'idle':
       case 'hold': {
@@ -616,7 +624,9 @@ export class Sim {
       }
       case 'attack': {
         const t = this.ents.get(o.targetId);
-        if (!t || t.dead || t.hp <= 0) { this.nextOrder(u); break; }
+        if (!t || t.dead || t.hp <= 0) { const n = def.dmg > 0 && u.role !== 'worker' ? this.nearestEnemy(u, 15, true) : null; if (n && !u.queue.length) { o.targetId = n.id; u.path = null; break; } this.nextOrder(u); break; }
+        // an armed enemy unit that comes within reach takes priority over a building
+        if (t.kind === 'building' && (this.tick + u.id) % 10 === 0) { const n = this.nearestEnemy(u, Math.max(def.sight, def.range + 1), false); if (n && n.kind === 'unit' && this.players[n.owner].tech.units[n.type].dmg > 0) { o.targetId = n.id; o.back = t.id; u.path = null; break; } }
         moved = this.attackTarget(u, def, t, true);
         break;
       }
@@ -724,7 +734,7 @@ export class Sim {
     }
     const wp = u.path[0];
     const dx = wp.x - u.x, dy = wp.y - u.y, dist = Math.hypot(dx, dy);
-    const stepLen = u.speed * DT;
+    const stepLen = (u.order && u.order.cap && (u.order.type === 'move' || u.order.type === 'amove') && !u.engage ? Math.min(u.speed, u.order.cap) : u.speed) * DT;
     if (dist <= stepLen + 0.02) {
       u.x = wp.x; u.y = wp.y; u.path.shift();
       if (!u.path.length) return false;
@@ -822,6 +832,8 @@ export class Sim {
 
   dealDamage(t, dmg, bonus, attackerOwner, attackerId, attackerRole) {
     if (t.dead || t.hp <= 0 || t.owner === undefined) return;
+    // N15: nearby idle allies join the fight instead of waiting until the enemy walks into their own range
+    if (attackerId && (this.tick + t.id) % 10 === 0) { const atk = this.ents.get(attackerId); if (atk && !atk.dead) { const team = this.players[t.owner].team; this.unitsNear(t.x, t.y, 9, e => { if (e.dead || e.owner === undefined || this.players[e.owner].team !== team || e.engage || e.role === 'worker' || e.hidden) return; const d = this.players[e.owner].tech.units[e.type]; if (!d || d.dmg <= 0 || !(e.order.type === 'idle')) return; e.engage = atk.id; e.path = null; if (!e.home) e.home = { x: e.x, y: e.y }; }); } }
     const p = this.players[t.owner];
     let armor = 0, mult = 1;
     if (t.kind === 'unit') { const d = p.tech.units[t.type]; armor = this.unitArmor(p, d) + this.buffArmor(t); mult = bonus[t.role] || 1; }
@@ -907,7 +919,7 @@ export class Sim {
     const nodes = this.era.nodes;
     let node = this.ents.get(o.targetId);
     if (o.phase !== 'return' && (!node || node.dead || node.amount <= 0)) {
-      const alt = this.nearestNode(u, o.kind || (node ? node.kind : 'tree'), 12);
+      const alt = this.nearestNode(u, o.kind || (node ? node.kind : 'tree'), 60);
       if (o.phase === 'inside' && u.hidden) { u.hidden = false; u.dirty = true; o.phase = 'go'; }
       if (!alt) { if (u.carry) { o.phase = 'return'; } else { this.nextOrder(u); return false; } }
       else { o.targetId = alt.id; node = alt; u.path = null; }
@@ -968,7 +980,7 @@ export class Sim {
           p.res[u.carry.res] += u.carry.amt; p.dirty = true;
           if (u.carry.res === 'p') p.stats.gatheredP += u.carry.amt; else p.stats.gatheredS += u.carry.amt;
           u.carry = null; u.dirty = true; o.phase = 'go'; u.path = null;
-          if (!node || node.dead || node.amount <= 0) { const alt = this.nearestNode(u, o.kind, 16); if (alt) o.targetId = alt.id; else this.nextOrder(u); }
+          if (!node || node.dead || node.amount <= 0) { const alt = this.nearestNode(u, o.kind, 60); if (alt) o.targetId = alt.id; else this.nextOrder(u); }
         }
         return still;
       }
@@ -1000,16 +1012,27 @@ export class Sim {
         p.stats.buildingsBuilt++;
         this.events.push({ t: 'built', x: b.x, y: b.y, o: b.owner, ty: b.type, id: b.id });
         this.recountPop(p);
-        this.nextOrder(u);
-        // auto-continue: if worker's next queued order is not build and it was gathering before? keep idle
+        const nxt = this.nextSite(u, b); if (nxt && !u.queue.length) { u.order = { type: 'build', targetId: nxt.id }; u.path = null; u.dirty = true; } else this.nextOrder(u);
       }
     } else {
       // repair: costs nothing in demo, slower
       b.hp = Math.min(b.maxHp, b.hp + b.maxHp * DT / (bdef.buildTime * 2)); b.dirty = true;
       if ((this.tick + u.id) % 10 === 0) { u.lastAttackTick = this.tick; u.dirty = true; }
-      if (b.hp >= b.maxHp) this.nextOrder(u);
+      if (b.hp >= b.maxHp) { const nxt = !u.queue.length ? this.nextRepair(u, 14) : null; if (nxt) { u.order = { type: 'build', targetId: nxt.id }; u.path = null; u.dirty = true; } else this.nextOrder(u); }
     }
     return false;
+  }
+  /** nearest unfinished own building (same type / walls preferred) to continue with after a build */
+  nextSite(u, last) {
+    let best = null, bd = Infinity;
+    for (const e of this.ents.values()) { if (e.kind !== 'building' || e.owner !== u.owner || e.built || e.dead || e === last) continue; let d = Math.hypot(e.x - u.x, e.y - u.y); if (last && (e.type === last.type || (last.type === 'gate' && e.type === 'wall'))) d -= 6; if (d < bd && d < 22) { bd = d; best = e; } }
+    return best;
+  }
+  /** nearest damaged own building nobody is repairing yet (one worker per building) */
+  nextRepair(u, radius) {
+    let best = null, bd = Infinity;
+    for (const e of this.ents.values()) { if (e.kind !== 'building' || e.owner !== u.owner || !e.built || e.dead || e.hp >= e.maxHp) continue; const d = Math.hypot(e.x - u.x, e.y - u.y); if (d > radius || d >= bd) continue; let taken = false; for (const o of this.ents.values()) if (o !== u && o.kind === 'unit' && o.owner === u.owner && o.order.type === 'build' && o.order.targetId === e.id) { taken = true; break; } if (!taken) { bd = d; best = e; } }
+    return best;
   }
 
   // ---------- buildings ----------
@@ -1129,8 +1152,8 @@ export class Sim {
     switch (e.kind) {
       case 'unit': return { i: e.id, k: 'u', t: e.type, o: e.owner, x: +e.x.toFixed(2), y: +e.y.toFixed(2), hp: Math.ceil(e.hp), m: e.maxHp, f: +e.facing.toFixed(2), a: e.anim, at: e.lastAttackTick, hd: e.hidden ? 1 : 0, c: e.carry ? e.carry.res : '', o2: e.order.type, tg: e.order.targetId || e.engage || 0, dx: e.order.x, dy: e.order.y, ab: e.abilityReady || 0, bf: e.buffUntil || 0, lv: e.level || 1, xp: e.xp || 0, cg: e.cargo ? e.cargo.length : 0 };
       case 'building': return { i: e.id, k: 'b', t: e.type, o: e.owner, x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: e.w, h: e.h, hp: Math.ceil(e.hp), m: e.maxHp, bl: e.built ? 1 : 0, pr: +e.progress.toFixed(3), q: e.queue.map(q => ({ t: q.type, p: +q.progress.toFixed(3), rid: q.rid })), r: e.rally, at: e.lastAttackTick, lv: e.level || 1 };
-      case 'tree': return { i: e.id, k: 't', x: e.x, y: e.y, tx: e.tx, ty: e.ty, a: e.amount, v: e.v };
-      case 'mine': return { i: e.id, k: 'm', x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: 2, h: 2, a: e.amount };
+      case 'tree': return { i: e.id, k: 't', x: e.x, y: e.y, tx: e.tx, ty: e.ty, a: e.endless ? 999999 : e.amount, v: e.v, big: e.endless ? 1 : 0 };
+      case 'mine': return { i: e.id, k: 'm', x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: 2, h: 2, a: e.endless ? 999999 : e.amount, big: e.endless ? 1 : 0 };
       case 'proj': return { i: e.id, k: 'p', t: e.type, x: +e.x.toFixed(2), y: +e.y.toFixed(2), sx: e.sx, sy: e.sy, tx: +e.tx.toFixed(2), ty: +e.ty.toFixed(2), arc: e.arc, o: e.owner };
     }
     return null;

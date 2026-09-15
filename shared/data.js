@@ -1,7 +1,7 @@
 // Ages of War - shared game data (used by server sim and client UI)
 
 export const TICK_RATE = 20;          // simulation ticks per second
-export const NET_RATE = 10;           // snapshots per second
+export const NET_RATE = 20;           // snapshots per second (every tick: smooth movement)
 export const MAP_SIZE = 96;           // tiles per side
 export const MAX_PLAYERS = 8;
 
@@ -25,7 +25,7 @@ const commonUnits = {
   infantry: { role: 'infantry', hp: 120, armor: 2, dmg: 13, range: 0.8, cooldown: 1.0, speed: 2.5, sight: 7, pop: 2, size: 0.34, trainTime: 15, cost: { p: 70, s: 10 },  building: 'barracks', domain: 'land', projectile: null, bonus: { cavalry: 1.3 } },
   ranged:   { role: 'ranged',   hp: 65,  armor: 0, dmg: 11, range: 5.5, cooldown: 1.3, speed: 2.6, sight: 8, pop: 2, size: 0.32, trainTime: 16, cost: { p: 60, s: 35 },  building: 'barracks', domain: 'land', projectile: 'arrow', bonus: { infantry: 1.25 } },
   cavalry:  { role: 'cavalry',  hp: 170, armor: 3, dmg: 20, range: 0.9, cooldown: 1.1, speed: 4.3, sight: 8, pop: 3, size: 0.42, trainTime: 22, cost: { p: 120, s: 40 }, building: 'stable',   domain: 'land', projectile: null, bonus: { ranged: 1.6, siege: 1.6 } },
-  siege:    { role: 'siege',    hp: 130, armor: 1, dmg: 55, range: 8,   cooldown: 3.2, speed: 1.6, sight: 9, pop: 4, size: 0.5,  trainTime: 30, cost: { p: 160, s: 130 }, building: 'siege',    domain: 'land', projectile: 'rock', splash: 1.1, minRange: 2, bonus: { building: 3.0, wall: 4.0 } },
+  siege:    { role: 'siege',    hp: 130, armor: 1, dmg: 55, range: 8,   cooldown: 3.2, speed: 1.6, sight: 9, pop: 4, size: 0.5,  trainTime: 30, cost: { p: 160, s: 130 }, building: 'siege',    domain: 'land', projectile: 'rock', splash: 0, minRange: 2, bonus: { building: 3.0, wall: 4.0 } },
   ship:     { role: 'ship',     hp: 320, armor: 3, dmg: 24, range: 6.5, cooldown: 1.5, speed: 3.4, sight: 9, pop: 3, size: 0.6,  trainTime: 28, cost: { p: 130, s: 160 }, building: 'dock',     domain: 'sea',  projectile: 'bolt', bonus: { building: 1.5 } },
 };
 
@@ -59,13 +59,14 @@ const tierUnits = {
 const commonBuildings = {
   hall:     { hp: 1600, armor: 5, w: 3, h: 3, cost: { p: 350, s: 250 }, buildTime: 70, trains: ['worker'], dropoff: true, popCap: 40, hotkey: 'H',
               upgrades: [ { level: 2, cost: { p: 300, s: 200 }, time: 60, unlocks: ['medic'], popCap: 10, hp: 1.2 }, { level: 3, cost: { p: 500, s: 350 }, time: 80, unlocks: [], popCap: 10, hp: 1.2 }, { level: 4, cost: { p: 800, s: 500 }, time: 100, unlocks: ['hero'], popCap: 20, hp: 1.25 } ] },
-  house:    { hp: 420,  armor: 3, w: 2, h: 2, cost: { p: 40, s: 50 },   buildTime: 18, trains: [], popCap: 8, hotkey: 'E' },
+  house:    { hp: 420,  armor: 3, w: 2, h: 2, cost: { p: 40, s: 50 },   buildTime: 18, trains: [], popCap: 10, hotkey: 'E',
+              upgrades: [ { level: 2, cost: { p: 60, s: 60 }, time: 25, unlocks: [], popCap: 5, armorAdd: 1, desc: 'Přístavba.' }, { level: 3, cost: { p: 90, s: 90 }, time: 30, unlocks: [], popCap: 5, armorAdd: 1, hall: 2, desc: 'Patro navíc.' } ] },
   barracks: { hp: 950,  armor: 4, w: 3, h: 3, cost: { p: 130, s: 90 },  buildTime: 32, trains: ['infantry', 'ranged'], hotkey: 'B',
               upgrades: [ { level: 2, cost: { p: 200, s: 150 }, time: 45, unlocks: ['spearman', 'skirmisher'], hall: 2 }, { level: 3, cost: { p: 350, s: 250 }, time: 60, unlocks: ['veteran', 'longbow'], hall: 3 } ] },
   stable:   { hp: 950,  armor: 4, w: 3, h: 3, cost: { p: 160, s: 110 }, buildTime: 36, trains: ['cavalry'], hotkey: 'S',
               upgrades: [ { level: 2, cost: { p: 220, s: 160 }, time: 45, unlocks: ['heavycav'], hall: 2 }, { level: 3, cost: { p: 380, s: 260 }, time: 60, unlocks: ['chariot'], hall: 3 } ] },
-  siege:    { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 170, s: 140 }, buildTime: 38, trains: ['siege'], hotkey: 'W',
-              upgrades: [ { level: 2, cost: { p: 240, s: 200 }, time: 50, unlocks: ['ballista'], hall: 2 } ] },
+  siege:    { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 170, s: 140 }, buildTime: 38, trains: ['ballista'], hotkey: 'W',
+              upgrades: [ { level: 2, cost: { p: 220, s: 180 }, time: 45, unlocks: [], hall: 2, dmgMul: 1, desc: 'Pevnější dílna, rychlejší výroba.' }, { level: 3, cost: { p: 320, s: 260 }, time: 60, unlocks: ['siege'], hall: 3 } ] },
   dock:     { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 110, s: 140 }, buildTime: 32, trains: ['ship', 'transport'], shore: true, hotkey: 'D',
               upgrades: [ { level: 2, cost: { p: 220, s: 240 }, time: 50, unlocks: ['heavyship'], hall: 2 } ] },
   tower:    { hp: 550,  armor: 6, w: 1, h: 1, cost: { p: 70,  s: 90 },  buildTime: 26, trains: [], attack: { dmg: 15, range: 6.5, cooldown: 1.0, projectile: 'arrow' }, hotkey: 'T',
@@ -87,7 +88,7 @@ export const ERAS = {
       p: { id: 'gold', name: 'Zlato', acc: 'zlato', short: 'Zl', color: '#f2c94c' },
       s: { id: 'wood', name: 'Dřevo', acc: 'dřevo', short: 'Dř', color: '#b7863f' },
     },
-    nodes: { mine: { name: 'Zlatý důl', amount: 12000, perTrip: 10, tripTicks: 22 }, secondary: { name: 'Les', kind: 'trees', amount: 150, perTrip: 10, chopTicks: 8, chopHits: 5 } },
+    nodes: { mine: { name: 'Zlatý důl', amount: 12000, perTrip: 10, tripTicks: 22 }, secondary: { name: 'Les', kind: 'trees', amount: 240, perTrip: 20, chopTicks: 8, chopHits: 5 } },
     palette: { grass: [92, 140, 58], grass2: [78, 122, 50], dirt: [150, 120, 78], sand: [214, 196, 140], water: [36, 96, 150], deep: [22, 62, 112], rock: [120, 118, 110] },
     music: { scale: [0, 2, 3, 5, 7, 8, 10], root: 220, tempo: 70, style: 'lyre' },
     factions: [
@@ -144,7 +145,7 @@ export const ERAS = {
       p: { id: 'oil', name: 'Ropa', acc: 'ropu', short: 'Ro', color: '#3a3a3a' },
       s: { id: 'wood', name: 'Dřevo', acc: 'dřevo', short: 'Dř', color: '#b7863f' },
     },
-    nodes: { mine: { name: 'Ropné pole', amount: 12000, perTrip: 10, tripTicks: 22 }, secondary: { name: 'Les', kind: 'trees', amount: 150, perTrip: 10, chopTicks: 8, chopHits: 5 } },
+    nodes: { mine: { name: 'Ropné pole', amount: 12000, perTrip: 10, tripTicks: 22 }, secondary: { name: 'Les', kind: 'trees', amount: 240, perTrip: 20, chopTicks: 8, chopHits: 5 } },
     palette: { grass: [96, 118, 64], grass2: [82, 102, 56], dirt: [122, 104, 80], sand: [186, 176, 140], water: [42, 84, 118], deep: [26, 54, 84], rock: [104, 104, 100] },
     music: { scale: [0, 2, 4, 5, 7, 9, 11], root: 196, tempo: 92, style: 'march' },
     factions: [
@@ -164,7 +165,7 @@ export const ERAS = {
       infantry: { ...commonUnits.infantry, name: 'Pěšák',        sprite: 'ww2_infantry', range: 3.5, projectile: 'bullet', dmg: 9, cooldown: 0.7, hp: 100 },
       ranged:   { ...commonUnits.ranged,   name: 'Kulometčík',   sprite: 'ww2_ranged', range: 6, projectile: 'bullet', dmg: 7, cooldown: 0.35, hp: 70 },
       cavalry:  { ...commonUnits.cavalry,  name: 'Tank',         sprite: 'ww2_tank', hp: 340, armor: 7, dmg: 38, range: 4.5, cooldown: 1.8, speed: 3.3, size: 0.5, cost: { p: 190, s: 110 }, projectile: 'shell', bonus: { infantry: 1.2, building: 1.5 } },
-      siege:    { ...commonUnits.siege,    name: 'Dělostřelectvo', sprite: 'ww2_artillery', range: 10, projectile: 'shell', splash: 1.4, dmg: 60, minRange: 3 },
+      siege:    { ...commonUnits.siege,    name: 'Dělostřelectvo', sprite: 'ww2_artillery', range: 10, projectile: 'shell', splash: 0, dmg: 60, minRange: 3 },
       ship:     { ...commonUnits.ship,     name: 'Torpédoborec', sprite: 'ww2_destroyer', hp: 380, range: 7.5, projectile: 'shell', dmg: 30 },
       spearman: { ...tierUnits.flamer,     name: 'Plamenometčík', sprite: 'ww2_flamer', desc: 'Krátký dosah, zapaluje budovy i pěchotu.' },
       skirmisher: { ...tierUnits.sniper,   name: 'Odstřelovač', sprite: 'ww2_sniper', desc: 'Velký dosah, smrtící proti pěchotě.' },
@@ -221,7 +222,7 @@ export const ERAS = {
       infantry: { ...commonUnits.infantry, name: 'Mariňák',         sprite: 'sf_infantry', range: 3.2, projectile: 'plasma', dmg: 10, cooldown: 0.8, hp: 110 },
       ranged:   { ...commonUnits.ranged,   name: 'Railgunner',      sprite: 'sf_ranged', range: 7, projectile: 'rail', dmg: 16, cooldown: 1.6, hp: 65 },
       cavalry:  { ...commonUnits.cavalry,  name: 'Hover tank',      sprite: 'sf_tank', hp: 320, armor: 6, dmg: 34, range: 4.5, cooldown: 1.6, speed: 3.8, size: 0.5, cost: { p: 190, s: 110 }, projectile: 'plasma', bonus: { infantry: 1.2, building: 1.4 }, domain: 'hover', desc: 'Vznášedlo – projede i mělkou vodou.' },
-      siege:    { ...commonUnits.siege,    name: 'Mortarový walker', sprite: 'sf_walker', range: 9.5, projectile: 'plasmaShell', splash: 1.5, dmg: 58, minRange: 3, speed: 1.9 },
+      siege:    { ...commonUnits.siege,    name: 'Mortarový walker', sprite: 'sf_walker', range: 9.5, projectile: 'plasmaShell', splash: 0, dmg: 58, minRange: 3, speed: 1.9 },
       ship:     { ...commonUnits.ship,     name: 'Hover člun',      sprite: 'sf_boat', hp: 360, range: 7, projectile: 'plasma', dmg: 28, speed: 3.8 },
       spearman: { ...tierUnits.spearman,   name: 'Štítonoš',        sprite: 'sf_shield', desc: 'Energetický štít, ničí vozidla raketami.', range: 3, projectile: 'plasma', armor: 4 },
       skirmisher: { ...tierUnits.skirmisher, name: 'Jetpack voják', sprite: 'sf_jet', desc: 'Velmi rychlý, obtěžuje střelce.', range: 3, projectile: 'plasma', speed: 3.8 },
@@ -293,6 +294,7 @@ export function makeTechTable(eraId, factionId) {
     buildings[k] = { ...b, id: k, cost: { p: Math.round(b.cost.p * cmul), s: Math.round(b.cost.s * cmul) }, attack };
   }
   const economy = f.mods.economy || {};
+  for (const u of Object.values(units)) if (u.trainTime && !u._fast) { u.trainTime = Math.round(u.trainTime / 1.3); u._fast = true; }
   return { era: e, faction: f, units, buildings, economy };
 }
 

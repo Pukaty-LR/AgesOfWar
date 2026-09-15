@@ -15,3 +15,32 @@ UI BUDOV JE ROZBITÉ NĚCO SE PŘEKRÝVÁ CO MÁ BÝT SCHOVANÉ A NĚCO ZASE JE 
 U DRUHÉ SVĚTOVÉ DOBRÉ ŠROTIŠTĚ A ROPA A STROMY- ALE NECHAL BYCH JEN DVĚ VĚCI TŘEBA ROPU A TY STROMY KLIDNĚ ŠROT DEJME KLIDNĚ PRYČ A NEBO NE ? NEVIM NECHÁM NA TOBĚ POKUD TAM MÁŠ VĚTŠÍ PLÁNY...
 PŘIDEJ SETTINGS A MUTE MUSIC BUTTON 
 přidej upgrady na tu defend věž plz
+
+nové bugs: 15.9.:
+animace pohybu postav jsou trhané
+při stavbě nevidim progres bar stavby - občas je vidět a občas je úplně v píči od budovy
+stavba má být nejdůležitejší button postavy otroka takže na první místo
+rework skal musí být vidět jasně že je víš ! žádný klam prostě bude víš že tma nejde projít !
+léřitel máí velkej range - sám si najde co je potřeba vyléčit 
+hradby když kliknu že začne stavět jednu tak bude stavět dokud nedostaví vše rozestavěné!
+brána je špatně otočená když je pod úhlem ! opravit musí to dávat smysl
+je možné zaseknou otroka mezi dvě stavby tak at může projít mezi třeba mezi věž a stěna!
+auto stavení pokud prostě stavim věž tak po dostavění jde stavět druhou sám od sebe !
+přidej do budov i to co je zamklé jen to nech zamklé a dej tam textaci že to ptořebuje lvl tolik a tolik
+auto repair pokud dám opravovat otroka tak jde opravovatvat vše rozbité - všichnci otroco co nemaj co dělat jdou opraovvat - jeden otrok jedna budova max !
+dům na jednotky jde taky upgradnout ! a už lvl 1 dává víc kapacity!
+když označim víct typů postav otrok voják atd při kliku na jednoho z nich mi to vybere všechny tohoto typu co mám v té zoně původně !
+když má ukol těžit dřevo tak bude těžit dřevo dokud nepadne poslední strom na mapě at jde dál sebevíc ! přestávaj mi těžit
+jednotky musí mít lepší auto defend pokud se bojuje v blízkosti tak jde bránit ne že čeká dokud nevejde do range...
+pokud nemám dostatek surovin a pak mám - tak se to odemkne, teď to musím zavří a otevřít at se to refreshne !
+dřevo je obří problém je ho málo pomalu ho získávám a vše je drahé boostni to kolik ho dostávám třeba 3x minimálnšš - nebo jinak 2x a zkusíme to nebo jinak udělej jednotky všech typů 50% ceny dřeva !
+velké jednotky sde nevykreslují celé třeba válečný vůz!
+trénování jednotek mi taky přijd epomalé dal byhc 30% speed boost
+ta artilerie mi přijde extra op potrebuje nerf no spalsh dmg jen ten jeden cil co focusu
+pokud posílám víc typů jednotek čekaj na tu nejpomalejší ! neutíkaj od sebe - jdou spolu
+hra vlastně končí v moment co dojde dřevo, to je sračka dej do středu mapy nějake velke zasoby treba 4 giga stormy  ktere nejde znicit -. nekonecnej zdroj dřeva a taky nekonecenej zdroj i zlata někam tkay podobnej format ale musi to byt ve stredu at to je fer a nejk vizuelne odlyšit že je to op ! a že kdo vládne tomu je proste ten top...
+ta artilerie tu dej na tier 3 ne na jedna na jedna dej nějaké protipěchotní dělo...
+autoatack na cile prostě sam pošlu vsechny jednotky na mesto, prostě dokud je v rozumnem range treba velikost 5 budov jina budova jde do ni taky pokud dotocil a jinde neni jina utocna jendota enemy ta ma prioritu !
+graficky je tam furt par much u bodov hlavne neco prochazi skrz a neco co ma byt schovane za je v predu nedava to smyls!
+utocna jednotka enymy ma vždy priporitu jak veze tak posadka tanky dela vse az pak domy a furt odkola furt to checkuje prijde enemy typke kdyz nicim barak focus na nej...
+přidej mi tam jayzky default english a třeba ta čeština a top 5 dalších jazyků co se používá a dje to v menu hned v pravo do rohu jako vlajky... nebo nevim nějak šikovně at to dásá smysl

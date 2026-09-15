@@ -90,8 +90,9 @@ export function generateMap(seed, size, numPlayers, style = 'continent') {
     height[i] = v;
     moisture[i] = noise2(x / 9 + 50, y / 9 + 50, 3);
   }
-  // Base plateaus: guarantee land around spawns.
-  for (const s of spawns) {
+  // Base plateaus: guarantee land around spawns (and a plateau in the middle for the endless resources).
+  const centre = { x: Math.floor(w / 2), y: Math.floor(h / 2) };
+  for (const s of [...spawns, centre]) {
     for (let y = -11; y <= 11; y++) for (let x = -11; x <= 11; x++) {
       const tx = s.x + x, ty = s.y + y;
       if (tx < 0 || ty < 0 || tx >= w || ty >= h) continue;
@@ -152,6 +153,7 @@ export function generateMap(seed, size, numPlayers, style = 'continent') {
     }
   }
   for (let i = 1; i < spawns.length; i++) if (!reachable(spawns[0], spawns[i])) carve(spawns[0], spawns[i]);
+  if (!reachable(spawns[0], centre)) carve(spawns[0], centre); // the centre must be reachable by land too
 
   // Shore sand: land tiles adjacent to water become sand
   for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
@@ -261,5 +263,15 @@ export function generateMap(seed, size, numPlayers, style = 'continent') {
     else if (t === T.SAND) deco.push({ x: tx + rng(), y: ty + rng(), k: 2, v: rng() });
   }
 
+  // centre of the map: endless resources placed last so the tree-thinning pass cannot remove them (visually distinct, guarded by creeps) - whoever holds the middle never runs dry
+  { const cx = Math.floor(w / 2), cy = Math.floor(h / 2); let done = false;
+    for (let r = 0; r < 16 && !done; r++) for (let oy = -r; oy <= r && !done; oy++) for (let ox = -r; ox <= r && !done; ox++) {
+      const mx = cx + ox, my = cy + oy; if (Math.abs(ox) !== r && Math.abs(oy) !== r) continue;
+      if (!free(mx - 1, my - 1, 4, 4)) continue; let land = true; for (let yy = my - 1; yy <= my + 2 && land; yy++) for (let xx = mx - 1; xx <= mx + 2; xx++) { if (xx < 0 || yy < 0 || xx >= w || yy >= h || !isLand(tiles[yy * w + xx])) { land = false; break; } }
+      if (!land) continue;
+      occupy(mx - 1, my - 1, 4, 4); mines.push({ tx: mx, ty: my, amount: Infinity, endless: true });
+      for (const [bx, by] of [[mx - 4, my - 3], [mx + 3, my - 3], [mx - 4, my + 2], [mx + 3, my + 2]]) { let put = false; for (let rr = 0; rr <= 5 && !put; rr++) for (let dy = -rr; dy <= rr && !put; dy++) for (let dx = -rr; dx <= rr && !put; dx++) { const tx = bx + dx, ty = by + dy; if (tx < 0 || ty < 0 || tx >= w || ty >= h || !isLand(tiles[ty * w + tx]) || !free(tx, ty, 1, 1)) continue; occupy(tx, ty, 1, 1); trees.push({ tx, ty, v: 0, endless: true }); put = true; } }
+      done = true;
+    } }
   return { w, h, tiles, height, spawns, mines, trees, deco, seed };
 }
