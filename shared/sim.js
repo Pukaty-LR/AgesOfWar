@@ -759,8 +759,10 @@ export class Sim {
     return still;
   }
 
+  /** Age of Empires style elevation bonus: attacking downhill +25 %, uphill -25 % (needs a clear height step). */
+  elevMult(u, t) { const h = this.map.height, w = this.w; const ha = h[(u.y | 0) * w + (u.x | 0)], ht = h[(t.y | 0) * w + (t.x | 0)]; if (ha === undefined || ht === undefined) return 1; const d = ha - ht; return d > 0.2 ? 1.25 : (d < -0.2 ? 0.75 : 1); }
   fire(u, def, t) {
-    const dmg = this.unitDmg(this.players[u.owner], def) * this.auraMult(u) * (def.aura ? this.heroMult(u) : 1);
+    const dmg = this.unitDmg(this.players[u.owner], def) * this.auraMult(u) * (def.aura ? this.heroMult(u) : 1) * this.elevMult(u, t);
     if (def.projectile) {
       const speed = PROJ_SPEED[def.projectile] || 12;
       this.add({ kind: 'proj', type: def.projectile, x: u.x, y: u.y, sx: u.x, sy: u.y, tx: t.x, ty: t.y, targetId: t.id, speed, dmg, owner: u.owner, attackerId: u.id, attackerType: u.type, attackerRole: u.role, bonus: def.bonus || {}, splash: def.splash || 0, arc: PROJ_ARC[def.projectile] || 0, total: Math.hypot(t.x - u.x, t.y - u.y), travelled: 0 });
