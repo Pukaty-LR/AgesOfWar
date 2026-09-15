@@ -3,7 +3,7 @@
 import { Sim } from '../shared/sim.js';
 import { AIPlayer } from '../shared/ai.js';
 import { ERAS, RESEARCH } from '../shared/data.js';
-import { MAP_STYLES } from '../shared/mapgen.js';
+import { MAP_STYLES, generateMap } from '../shared/mapgen.js';
 
 const TICKS = +(process.argv[2] || 4000);
 let failures = 0;
@@ -53,6 +53,20 @@ for (const era of Object.keys(ERAS)) {
   const before = sim.ents.size; sim.command(0, { t: 'build', ids: ws(), type: 'barracks' }); sim.command(0, { t: 'build', ids: ws(), type: 'barracks', tx: 'abc', ty: 5 }); sim.command(0, { t: 'move', ids: ws(), x: NaN, y: 3 }); sim.command(0, { t: 'build', ids: ws(), type: 'barracks', tx: 5000, ty: 5000 });
   check(sim.ents.size === before && ![...sim.ents.values()].some(e => !Number.isFinite(e.x)), 'malformed coordinates rejected');
   console.log('command coverage done');
+}
+// map fairness: every start has a mine and trees close by, for all styles, sizes and player counts
+{
+  let worstMine = 0, worstTree = 0, maps = 0;
+  for (const st of Object.keys(MAP_STYLES)) for (const sz of [72, 96, 128]) for (let seed = 1; seed <= 3; seed++) for (const np of [2, 4, 8]) {
+    const m = generateMap(seed, sz, np, st); maps++;
+    for (let i = 0; i < np; i++) {
+      const sp = m.spawns[i]; check(!!sp, `${st}/${sz}/${seed}: spawn ${i} exists`); if (!sp) continue;
+      const dm = Math.min(...m.mines.map(q => Math.hypot(q.tx - sp.x, q.ty - sp.y))), dt = Math.min(...m.trees.map(q => Math.hypot(q.tx - sp.x, q.ty - sp.y)));
+      worstMine = Math.max(worstMine, dm); worstTree = Math.max(worstTree, dt);
+      check(dm <= 14 && dt <= 16, `${st}/${sz}/seed${seed}/${np}p spawn ${i}: mine ${dm.toFixed(1)} tree ${dt.toFixed(1)} too far`);
+    }
+  }
+  console.log(`map fairness: ${maps} maps, worst mine ${worstMine.toFixed(1)}, worst tree ${worstTree.toFixed(1)}`);
 }
 console.log(failures ? `SMOKE FAILED (${failures})` : 'SMOKE OK');
 process.exit(failures ? 1 : 0);
