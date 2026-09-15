@@ -60,7 +60,7 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 | Akce | Ovládání |
 |---|---|
 | Výběr | levé tlačítko / tažení rámečku, Shift = přidat, dvojklik = všechny stejného typu |
-| Rozkaz | pravé tlačítko (jdi / útoč / těž / stav / oprav), Shift = fronta |
+| Rozkaz | pravé tlačítko (jdi / útoč / těž / stav / oprav / následuj vlastní jednotku), Shift = fronta |
 | Útočný pochod | A + klik |
 | Stop / držet pozici | S / H |
 | Dělník | G = těžit hlavní surovinu, F = těžit dřevo, B = stavět, R = opravit |

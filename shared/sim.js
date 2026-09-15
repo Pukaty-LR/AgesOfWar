@@ -284,6 +284,7 @@ export class Sim {
             if (target.owner !== undefined && this.isEnemy(u, target)) { this.setOrder(u, { type: 'attack', targetId: target.id }, c.queue); continue; }
             if (target.kind === 'unit' && target.owner === pid && target.cargo && u.domain !== 'sea' && !u.inside) { this.setOrder(u, { type: 'board', targetId: target.id }, c.queue); continue; }
             if (target.kind === 'building' && target.owner === pid && u.role === 'worker' && (!target.built || target.hp < target.maxHp)) { this.setOrder(u, { type: 'build', targetId: target.id }, c.queue); continue; }
+            if (target.kind === 'unit' && target !== u && target.owner !== undefined && this.players[target.owner].team === p.team && !target.hidden) { this.setOrder(u, { type: 'follow', targetId: target.id }, c.queue); continue; } // WC3: right-click an ally = follow
           }
           if (u.hidden) continue;
           if (!c._f) c._f = this.formation(myUnits, c.x, c.y);
@@ -600,6 +601,15 @@ export class Sim {
           }
         }
         if (!u.engage) u.anim = 'idle';
+        break;
+      }
+      case 'follow': { // stay close to an allied unit; fighters still answer enemies that come near
+        const ft = this.ents.get(o.targetId);
+        if (!ft || ft.dead || ft.hidden) { this.nextOrder(u); break; }
+        if (def.dmg > 0 && u.role !== 'worker' && (this.tick + u.id) % 6 === 0) { const en = this.nearestEnemy(u, Math.max(def.range + 1, 4), false); if (en) { u.queue.unshift({ ...o }); u.order = { type: 'attack', targetId: en.id }; u.path = null; break; } }
+        const fd = Math.hypot(ft.x - u.x, ft.y - u.y);
+        if (fd > 2.2) { moved = this.moveTo(u, def, ft.x, ft.y, 1.6); if ((this.tick + u.id) % 20 === 0) u.path = null; }
+        else { u.anim = 'idle'; }
         break;
       }
       case 'move': {
