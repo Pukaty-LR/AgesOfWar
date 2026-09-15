@@ -73,7 +73,7 @@ export function translateDom(root = document.body) {
 /** localize the shared game data in place (names, descriptions) */
 export function localizeData() {
   if (lang === 'cs') return;
-  const L = o => { for (const k of ['name', 'desc', 'acc', 'short', 'leader']) if (typeof o[k] === 'string') o[k] = t(o[k]); };
+  const L = o => { for (const k of ['name', 'desc', 'acc', 'short', 'leader', 'year', 'tagline']) if (typeof o[k] === 'string') o[k] = t(o[k]); };
   for (const era of Object.values(ERAS)) {
     L(era);
     if (era.resources) for (const r of Object.values(era.resources)) L(r);
