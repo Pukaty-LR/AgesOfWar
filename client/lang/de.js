@@ -111,4 +111,5 @@ export default {
   'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Mauer: %1 Segmente · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – nicht genug Rohstoffe',
   'Radnice vylepšena na úroveň %1': 'Rathaus auf Stufe %1 ausgebaut',
   'Nemáš hrdinu.': 'Du hast keinen Helden.', 'F1 = celá armáda · F2 = hrdina · . = nečinný dělník': 'F1 = whole army · F2 = hero · . = idle worker',
+  'DRŽÍ STŘED': 'HÄLT DIE MITTE',
 };

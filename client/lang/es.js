@@ -111,4 +111,5 @@ export default {
   'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Muralla: %1 segmentos · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – recursos insuficientes',
   'Radnice vylepšena na úroveň %1': 'Ayuntamiento mejorado al nivel %1',
   'Nemáš hrdinu.': 'No tienes héroe.', 'F1 = celá armáda · F2 = hrdina · . = nečinný dělník': 'F1 = whole army · F2 = hero · . = idle worker',
+  'DRŽÍ STŘED': 'DOMINA EL CENTRO',
 };

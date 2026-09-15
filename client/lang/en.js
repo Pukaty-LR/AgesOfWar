@@ -245,4 +245,5 @@ export default {
   'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Wall: %1 segments · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – not enough resources',
   'Radnice vylepšena na úroveň %1': 'Town hall upgraded to level %1',
   'Nemáš hrdinu.': 'You have no hero.', 'F1 = celá armáda · F2 = hrdina · . = nečinný dělník': 'F1 = whole army · F2 = hero · . = idle worker',
+  'DRŽÍ STŘED': 'HOLDS THE CENTRE',
 };
