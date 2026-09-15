@@ -183,7 +183,7 @@ export class Sim {
     const e = this.add({
       kind: 'unit', type, role: def.role, owner: p.id, x, y, hp: def.hp, maxHp: def.hp, facing: this.rng() * Math.PI * 2,
       domain: def.domain, size: def.size, speed: def.speed, order: { type: 'idle' }, queue: [], path: null,
-      cooldown: 0, engage: 0, lastAttackTick: -100, anim: 'idle', hidden: false, carry: null, stuck: 0, lastX: x, lastY: y, repathAt: 0, dead: false, home: null,
+      cooldown: 0, engage: 0, lastAttackTick: -100, anim: 'idle', hidden: false, carry: null, stuck: 0, lastX: x, lastY: y, repathAt: 0, dead: false, home: null, cargo: def.capacity ? [] : undefined, inside: 0,
     });
     p.stats.unitsBuilt++;
     return e;
@@ -276,6 +276,7 @@ export class Sim {
           if (target && !target.dead) {
             if ((target.kind === 'tree' || target.kind === 'mine') && u.role === 'worker') { this.setOrder(u, { type: 'gather', targetId: target.id, phase: 'go' }, c.queue); continue; }
             if (target.owner !== undefined && this.isEnemy(u, target)) { this.setOrder(u, { type: 'attack', targetId: target.id }, c.queue); continue; }
+            if (target.kind === 'unit' && target.owner === pid && target.cargo && u.domain !== 'sea' && !u.inside) { this.setOrder(u, { type: 'board', targetId: target.id }, c.queue); continue; }
             if (target.kind === 'building' && target.owner === pid && u.role === 'worker' && (!target.built || target.hp < target.maxHp)) { this.setOrder(u, { type: 'build', targetId: target.id }, c.queue); continue; }
           }
           if (u.hidden) continue;
@@ -416,6 +417,10 @@ export class Sim {
         p.dirty = true;
         break;
       }
+      case 'unload': { // transports sail to (x,y) and drop their cargo on the nearest shore
+        for (const u of myUnits) if (u.cargo) this.setOrder(u, { type: 'unload', x: c.x ?? u.x, y: c.y ?? u.y, here: c.x === undefined }, c.queue);
+        break;
+      }
       case 'gatherKind': { // find nearest resource of a kind for each worker
         const kind = c.kind === 'mine' ? 'mine' : 'tree';
         for (const u of myUnits) {
@@ -542,6 +547,11 @@ export class Sim {
   stepUnit(u) {
     const p = this.players[u.owner];
     const def = p.tech.units[u.type];
+    if (u.inside) { // riding in a transport: follow it, do nothing else
+      const tr = this.ents.get(u.inside); if (!tr || tr.dead) { u.inside = 0; u.hidden = false; u.dirty = true; return; }
+      if (u.x !== tr.x || u.y !== tr.y) { u.x = tr.x; u.y = tr.y; u.lastX = u.x; u.lastY = u.y; u.dirty = true; }
+      return;
+    }
     if (u.cooldown > 0) u.cooldown -= DT;
     const o = u.order;
     let moved = false;
@@ -587,6 +597,32 @@ export class Sim {
         const t = this.ents.get(o.targetId);
         if (!t || t.dead || t.hp <= 0) { this.nextOrder(u); break; }
         moved = this.attackTarget(u, def, t, true);
+        break;
+      }
+      case 'board': { // walk to the transport and climb aboard
+        const tr = this.ents.get(o.targetId);
+        if (!tr || tr.dead || !tr.cargo || tr.cargo.length >= (p.tech.units[tr.type].capacity || 0)) { this.nextOrder(u); break; }
+        const d = Math.hypot(tr.x - u.x, tr.y - u.y);
+        if (d <= 1.6) { tr.cargo.push(u.id); tr.dirty = true; u.inside = tr.id; u.hidden = true; u.path = null; u.order = { type: 'idle' }; u.queue = []; u.dirty = true; this.events.push({ t: 'board', x: tr.x, y: tr.y, o: u.owner }); break; }
+        const gt = (tx, ty) => Math.hypot(tx + 0.5 - tr.x, ty + 0.5 - tr.y) <= 1.5;
+        moved = this.moveTo(u, def, tr.x, tr.y, 1.6, gt, tr.x, tr.y);
+        if (!moved && Math.hypot(tr.x - u.x, tr.y - u.y) > 1.6) { if ((this.tick + u.id) % 30 === 0) u.path = null; moved = true; }
+        break;
+      }
+      case 'unload': { // sail to the spot, then drop cargo onto nearby land
+        if (!o.here) { moved = this.moveTo(u, def, o.x, o.y, 0.8, null, o.x, o.y); if (moved) break; }
+        let dropped = 0;
+        for (const id of [...(u.cargo || [])]) {
+          const c2 = this.ents.get(id); if (!c2) { u.cargo.splice(u.cargo.indexOf(id), 1); continue; }
+          const pass = this.passFor(c2.domain, this.teamOf(c2));
+          const spot = nearestTile(this.w, this.h, u.x | 0, u.y | 0, (tx, ty) => pass[ty * this.w + tx] === 1, 3);
+          if (!spot) break;
+          u.cargo.splice(u.cargo.indexOf(id), 1); c2.inside = 0; c2.hidden = false; c2.x = spot.x + 0.5 + (this.rng() - 0.5) * 0.4; c2.y = spot.y + 0.5 + (this.rng() - 0.5) * 0.4; c2.lastX = c2.x; c2.lastY = c2.y; c2.dirty = true; dropped++;
+        }
+        u.dirty = true;
+        if (dropped) this.events.push({ t: 'unload', x: u.x, y: u.y, o: u.owner });
+        else if (u.cargo && u.cargo.length) this.events.push({ t: 'msg', owner: u.owner, text: 'Tady není břeh na vylodění.' });
+        this.nextOrder(u);
         break;
       }
       case 'patrol': {
@@ -800,7 +836,8 @@ export class Sim {
     if (killerOwner !== null && killerOwner !== undefined && this.players[killerOwner]) this.players[killerOwner].stats.unitsKilled++;
     if (u.lastAttackerId) this.grantXp(u.lastAttackerId, 20 + Math.round(u.maxHp / 10));
     this.events.push({ t: 'death', x: u.x, y: u.y, o: u.owner, k: 'unit', ty: u.type, f: u.facing });
-    // release building it was constructing
+    // a sinking transport takes its passengers with it
+    if (u.cargo) for (const id of u.cargo) { const c2 = this.ents.get(id); if (c2 && !c2.dead) { c2.dead = true; p.stats.unitsLost++; this.remove(c2); } }
     this.remove(u);
     this.recountPop(p);
   }
@@ -1063,7 +1100,7 @@ export class Sim {
   // ---------- serialization ----------
   serializeEntity(e) {
     switch (e.kind) {
-      case 'unit': return { i: e.id, k: 'u', t: e.type, o: e.owner, x: +e.x.toFixed(2), y: +e.y.toFixed(2), hp: Math.ceil(e.hp), m: e.maxHp, f: +e.facing.toFixed(2), a: e.anim, at: e.lastAttackTick, hd: e.hidden ? 1 : 0, c: e.carry ? e.carry.res : '', o2: e.order.type, tg: e.order.targetId || e.engage || 0, dx: e.order.x, dy: e.order.y, ab: e.abilityReady || 0, bf: e.buffUntil || 0, lv: e.level || 1, xp: e.xp || 0 };
+      case 'unit': return { i: e.id, k: 'u', t: e.type, o: e.owner, x: +e.x.toFixed(2), y: +e.y.toFixed(2), hp: Math.ceil(e.hp), m: e.maxHp, f: +e.facing.toFixed(2), a: e.anim, at: e.lastAttackTick, hd: e.hidden ? 1 : 0, c: e.carry ? e.carry.res : '', o2: e.order.type, tg: e.order.targetId || e.engage || 0, dx: e.order.x, dy: e.order.y, ab: e.abilityReady || 0, bf: e.buffUntil || 0, lv: e.level || 1, xp: e.xp || 0, cg: e.cargo ? e.cargo.length : 0 };
       case 'building': return { i: e.id, k: 'b', t: e.type, o: e.owner, x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: e.w, h: e.h, hp: Math.ceil(e.hp), m: e.maxHp, bl: e.built ? 1 : 0, pr: +e.progress.toFixed(3), q: e.queue.map(q => ({ t: q.type, p: +q.progress.toFixed(3), rid: q.rid })), r: e.rally, at: e.lastAttackTick, lv: e.level || 1 };
       case 'tree': return { i: e.id, k: 't', x: e.x, y: e.y, tx: e.tx, ty: e.ty, a: e.amount, v: e.v };
       case 'mine': return { i: e.id, k: 'm', x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: 2, h: 2, a: e.amount };

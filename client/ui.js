@@ -172,6 +172,7 @@ export class UI {
       const st = $('sel-stats'); st.innerHTML = '';
       const stat = (icon, l, v) => { const s = document.createElement('span'); s.title = l; s.innerHTML = `${STAT_SVG[icon] || ''}${l} <b>${v}</b>`; st.appendChild(s); };
       if (e.k === 'u' && game.unitDef(e).aura) { const lv = e.lv || 1; const need = HERO_XP[lv - 1]; stat('pop', 'Úroveň', lv + (need ? ` · ${e.xp || 0}/${need} XP` : ' (max)')); }
+      if (e.k === 'u' && game.unitDef(e).capacity) stat('carry', 'Náklad', `${e.cg || 0}/${game.unitDef(e).capacity}`);
       if (e.k === 'u') { const d = game.unitDef(e); stat('attack', 'Útok', d.dmg); stat('armor', 'Pancíř', d.armor); stat('range', 'Dosah', d.range >= 1 ? d.range.toFixed(1) : 'blízko'); stat('speed', 'Rychlost', d.speed.toFixed(1)); if (e.c) stat('carry', 'Nese', e.c === 'p' ? game.eraDef.resources.p.name : game.eraDef.resources.s.name); }
       else if (e.k === 'b') { const d = game.buildingDef(e); stat('armor', 'Pancíř', d.armor); if (d.attack) { stat('attack', 'Útok', d.attack.dmg); stat('range', 'Dosah', d.attack.range); } if (d.popCap) stat('pop', 'Populace', '+' + d.popCap); if (!e.bl) stat('build', 'Stavba', Math.round(e.pr * 100) + ' %'); }
       else if (e.k === 't' || e.k === 'm') stat('left', 'Zbývá', e.a);
@@ -204,6 +205,7 @@ export class UI {
     if (units.length) {
       const hasWorker = units.some(e => game.unitDef(e).role === 'worker');
       const hasMil = units.some(e => game.unitDef(e).role !== 'worker');
+      if (units.some(e => game.unitDef(e).capacity)) btn(9, { label: 'Vyložit', key: 'U', icon: () => actionIcon('unload'), desc: 'Klikni na břeh, kam má loď doplout a vyložit jednotky. Dvojitý stisk U vyloží na místě.', act: () => { if (game.state.mode === 'unload') { game.unloadHere(); game.state.mode = null; } else game.state.mode = 'unload'; }, active: () => game.state.mode === 'unload' });
       const abUnit = units.find(e => game.unitDef(e).ability);
       if (abUnit) { const ab = game.unitDef(abUnit).ability; const left = Math.max(0, Math.ceil(((abUnit.ab || 0) - game.tickNow()) / 20)); btn(9, { label: ab.name, labelFn: () => { const l = Math.max(0, Math.ceil(((abUnit.ab || 0) - game.tickNow()) / 20)); return l > 0 ? `${ab.name} (${l} s)` : ab.name; }, key: ab.hotkey, icon: () => actionIcon('warcry'), desc: `${ab.desc} Přebití ${ab.cooldown} s.`, act: () => game.useAbility(), canAfford: () => (abUnit.ab || 0) <= game.tickNow() }); }
       if (hasMil) btn(8, { label: 'Hlídkovat', key: 'P', icon: () => actionIcon('patrol'), desc: 'Jednotky hlídkují mezi současnou pozicí a cílem a útočí na vše, co potkají.', act: () => { game.state.mode = 'patrol'; }, active: () => game.state.mode === 'patrol' });

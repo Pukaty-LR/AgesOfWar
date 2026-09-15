@@ -333,6 +333,27 @@ const UNIT_DRAW = {
   ww2_rockets: (ctx, o) => rocketTruck(ctx, o),
   ww2_cruiser: (ctx, o) => { ctx.save(); ctx.scale(1.3, 1.3); destroyer(ctx, o); ctx.restore(); },
   ww2_hero: (ctx, o) => commandCar(ctx, o),
+  // ---- transports ----
+  ant_transport: (ctx, o) => { const { dir, team, frame } = o; const a = worldAngleForDir(dir); const bobz = Math.sin(frame / 6 * Math.PI * 2) * 1.2;
+    ellipse(ctx, 0, 0, 30, 14, 'rgba(0,0,0,0.25)');
+    prism(ctx, rot([[-0.9, -0.3], [0.7, -0.3], [1.0, 0], [0.7, 0.3], [-0.9, 0.3], [-1.05, 0]], a), 2 + bobz, 8, [150, 105, 60], [110, 70, 35]);
+    prism(ctx, rot(isoRect(-0.6, -0.22, 1.0, 0.44), a), 10 + bobz, 3, [170, 130, 80], [120, 90, 55]); // open cargo deck
+    for (let i = 0; i < Math.min(4, o.cargo || 0); i++) { const [cx, cy] = iso(Math.cos(a) * (-0.4 + i * 0.25), Math.sin(a) * (-0.4 + i * 0.25), 13 + bobz); rrect(ctx, cx - 3, cy - 6, 6, 6, 1, rgb([120, 85, 45]), OUT, 0.5); }
+    const [mx, my] = iso(-0.3, 0, 11 + bobz); line(ctx, mx, my, mx, my - 26, rgb(WOOD_D), 2.2); poly(ctx, [[mx - 8, my - 24], [mx + 8, my - 24], [mx + 9, my - 12], [mx - 9, my - 11]], '#efe4c8', OUT, 0.7); ctx.fillStyle = rgb(team); ctx.fillRect(mx - 6, my - 19, 12, 4); },
+  ww2_landing: (ctx, o) => { const { dir, team, frame } = o; const a = worldAngleForDir(dir); const bobz = Math.sin(frame / 6 * Math.PI * 2) * 0.8; const grey = [110, 118, 110];
+    ellipse(ctx, 0, 0, 30, 13, 'rgba(0,0,0,0.25)');
+    prism(ctx, rot([[-0.95, -0.28], [0.8, -0.28], [0.95, -0.18], [0.95, 0.18], [0.8, 0.28], [-0.95, 0.28]], a), 1 + bobz, 7, grey, shade(grey, 0.65)); // flat-bottomed hull
+    prism(ctx, rot(isoRect(0.72, -0.26, 0.2, 0.52), a), 8 + bobz, 8, shade(grey, 1.1), shade(grey, 0.7)); // bow ramp
+    prism(ctx, rot(isoRect(-0.95, -0.14, 0.25, 0.28), a), 8 + bobz, 6, shade(grey, 1.05), shade(grey, 0.7)); // coxswain box
+    for (let i = 0; i < Math.min(4, o.cargo || 0); i++) { const [cx, cy] = iso(Math.cos(a) * (-0.5 + i * 0.25) - Math.sin(a) * ((i % 2) - 0.5) * 0.2, Math.sin(a) * (-0.5 + i * 0.25) + Math.cos(a) * ((i % 2) - 0.5) * 0.2, 9 + bobz); ellipse(ctx, cx, cy - 3, 3, 3.2, rgb([88, 96, 80]), OUT, 0.5); }
+    const [fx, fy] = iso(-0.7, 0, 14 + bobz); line(ctx, fx, fy, fx, fy - 9, '#333', 1); ctx.fillStyle = rgb(team); ctx.fillRect(fx, fy - 9, 6, 3.5); },
+  sf_transport: (ctx, o) => { const { dir, team, frame } = o; const a = worldAngleForDir(dir); const hover = 5 + Math.sin(frame * 1.05) * 1.2;
+    ellipse(ctx, 0, 0, 30, 14, 'rgba(0,0,0,0.25)'); hoverGlow(ctx, 30, 14, 1);
+    const hullC = mix([170, 178, 192], team, 0.3), hullD = shade(hullC, 0.62);
+    prism(ctx, rot([[-0.9, -0.3], [0.6, -0.3], [0.95, 0], [0.6, 0.3], [-0.9, 0.3], [-1.0, 0]], a), hover, 8, hullC, hullD);
+    const [cx, cy] = iso(-0.1, 0, hover + 8); for (let i = 5; i >= 0; i--) { const k = i / 6; ellipse(ctx, cx, cy - (1 - k) * 10, 20 * k + 3, 9 * k + 1.5, `rgba(120,200,255,${0.15 + (1 - k) * 0.12})`, i === 5 ? 'rgba(160,220,255,0.6)' : null, 0.7); } // glass pod
+    for (let i = 0; i < Math.min(4, o.cargo || 0); i++) { const [px, py] = iso(-0.45 + i * 0.25, 0, hover + 9); ellipse(ctx, px, py - 2, 2.5, 2.8, rgb([90, 96, 110]), OUT, 0.4); }
+    const [fx, fy] = iso(-0.7, 0, hover + 12); ctx.fillStyle = rgb(team); ctx.fillRect(fx - 3, fy - 2, 6, 3); },
   // ---- healers ----
   ant_medic: (ctx, o) => humanoid(ctx, { ...o, torso: [235, 230, 215], helmet: 'band', weapon: o.anim === 'work' ? 'wrench' : null, legs: [200, 195, 180], belt: [180, 150, 80], emblem: o.team }),
   ww2_medic: (ctx, o) => { humanoid(ctx, { ...o, torso: mix([96, 100, 80], o.team, 0.35), helmet: 'garrison', weapon: null, legs: [75, 78, 62], sleeves: [220, 220, 220] }); ctx.fillStyle = '#fff'; ctx.fillRect(-6.5, -21, 5, 5); ctx.fillStyle = '#d33'; ctx.fillRect(-4.6, -20.5, 1.2, 4); ctx.fillRect(-6, -19.1, 4, 1.2); },
@@ -366,7 +387,7 @@ const UNIT_DRAW = {
 const UNIT_BOX = { default: [32, 52, 16, 46], ant_cavalry: [44, 56, 22, 50], ant_siege: [56, 70, 28, 62], ant_ship: [80, 80, 40, 70], ww2_tank: [64, 56, 32, 48], ww2_artillery: [56, 52, 28, 44], ww2_destroyer: [90, 80, 45, 70],
   ant_veteran: [30, 52, 15, 46], ant_heavycav: [44, 56, 22, 50], ant_chariot: [64, 60, 32, 52], ant_ballista: [56, 60, 28, 52], ant_heavyship: [100, 100, 50, 88], ant_hero: [46, 58, 23, 52],
   ww2_atgun: [48, 44, 24, 38], ww2_heavytank: [80, 70, 40, 60], ww2_td: [64, 56, 32, 48], ww2_rockets: [66, 66, 33, 56], ww2_cruiser: [118, 104, 59, 90], ww2_hero: [56, 50, 28, 42],
-  sf_creep: [48, 44, 24, 36], sf_worker: [30, 40, 15, 34], sf_snipedrone: [70, 44, 35, 36], sf_tank: [64, 62, 32, 54], sf_heavytank: [82, 78, 41, 68], sf_walker: [56, 66, 28, 58], sf_boat: [80, 70, 40, 60], sf_cruiser: [108, 92, 54, 80], sf_mech: [44, 66, 22, 60], sf_hero: [58, 90, 29, 82], sf_laser: [60, 60, 30, 52], sf_exo: [30, 54, 15, 48], sf_jet: [28, 56, 14, 50] };
+  ant_transport: [90, 80, 45, 68], ww2_landing: [90, 70, 45, 58], sf_transport: [90, 76, 45, 64], sf_creep: [48, 44, 24, 36], sf_worker: [30, 40, 15, 34], sf_snipedrone: [70, 44, 35, 36], sf_tank: [64, 62, 32, 54], sf_heavytank: [82, 78, 41, 68], sf_walker: [56, 66, 28, 58], sf_boat: [80, 70, 40, 60], sf_cruiser: [108, 92, 54, 80], sf_mech: [44, 66, 22, 60], sf_hero: [58, 90, 29, 82], sf_laser: [60, 60, 30, 52], sf_exo: [30, 54, 15, 48], sf_jet: [28, 56, 14, 50] };
 
 function chariot(ctx, o) {
   const { dir, team } = o; const a = worldAngleForDir(dir);
@@ -544,11 +565,11 @@ const ANIM_FRAMES = { idle: 4, walk: 6, attack: 4, work: 4 };
 
 export function unitSprite(sprite, colorIdx, dir, anim, frame, extra = {}) {
   const frames = ANIM_FRAMES[anim] || 1; frame = frame % frames;
-  const key = `u|${sprite}|${colorIdx}|${dir}|${anim}|${frame}|${extra.carry || ''}|${extra.faction || ''}|${extra.workKind || ''}`;
+  const key = `u|${sprite}|${colorIdx}|${dir}|${anim}|${frame}|${extra.carry || ''}|${extra.faction || ''}|${extra.workKind || ''}|${extra.cargo || 0}`;
   const box = UNIT_BOX[sprite] || UNIT_BOX.default;
   return cached(key, box[0], box[1], box[2], box[3], ctx => {
     const fn = UNIT_DRAW[sprite]; if (!fn) { ellipse(ctx, 0, -8, 8, 8, '#f0f', '#000'); return; }
-    fn(ctx, { dir, anim, frame, team: teamRgb(colorIdx), carry: extra.carry, faction: extra.faction, workKind: extra.workKind });
+    fn(ctx, { dir, anim, frame, team: teamRgb(colorIdx), carry: extra.carry, faction: extra.faction, workKind: extra.workKind, cargo: extra.cargo || 0 });
   });
 }
 export function animFrameCount(anim) { return ANIM_FRAMES[anim] || 1; }
@@ -1119,6 +1140,7 @@ export function actionIcon(kind, size = 64, color = '#e8c04a') {
   return iconCanvas((ctx, s) => {
     ctx.translate(s / 2, s / 2); const r = s * 0.32;
     switch (kind) {
+      case 'unload': ctx.fillStyle = '#8b6a3a'; ctx.beginPath(); ctx.moveTo(-r, -r * 0.1); ctx.lineTo(r, -r * 0.1); ctx.lineTo(r * 0.7, r * 0.6); ctx.lineTo(-r * 0.7, r * 0.6); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#8fd0ff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(0, r * 0.2); ctx.moveTo(-r * 0.4, -r * 0.3); ctx.lineTo(0, r * 0.2); ctx.lineTo(r * 0.4, -r * 0.3); ctx.stroke(); break;
       case 'warcry': ctx.strokeStyle = '#f1d36a'; ctx.lineWidth = 3; for (let i = 1; i <= 3; i++) { ctx.globalAlpha = 1 - i * 0.22; ctx.beginPath(); ctx.arc(-r * 0.3, 0, r * 0.35 * i, -0.9, 0.9); ctx.stroke(); } ctx.globalAlpha = 1; ctx.fillStyle = '#e0c060'; ctx.beginPath(); ctx.moveTo(-r, -r * 0.5); ctx.lineTo(-r * 0.3, 0); ctx.lineTo(-r, r * 0.5); ctx.closePath(); ctx.fill(); break;
       case 'research_atk': ctx.strokeStyle = '#e04040'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-r, r); ctx.lineTo(r * 0.5, -r * 0.5); ctx.stroke(); ctx.strokeStyle = '#ddd'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-r * 0.6, r * 0.6); ctx.lineTo(r * 0.6, -r * 0.6); ctx.stroke(); ctx.strokeStyle = '#f1d36a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(r * 0.9, r * 0.9); ctx.lineTo(r * 0.9, r * 0.1); ctx.moveTo(r * 0.9, r * 0.1); ctx.lineTo(r * 0.5, r * 0.5); ctx.moveTo(r * 0.9, r * 0.1); ctx.lineTo(r * 1.3, r * 0.5); ctx.stroke(); break;
       case 'research_arm': ctx.fillStyle = '#7f95b3'; ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.8, -r * 0.6); ctx.lineTo(r * 0.7, r * 0.3); ctx.lineTo(0, r); ctx.lineTo(-r * 0.7, r * 0.3); ctx.lineTo(-r * 0.8, -r * 0.6); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#f1d36a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, r * 0.5); ctx.lineTo(0, -r * 0.4); ctx.moveTo(0, -r * 0.4); ctx.lineTo(-r * 0.35, 0); ctx.moveTo(0, -r * 0.4); ctx.lineTo(r * 0.35, 0); ctx.stroke(); break;

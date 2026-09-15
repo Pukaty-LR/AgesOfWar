@@ -89,6 +89,9 @@ export class Game {
   nextUpgrade(b) { const def = this.tech.buildings[b.t]; return (def.upgrades || []).find(u => u.level === (b.lv || 1) + 1) || null; }
   hallLevel() { let lv = 0; for (const e of this.ents.values()) if (e.k === 'b' && e.o === this.me && e.t === 'hall' && e.bl) lv = Math.max(lv, e.lv || 1); return lv; }
   upgrade(bid) { const b = this.ents.get(bid); if (!b) return; const up = this.nextUpgrade(b); if (!up) return; const p = this.players[this.me]; if (up.hall && this.hallLevel() < up.hall) { this.ui.alert(`Vyžaduje ${this.eraDef.hallNames[up.hall - 1]} (radnice úrovně ${up.hall}).`, true); this.audio.sfx('error'); return; } if (p.res.p < up.cost.p || p.res.s < up.cost.s) { this.ui.alert('Nedostatek surovin.', true); this.audio.sfx('error'); return; } this.send({ t: 'upgrade', id: bid }); this.audio.sfx('click'); }
+  transportsSelected() { return this.selectedIds(e => e.k === 'u' && e.o === this.me && this.unitDef(e).capacity); }
+  unloadAt(wx, wy) { const ids = this.transportsSelected(); if (!ids.length) return; this.send({ t: 'unload', ids, x: wx, y: wy, queue: this.state.shift }); this.audio.sfx('ack', 0.7); this.renderer.addEffect({ kind: 'marker', x: wx, y: wy, color: 'rgba(120,200,255,0.9)' }); }
+  unloadHere() { const ids = this.transportsSelected(); if (!ids.length) return; this.send({ t: 'unload', ids }); this.audio.sfx('ack', 0.7); }
   useAbility() { const ids = this.selectedIds(e => e.k === 'u' && e.o === this.me && this.unitDef(e).ability); if (!ids.length) return; this.send({ t: 'ability', ids }); }
   research(bid, rid) { this.send({ t: 'research', id: bid, rid }); this.audio.sfx('click'); }
   pingMap(wx, wy) { this.net.send({ t: 'mping', x: wx, y: wy }); }
@@ -163,6 +166,8 @@ export class Game {
       case 'alert': if (ev.owner === this.me) { this.lastAlert = { x: ev.x, y: ev.y, t: performance.now() }; this.ui.alert(ev.k === 'building' ? 'Naše budova je pod útokem!' : 'Naše jednotky jsou pod útokem!', true); this.audio.sfx('alarm', 0.6); this.ui.minimapPing(ev.x, ev.y); } break;
       case 'eliminated': { const p = this.players[ev.owner]; this.ui.chat('', `${p?.name} byl vyřazen ze hry.`, true); if (ev.owner !== this.me) this.audio.sfx('horn', 0.6); else if (!this.gameOver) { this.audio.sfx('defeat', 1); this.eliminated = true; setTimeout(() => { if (!this.gameOver) this.ui.showEnd(this, false, true); }, 1200); } break; }
       case 'chat': this.ui.chat(ev.from, ev.text, false, ev.color); break;
+      case 'board': this.soundAt('splash', ev.x, ev.y, 0.5); break;
+      case 'unload': this.soundAt('splash', ev.x, ev.y, 0.7); if (mine) this.ui.alert('Jednotky vyloděny.', false); break;
       case 'heal': if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(5, ev.x, ev.y, 10, { colors: [[140, 255, 170], [220, 255, 230]], speed: 0.6, vz: 22, life: 0.7, size: 1.6, gravity: -10, drag: 0.97 }); break;
       case 'levelup': { R.addEffect({ kind: 'ring', x: ev.x, y: ev.y, color: 'rgba(255,240,160,0.95)' }); R.addEffect({ kind: 'text', x: ev.x, y: ev.y, text: `Úroveň ${ev.level}!`, color: '#f1d36a' }); R.spawnParticles(20, ev.x, ev.y, 6, { colors: [[255, 240, 160], [255, 200, 80]], speed: 1.5, vz: 40, life: 0.9, size: 2, gravity: 30 }); if (mine) { this.audio.sfx('unitReady', 0.8); this.ui.alert(`${ev.name} dosáhl úrovně ${ev.level}.`, false); this.ui.dirty = true; } break; }
       case 'gameover': break;
@@ -282,6 +287,7 @@ export class Game {
         if (st.placing) { this.confirmPlacement(); return; }
         if (st.mode === 'move') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.orderMove(wx, wy); if (!st.shift) st.mode = null; return; }
         if (st.mode === 'patrol') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.orderPatrol(wx, wy); if (!st.shift) st.mode = null; return; }
+        if (st.mode === 'unload') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.unloadAt(wx, wy); st.mode = null; return; }
         if (st.mode === 'gather' || st.mode === 'repair') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); const t = this.renderer.pick(sx, sy); if (t) this.smartCommand(wx, wy, t); else this.audio.sfx('error'); st.mode = null; return; }
         if (st.mode === 'amove' || st.mode === 'attack') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); this.orderAttackMove(wx, wy, this.renderer.pick(sx, sy)); if (!st.shift) st.mode = null; return; }
         if (st.mode === 'rally') { const [wx, wy] = this.renderer.screenToWorld(sx, sy); const t = this.renderer.pick(sx, sy); this.send({ t: 'rally', ids: this.myBuildingsSelected(), x: wx, y: wy, targetId: t ? t.i : 0 }); st.mode = null; this.audio.sfx('click'); return; }

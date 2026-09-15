@@ -41,6 +41,7 @@ const tierUnits = {
   heavyship: { role: 'ship',     hp: 520, armor: 5, dmg: 40, range: 7,   cooldown: 1.6, speed: 3.0, sight: 10, pop: 5, size: 0.7, trainTime: 36, cost: { p: 220, s: 260 }, building: 'dock', domain: 'sea', projectile: 'bolt', bonus: { building: 1.6, ship: 1.3 } },
   hero:      { role: 'cavalry',  hp: 620, armor: 6, dmg: 42, range: 1.0, cooldown: 1.0, speed: 3.6, sight: 10, pop: 6, size: 0.46, trainTime: 60, cost: { p: 500, s: 200 }, building: 'hall', domain: 'land', projectile: null, unique: true, aura: { range: 5, dmg: 1.2 }, bonus: {},
                ability: { id: 'warcry', name: 'Válečný pokřik', desc: 'Spojenci v okruhu 6 mají 12 s +35 % útok a +2 pancíř.', range: 6, dmg: 1.35, armor: 2, duration: 12, cooldown: 60, hotkey: 'C' } },
+  transport: { role: 'ship',     hp: 280, armor: 3, dmg: 0,  range: 0.7, cooldown: 1.0, speed: 3.8, sight: 8, pop: 2, size: 0.6, trainTime: 20, cost: { p: 90, s: 130 },  building: 'dock', domain: 'sea', projectile: null, capacity: 8, bonus: {} },
   medic:     { role: 'support',  hp: 70,  armor: 1, dmg: 0,  range: 0.7, cooldown: 1.0, speed: 2.8, sight: 7, pop: 2, size: 0.32, trainTime: 20, cost: { p: 90, s: 30 },  building: 'hall', domain: 'land', projectile: null, heal: { range: 4, amount: 8 }, bonus: {} },
   // ww2 variants
   sniper:    { role: 'ranged',   hp: 60,  armor: 0, dmg: 32, range: 8,   cooldown: 2.2, speed: 2.6, sight: 10, pop: 2, size: 0.32, trainTime: 20, cost: { p: 90, s: 40 },  building: 'barracks', domain: 'land', projectile: 'bullet', bonus: { infantry: 1.5, ranged: 1.6 } },
@@ -65,7 +66,7 @@ const commonBuildings = {
               upgrades: [ { level: 2, cost: { p: 220, s: 160 }, time: 45, unlocks: ['heavycav'], hall: 2 }, { level: 3, cost: { p: 380, s: 260 }, time: 60, unlocks: ['chariot'], hall: 3 } ] },
   siege:    { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 170, s: 140 }, buildTime: 38, trains: ['siege'], hotkey: 'W',
               upgrades: [ { level: 2, cost: { p: 240, s: 200 }, time: 50, unlocks: ['ballista'], hall: 2 } ] },
-  dock:     { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 110, s: 140 }, buildTime: 32, trains: ['ship'], shore: true, hotkey: 'D',
+  dock:     { hp: 850,  armor: 4, w: 3, h: 3, cost: { p: 110, s: 140 }, buildTime: 32, trains: ['ship', 'transport'], shore: true, hotkey: 'D',
               upgrades: [ { level: 2, cost: { p: 220, s: 240 }, time: 50, unlocks: ['heavyship'], hall: 2 } ] },
   tower:    { hp: 550,  armor: 6, w: 1, h: 1, cost: { p: 70,  s: 90 },  buildTime: 26, trains: [], attack: { dmg: 15, range: 6.5, cooldown: 1.0, projectile: 'arrow' }, hotkey: 'T',
               upgrades: [ { level: 2, cost: { p: 90, s: 110 }, time: 30, unlocks: [], hp: 1.3, dmgMul: 1.4, rangeAdd: 0.5, armorAdd: 2, desc: 'Zesílená věž: +40 % útok, +0,5 dosah, +2 pancíř.' }, { level: 3, cost: { p: 160, s: 180 }, time: 40, unlocks: [], hp: 1.3, dmgMul: 1.5, rangeAdd: 0.5, armorAdd: 2, hall: 2, desc: 'Pevnost: dvojitá střelba (+50 % útok), +0,5 dosah, +2 pancíř.' } ] },
@@ -116,6 +117,7 @@ export const ERAS = {
       heavyship: { ...tierUnits.heavyship, name: 'Těžká loď',   sprite: 'ant_heavyship', desc: 'Velká válečná loď.' },
       hero:     { ...tierUnits.hero,       name: 'Vojevůdce',   sprite: 'ant_hero', desc: 'Jediný hrdina. Spojenci v okolí +20 % útok.' },
       medic:    { ...tierUnits.medic,      name: 'Léčitel',     sprite: 'ant_medic', desc: 'Léčí zraněné spojence v okolí, sám nebojuje.' },
+      transport: { ...tierUnits.transport, name: 'Nákladní loď', sprite: 'ant_transport', desc: 'Převeze až 8 pozemních jednotek. Pravým klikem na loď nalodíš, klávesou U na břehu vylodíš.' },
       creep:    { ...commonUnits.infantry, name: 'Bandita',     sprite: 'ant_creep', hp: 140, dmg: 14, armor: 1, creep: true, desc: 'Neutrální lupiči hlídající doly v divočině.' },
     },
     buildings: {
@@ -174,6 +176,7 @@ export const ERAS = {
       heavyship: { ...tierUnits.cruiser,   name: 'Křižník',     sprite: 'ww2_cruiser', desc: 'Těžká válečná loď.' },
       hero:     { ...tierUnits.hero2,      name: 'Polní maršál', sprite: 'ww2_hero', desc: 'Jediný hrdina. Spojenci v okolí +20 % útok.' },
       medic:    { ...tierUnits.medic,      name: 'Zdravotník',  sprite: 'ww2_medic', desc: 'Ošetřuje zraněné vojáky v okolí, sám nebojuje.' },
+      transport: { ...tierUnits.transport, name: 'Výsadkový člun', sprite: 'ww2_landing', desc: 'Převeze až 8 pozemních jednotek. Pravým klikem na člun naložíš, klávesou U na břehu vyložíš.' },
       creep:    { ...commonUnits.infantry, name: 'Partyzán',    sprite: 'ww2_creep', hp: 120, dmg: 10, armor: 1, range: 3.5, projectile: 'bullet', cooldown: 0.7, creep: true, desc: 'Neutrální partyzáni hlídající ropná pole.' },
     },
     buildings: {
@@ -230,6 +233,7 @@ export const ERAS = {
       heavyship: { ...tierUnits.heavyship, name: 'Hover křižník',   sprite: 'sf_cruiser', desc: 'Těžká hover válečná loď.', range: 8, projectile: 'plasmaShell', splash: 1.0 },
       hero:     { ...tierUnits.hero2,      name: 'Velitel v mechu', sprite: 'sf_hero', desc: 'Jediný hrdina. Spojenci v okolí +20 % útok.', range: 4, projectile: 'plasma', hp: 700, dmg: 34, ability: { ...tierUnits.hero2.ability, name: 'Přetížení zbraní' } },
       medic:    { ...tierUnits.medic,      name: 'Opravný dron', sprite: 'sf_medic', desc: 'Opravuje a léčí spojence v okolí, sám nebojuje.', speed: 3.2 },
+      transport: { ...tierUnits.transport, name: 'Hover transportér', sprite: 'sf_transport', desc: 'Převeze až 8 pozemních jednotek. Pravým klikem naložíš, klávesou U na břehu vyložíš.', speed: 4.2 },
       creep:    { ...commonUnits.cavalry,  name: 'Xeno šelma',  sprite: 'sf_creep', hp: 180, dmg: 16, armor: 2, speed: 3.6, size: 0.4, pop: 0, creep: true, desc: 'Mimozemské šelmy hlídající krystaly.' },
     },
     buildings: {
