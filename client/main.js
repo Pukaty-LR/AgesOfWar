@@ -41,7 +41,8 @@ class App {
       const seed = (Math.random() * 1e9) | 0; const map = generateMap(seed, 64, 2, 'continent');
       stub.ents.clear(); let id = 1;
       for (const t of map.trees) stub.ents.set(id, { i: id++, k: 't', x: t.tx + 0.5, y: t.ty + 0.5, tx: t.tx, ty: t.ty, v: t.v });
-      for (const m of map.mines) stub.ents.set(id, { i: id++, k: 'm', x: m.tx, y: m.ty, tx: m.tx - 1, ty: m.ty - 1 });
+      for (const m of map.mines) stub.ents.set(id, { i: id++, k: 'm', x: m.tx, y: m.ty, tx: m.tx - 1, ty: m.ty - 1, big: m.endless ? 1 : 0 });
+      for (const t of map.trees) if (t.endless) { const e = stub.ents.get([...stub.ents.entries()].find(([, v]) => v.k === 't' && v.tx === t.tx && v.ty === t.ty)?.[0]); if (e) e.big = 1; }
       r.setMap(map, era); r.explored.fill(1); r.visible.fill(1); r.updateFog = () => {}; r.fogCtx.clearRect(0, 0, r.fw, r.fh); r.clouds = null;
       document.body.className = 'era-' + era;
     };
@@ -171,6 +172,7 @@ class App {
     for (let i = 0; i < size * size; i++) { const t = map.tiles[i]; let col; switch (t) { case 0: col = pal.grass; break; case 1: col = pal.dirt; break; case 2: col = pal.sand; break; case 3: col = pal.water.map((v, k) => v * 0.7 + pal.sand[k] * 0.3); break; case 4: col = pal.deep; break; default: col = pal.rock; } const k = 0.8 + (map.height[i] - 0.5) * 0.5; img.data[i * 4] = col[0] * k; img.data[i * 4 + 1] = col[1] * k; img.data[i * 4 + 2] = col[2] * k; img.data[i * 4 + 3] = 255; }
     const tmp = document.createElement('canvas'); tmp.width = size; tmp.height = size; tmp.getContext('2d').putImageData(img, 0, 0);
     const tc = tmp.getContext('2d'); tc.fillStyle = '#1e4d22'; for (const t of map.trees) tc.fillRect(t.tx, t.ty, 1, 1); tc.fillStyle = '#f2c94c'; for (const m of map.mines) tc.fillRect(m.tx - 1, m.ty - 1, 2, 2);
+    for (const m of map.mines) if (m.endless) { tc.fillStyle = '#fff1a0'; tc.fillRect(m.tx - 1, m.ty - 1, 2, 2); tc.strokeStyle = '#ffd700'; tc.lineWidth = 1; tc.strokeRect(m.tx - 2.5, m.ty - 2.5, 5, 5); } // the endless centre
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, c.width, c.height); const s = c.width / (2 * size); ctx.setTransform(s, s, -s, s, c.width / 2, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(tmp, 0, 0);
     map.spawns.forEach((sp, i) => { ctx.fillStyle = TEAM_COLORS[i].hex; ctx.fillRect(sp.x - 2, sp.y - 2, 4, 4); });
     ctx.setTransform(1, 0, 0, 1, 0, 0);
