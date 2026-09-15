@@ -248,7 +248,10 @@ wss.on('connection', (ws, req) => {
         if (l.slots.some(s => !s.isAI && s.id !== c.id && !s.ready)) return send(ws, { t: 'error', msg: 'Ne všichni hráči jsou připraveni.' });
         const teams = new Set(l.slots.map(s => s.team));
         if (teams.size < 2) return send(ws, { t: 'error', msg: 'Všichni jsou ve stejném týmu.' });
-        startGame(l);
+        if (l.starting) return;
+        l.starting = true; const secs = 3;
+        for (const s of l.slots) if (!s.isAI) { const o = clients.get(s.id); if (o) send(o.ws, { t: 'countdown', n: secs }); }
+        setTimeout(() => { l.starting = false; if (lobbies.get(l.id) === l && l.state === 'lobby' && l.slots.length >= 2) startGame(l); }, secs * 1000);
         break;
       }
       case 'cmd': {
