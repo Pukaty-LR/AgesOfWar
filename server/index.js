@@ -44,7 +44,7 @@ function broadcastLobbyList() {
   for (const c of clients.values()) if (!c.lobby) send(c.ws, { t: 'lobbies', list });
 }
 function lobbyState(l) {
-  return { id: l.id, name: l.name, hostId: l.hostId, era: l.era, max: l.max, state: l.state, mapStyle: l.mapStyle, mapSize: l.mapSize, startRes: l.startRes, reveal: !!l.reveal, slots: l.slots.map(s => ({ id: s.id, name: s.name, faction: s.faction, team: s.team, color: s.color, ready: s.ready, isAI: s.isAI, diff: s.diff, connected: s.isAI || (clients.get(s.id)?.ws.readyState === 1) })) };
+  return { id: l.id, name: l.name, hostId: l.hostId, era: l.era, max: l.max, state: l.state, mapStyle: l.mapStyle, mapSize: l.mapSize, startRes: l.startRes, reveal: !!l.reveal, seedText: l.seedText || '', slots: l.slots.map(s => ({ id: s.id, name: s.name, faction: s.faction, team: s.team, color: s.color, ready: s.ready, isAI: s.isAI, diff: s.diff, connected: s.isAI || (clients.get(s.id)?.ws.readyState === 1) })) };
 }
 function broadcastLobby(l) { const st = { t: 'lobby', lobby: lobbyState(l) }; for (const s of l.slots) if (!s.isAI) { const c = clients.get(s.id); if (c) send(c.ws, st); } }
 function freeColor(l) { const used = new Set(l.slots.map(s => s.color)); for (let i = 0; i < TEAM_COLORS.length; i++) if (!used.has(i)) return i; return 0; }
@@ -79,8 +79,8 @@ function leaveLobby(c, silent = false, explicit = false) {
 }
 
 function startGame(l) {
-  const seed = (Math.random() * 0x7fffffff) | 0;
-  const players = l.slots.map(s => ({ name: s.name, faction: s.faction, team: s.team, color: s.color, isAI: s.isAI }));
+  const seed = l.seed ? Math.abs(l.seed) : (Math.random() * 0x7fffffff) | 0;
+  const players = l.slots.map(s => { let faction = s.faction; if (faction === 'random') { const fs = ERAS[l.era].factions; const fac = fs[Math.floor(Math.random() * fs.length)]; faction = fac.id; s.faction = faction; if (s.isAI) { s.name = ''; s.name = botName(l, fac); } } return { name: s.name, faction, team: s.team, color: s.color, isAI: s.isAI }; });
   players.push({ name: 'Divočina', faction: ERAS[l.era].factions[0].id, team: 99, color: 7, isAI: false, neutral: true }); // neutral creeps
   const sim = new Sim({ seed, size: (MAP_SIZES[l.mapSize] || MAP_SIZES.medium).size, eraId: l.era, players, mapStyle: l.mapStyle || 'continent', startRes: l.startRes || 'normal' });
   const ais = l.slots.map((s, i) => s.isAI ? new AIPlayer(sim, i, s.diff || 'normal') : null).filter(Boolean);
@@ -189,7 +189,7 @@ wss.on('connection', (ws, req) => {
       case 'set': {
         if (!l || l.state !== 'lobby') return;
         const s = l.slots.find(s => s.id === c.id); if (!s) return;
-        if (m.faction && ERAS[l.era].factions.some(f => f.id === m.faction)) s.faction = m.faction;
+        if (m.faction && (m.faction === 'random' || ERAS[l.era].factions.some(f => f.id === m.faction))) s.faction = m.faction;
         if (m.team !== undefined) s.team = Math.max(0, Math.min(MAX_PLAYERS - 1, m.team | 0));
         if (m.color !== undefined) { const col = Math.max(0, Math.min(TEAM_COLORS.length - 1, m.color | 0)); if (!l.slots.some(o => o !== s && o.color === col)) s.color = col; }
         if (m.ready !== undefined) s.ready = !!m.ready;
@@ -200,6 +200,7 @@ wss.on('connection', (ws, req) => {
         if (!l || l.hostId !== c.id || l.state !== 'lobby') return;
         const s = l.slots[m.slot]; if (!s || !s.isAI) return;
         if (m.faction && ERAS[l.era].factions.some(f => f.id === m.faction)) { s.faction = m.faction; s.name = ''; s.name = botName(l, ERAS[l.era].factions.find(f => f.id === m.faction)); }
+        else if (m.faction === 'random') { s.faction = 'random'; s.name = ''; s.name = botName(l, { leader: 'Počítač', name: 'Počítač' }); }
         if (m.team !== undefined) s.team = Math.max(0, Math.min(MAX_PLAYERS - 1, m.team | 0));
         if (m.color !== undefined) { const col = Math.max(0, Math.min(TEAM_COLORS.length - 1, m.color | 0)); if (!l.slots.some(o => o !== s && o.color === col)) s.color = col; }
         if (m.diff) s.diff = validDiff(m.diff);
@@ -220,6 +221,7 @@ wss.on('connection', (ws, req) => {
         if (m.size && MAP_SIZES[m.size]) l.mapSize = m.size;
         if (m.startRes && ['low', 'normal', 'high'].includes(m.startRes)) l.startRes = m.startRes;
         if (m.reveal !== undefined) l.reveal = !!m.reveal;
+        if (m.seed !== undefined) { const sv = String(m.seed).trim(); l.seed = sv ? (/^\d+$/.test(sv) ? (+sv | 0) : [...sv].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7)) : null; l.seedText = sv.slice(0, 24); }
         broadcastLobby(l);
         break;
       }

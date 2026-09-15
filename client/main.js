@@ -190,6 +190,8 @@ class App {
     const mr = $('map-res'), mv = $('map-reveal');
     if (!mr.dataset.wired) { mr.dataset.wired = '1'; mr.onchange = () => this.net.send({ t: 'setMap', startRes: mr.value }); mv.onchange = () => this.net.send({ t: 'setMap', reveal: mv.checked }); }
     mr.value = l.startRes || 'normal'; mv.checked = !!l.reveal; mr.disabled = !isHost; mv.disabled = !isHost;
+    const sd = $('map-seed'); if (!sd.dataset.wired) { sd.dataset.wired = '1'; sd.onchange = () => this.net.send({ t: 'setMap', seed: sd.value }); }
+    if (document.activeElement !== sd) sd.value = l.seedText || ''; sd.disabled = !isHost;
     $('map-desc').textContent = (MAP_STYLES[l.mapStyle] || MAP_STYLES.continent).desc + ' Vzdálené doly hlídají neutrální jednotky.';
     const tb = $('slot-list'); tb.innerHTML = '';
     l.slots.forEach((s, idx) => {
@@ -197,7 +199,7 @@ class App {
       const tdName = document.createElement('td'); tdName.innerHTML = `${esc(s.name)}${s.id === l.hostId ? '<span class="host-tag">HOST</span>' : ''}`;
       if (s.isAI) { const sd = document.createElement('select'); sd.className = 'diff-sel'; for (const [v, t] of [['easy', 'AI lehká'], ['normal', 'AI střední'], ['hard', 'AI těžká'], ['impossible', 'AI nemožná']]) { const o = document.createElement('option'); o.value = v; o.textContent = t; if ((s.diff || 'normal') === v) o.selected = true; sd.appendChild(o); } sd.disabled = !isHost; sd.onchange = () => this.net.send({ t: 'setSlot', slot: idx, diff: sd.value }); tdName.appendChild(sd); }
       tr.appendChild(tdName);
-      const tdF = document.createElement('td'); const sel = document.createElement('select'); for (const f of era.factions) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; if (f.id === s.faction) o.selected = true; sel.appendChild(o); } sel.disabled = !editable; sel.onchange = () => this.net.send(mine ? { t: 'set', faction: sel.value } : { t: 'setSlot', slot: idx, faction: sel.value }); tdF.appendChild(sel); tr.appendChild(tdF);
+      const tdF = document.createElement('td'); const sel = document.createElement('select'); for (const f of [...era.factions, { id: 'random', name: 'Náhodná' }]) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; if (f.id === s.faction) o.selected = true; sel.appendChild(o); } sel.disabled = !editable; sel.onchange = () => this.net.send(mine ? { t: 'set', faction: sel.value } : { t: 'setSlot', slot: idx, faction: sel.value }); tdF.appendChild(sel); tr.appendChild(tdF);
       const tdT = document.createElement('td'); const selT = document.createElement('select'); for (let i = 0; i < MAX_PLAYERS; i++) { const o = document.createElement('option'); o.value = i; o.textContent = 'Tým ' + (i + 1); if (i === s.team) o.selected = true; selT.appendChild(o); } selT.disabled = !editable; selT.onchange = () => this.net.send(mine ? { t: 'set', team: +selT.value } : { t: 'setSlot', slot: idx, team: +selT.value }); tdT.appendChild(selT); tr.appendChild(tdT);
       const tdC = document.createElement('td'); const dot = document.createElement('span'); dot.className = 'color-dot'; dot.style.background = TEAM_COLORS[s.color].hex; dot.title = TEAM_COLORS[s.color].name + (editable ? ' – klik změní' : ''); if (editable) dot.onclick = () => { let c = (s.color + 1) % TEAM_COLORS.length; while (l.slots.some(o => o !== s && o.color === c)) c = (c + 1) % TEAM_COLORS.length; this.net.send(mine ? { t: 'set', color: c } : { t: 'setSlot', slot: idx, color: c }); }; tdC.appendChild(dot); tr.appendChild(tdC);
       const tdS = document.createElement('td'); tdS.innerHTML = s.isAI ? '<span class="ready">Bot</span>' : (s.ready || s.id === l.hostId ? '<span class="ready">Připraven</span>' : '<span class="notready">Čeká…</span>'); tr.appendChild(tdS);
@@ -207,7 +209,7 @@ class App {
     const me = l.slots.find(s => s.id === this.myId);
     $('btn-start').classList.toggle('hidden', !isHost); $('btn-ready').classList.toggle('hidden', isHost); $('btn-ready').textContent = me && me.ready ? 'Zrušit připravenost' : 'Připraven';
     $('btn-add-bot').classList.toggle('hidden', !isHost); $('btn-add-bot-hard').classList.toggle('hidden', !isHost); $('btn-add-bot-easy').classList.toggle('hidden', !isHost); $('btn-add-bot-impossible').classList.toggle('hidden', !isHost);
-    const f = me && era.factions.find(x => x.id === me.faction); $('faction-desc').textContent = f ? `${f.name}: ${f.desc}` : '';
+    const f = me && era.factions.find(x => x.id === me.faction); $('faction-desc').textContent = f ? `${f.name}: ${f.desc}` : (me && me.faction === 'random' ? 'Náhodná frakce se vylosuje při startu hry.' : '');
   }
   leaveGame(silent = false) {
     this.game.stop(); if (!silent) this.net.send({ t: 'leave' }); this.lobby = null; $('pause-menu').classList.add('hidden'); this.show('menu'); this.net.send({ t: 'list' }); this.menuMusic();
