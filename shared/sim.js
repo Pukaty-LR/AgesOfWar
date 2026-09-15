@@ -932,7 +932,7 @@ export class Sim {
     if (o.phase !== 'return' && (!node || node.dead || node.amount <= 0)) {
       const alt = this.nearestNode(u, o.kind || (node ? node.kind : 'tree'), 60);
       if (o.phase === 'inside' && u.hidden) { u.hidden = false; u.dirty = true; o.phase = 'go'; }
-      if (!alt) { if (u.carry) { o.phase = 'return'; } else { this.nextOrder(u); return false; } }
+      if (!alt) { if (u.carry) { o.phase = 'return'; } else { const pl = this.players[u.owner]; if (!pl.neutral && (!pl.noResAt || this.tick - pl.noResAt > 20 * 20)) { pl.noResAt = this.tick; this.events.push({ t: 'msg', owner: u.owner, text: o.kind === 'mine' ? 'Žádný důl v dosahu – dělníci nemají co těžit.' : 'Žádné stromy v dosahu – dělníci nemají co těžit.' }); } this.nextOrder(u); return false; } }
       else { o.targetId = alt.id; node = alt; u.path = null; }
     }
     if (node) o.kind = node.kind;

@@ -262,4 +262,5 @@ export default {
   'Vaše základna bude asimilována.': 'Your base will be assimilated.',
   'Hover flotila vyráží.': 'Hover fleet moving out.',
   'Odpor je zbytečný.': 'Resistance is futile.',
+  'Žádný důl v dosahu – dělníci nemají co těžit.': 'No mine within reach – workers have nothing to gather.', 'Žádné stromy v dosahu – dělníci nemají co těžit.': 'No trees within reach – workers have nothing to gather.',
 };

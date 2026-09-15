@@ -133,4 +133,5 @@ export default {
   'Vaše základna bude asimilována.': 'Ваша база будет ассимилирована.',
   'Hover flotila vyráží.': 'Ховерфлот выдвигается.',
   'Odpor je zbytečný.': 'Сопротивление бесполезно.',
+  'Žádný důl v dosahu – dělníci nemají co těžit.': 'Рядом нет рудника – рабочим нечего добывать.', 'Žádné stromy v dosahu – dělníci nemají co těžit.': 'Рядом нет деревьев – рабочим нечего добывать.',
 };

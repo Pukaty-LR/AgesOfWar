@@ -126,4 +126,5 @@ export default {
   'Vaše základna bude asimilována.': 'Vuestra base será asimilada.',
   'Hover flotila vyráží.': 'La flota flotante sale.',
   'Odpor je zbytečný.': 'La resistencia es inútil.',
+  'Žádný důl v dosahu – dělníci nemají co těžit.': 'No hay minas al alcance: los trabajadores no tienen qué recolectar.', 'Žádné stromy v dosahu – dělníci nemají co těžit.': 'No hay árboles al alcance: los trabajadores no tienen qué recolectar.',
 };
