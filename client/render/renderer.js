@@ -37,7 +37,7 @@ export class Renderer {
     this.fogRaw = document.createElement('canvas'); this.fogRaw.width = this.fw; this.fogRaw.height = this.fh; this.fogRawCtx = this.fogRaw.getContext('2d'); this.fogImg = this.fogRawCtx.createImageData(this.fw, this.fh);
     this.fogCanvas = document.createElement('canvas'); this.fogCanvas.width = this.fw; this.fogCanvas.height = this.fh; this.fogCtx = this.fogCanvas.getContext('2d');
     this.fogCtx.fillStyle = 'rgb(6,5,8)'; this.fogCtx.fillRect(0, 0, this.fw, this.fh);
-    this.particles = []; this.effects = [];
+    this.particles = []; this.effects = []; this.weather = undefined; this.drops = []; this.clouds = null;
   }
   elevV(vx, vy) { const v = this.vh[vy * (this.map.w + 1) + vx]; return Math.max(0, v - SEA) * ELEV + Math.max(0, v - 0.83) * 520; }
   /** elevation (px) at world point, bilinear over vertex heights */
@@ -253,6 +253,8 @@ export class Renderer {
     this.drawParticles(ctx, z);
     // fog
     this.drawFog(ctx, ox, oy, z);
+    // weather: light rain (antiquity/ww2, some maps) or drifting spores (sci-fi)
+    this.drawWeather(ctx, dt);
     // slow day/night tint (10-minute cycle, subtle)
     { const ph = (this.time / 600) * Math.PI * 2; const night = Math.max(0, -Math.cos(ph)); const dusk = Math.max(0, Math.sin(ph)) * Math.max(0, Math.cos(ph)) * 2;
       if (night > 0.02) { ctx.fillStyle = `rgba(20,30,70,${night * 0.22})`; ctx.fillRect(0, 0, this.W, this.H); }
@@ -261,6 +263,22 @@ export class Renderer {
     this.drawOverlays(ctx, state, ox, oy, z, list);
   }
 
+  drawWeather(ctx, dt) {
+    if (!this.map) return;
+    if (this.weather === undefined) { const r = this.hash(this.map.seed & 0xffff, this.map.seed >>> 16); this.weather = this.era === 'scifi' ? 'spores' : (r < 0.3 ? 'rain' : 'clear'); this.drops = []; }
+    if (this.weather === 'clear') return;
+    const W = this.W, H = this.H;
+    if (this.weather === 'rain') {
+      while (this.drops.length < 260) this.drops.push({ x: Math.random() * (W + 200) - 100, y: Math.random() * H, s: 0.6 + Math.random() * 0.6 });
+      ctx.strokeStyle = 'rgba(200,220,255,0.28)'; ctx.lineWidth = 1; ctx.beginPath();
+      for (const d of this.drops) { d.y += 900 * d.s * dt; d.x += 120 * d.s * dt; if (d.y > H) { d.y = -20; d.x = Math.random() * (W + 200) - 100; } ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + 2.5 * d.s, d.y + 14 * d.s); }
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(40,50,70,0.10)'; ctx.fillRect(0, 0, W, H);
+    } else {
+      while (this.drops.length < 60) this.drops.push({ x: Math.random() * W, y: Math.random() * H, s: 0.5 + Math.random(), p: Math.random() * 6.28 });
+      for (const d of this.drops) { d.p += dt; d.y -= 12 * d.s * dt; d.x += Math.sin(d.p) * 18 * dt; if (d.y < -10) { d.y = H + 10; d.x = Math.random() * W; } const a = 0.25 + Math.sin(d.p * 2) * 0.2; ctx.fillStyle = `rgba(197,140,255,${a})`; ctx.beginPath(); ctx.arc(d.x, d.y, 1.2 + d.s, 0, 7); ctx.fill(); }
+    }
+  }
   drawClouds(ctx, ox, oy, z) {
     // a few large soft shadows drifting across the world (world-space, iso-projected)
     if (!this.clouds) { this.clouds = []; for (let i = 0; i < 7; i++) this.clouds.push({ x: Math.random() * this.map.w, y: Math.random() * this.map.h, r: 7 + Math.random() * 9, s: 0.25 + Math.random() * 0.3, a: 0.10 + Math.random() * 0.08 }); }
