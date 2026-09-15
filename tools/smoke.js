@@ -49,6 +49,9 @@ for (const era of Object.keys(ERAS)) {
   check(walls.length > 0, 'walls placed'); if (walls.length) { sim.command(0, { t: 'gate', ids: [walls[0].id] }); check(walls[0].type === 'gate', 'gate toggled'); }
   sim.command(0, { t: 'gatherKind', ids: ws(), kind: 'mine' }); run(20 * 10); check([...sim.ents.values()].some(e => e.kind === 'unit' && e.owner === 0 && e.order.type === 'gather'), 'gatherKind');
   sim.command(0, { t: 'demolish', ids: [bar.id] }); check(!sim.ents.has(bar.id), 'demolish');
+  // malformed coordinates must be rejected, never create entities with NaN positions
+  const before = sim.ents.size; sim.command(0, { t: 'build', ids: ws(), type: 'barracks' }); sim.command(0, { t: 'build', ids: ws(), type: 'barracks', tx: 'abc', ty: 5 }); sim.command(0, { t: 'move', ids: ws(), x: NaN, y: 3 }); sim.command(0, { t: 'build', ids: ws(), type: 'barracks', tx: 5000, ty: 5000 });
+  check(sim.ents.size === before && ![...sim.ents.values()].some(e => !Number.isFinite(e.x)), 'malformed coordinates rejected');
   console.log('command coverage done');
 }
 console.log(failures ? `SMOKE FAILED (${failures})` : 'SMOKE OK');

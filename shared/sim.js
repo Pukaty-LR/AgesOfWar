@@ -102,7 +102,7 @@ export class Sim {
   }
   canPlace(type, tx, ty, player) {
     const def = player.tech.buildings[type];
-    if (!def) return false;
+    if (!def || !Number.isInteger(tx) || !Number.isInteger(ty) || tx < 0 || ty < 0 || tx + def.w > this.w || ty + def.h > this.h) return false;
     if (!this.footprintFree(tx, ty, def.w, def.h)) return false;
     if (def.shore && !this.touchesWater(tx, ty, def.w, def.h)) return false;
     // no unit standing inside (except we allow: units get pushed out) -> allow
@@ -266,7 +266,10 @@ export class Sim {
   // ---------- commands ----------
   command(pid, c) {
     const p = this.players[pid];
-    if (!p || !p.alive || this.gameOver) return;
+    if (!p || !p.alive || this.gameOver || !c) return;
+    // coordinates from the network must be finite numbers, otherwise NaN would slip through range checks (invisible buildings etc.)
+    for (const k of ['x', 'y', 'tx', 'ty', 'x2', 'y2', 'ex', 'ey']) if (c[k] !== undefined && !Number.isFinite(c[k])) return;
+    if (c.tx !== undefined) { c.tx = c.tx | 0; c.ty = c.ty | 0; }
     const units = (c.ids || []).map(id => this.ents.get(id)).filter(e => e && e.owner === pid && !e.dead);
     const myUnits = units.filter(e => e.kind === 'unit');
     switch (c.t) {
