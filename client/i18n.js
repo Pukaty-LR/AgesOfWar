@@ -9,14 +9,17 @@ import ES from './lang/es.js';
 import PL from './lang/pl.js';
 import RU from './lang/ru.js';
 
+// flags as small inline SVGs (proper shapes: US stripes and canton, Czech blue wedge)
+const svg = body => 'url("data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20">' + body + '</svg>') + '")';
+const stripes = (a, b, n) => { let o = ''; for (let i = 0; i < n; i++) o += `<rect x="0" y="${(20 / n) * i}" width="30" height="${20 / n + 0.2}" fill="${i % 2 ? b : a}"/>`; return o; };
 export const LANGS = [
-  { code: 'en', name: 'English', locale: 'en-GB', flag: 'linear-gradient(180deg,#012169 0 33%,#fff 33% 66%,#c8102e 66%)' },
-  { code: 'cs', name: 'Čeština', locale: 'cs-CZ', flag: 'linear-gradient(180deg,#fff 0 50%,#d7141a 50%), linear-gradient(135deg,#11457e 0 40%,transparent 40%)' },
-  { code: 'de', name: 'Deutsch', locale: 'de-DE', flag: 'linear-gradient(180deg,#000 0 33%,#dd0000 33% 66%,#ffce00 66%)' },
-  { code: 'fr', name: 'Français', locale: 'fr-FR', flag: 'linear-gradient(90deg,#0055a4 0 33%,#fff 33% 66%,#ef4135 66%)' },
-  { code: 'es', name: 'Español', locale: 'es-ES', flag: 'linear-gradient(180deg,#aa151b 0 25%,#f1bf00 25% 75%,#aa151b 75%)' },
-  { code: 'pl', name: 'Polski', locale: 'pl-PL', flag: 'linear-gradient(180deg,#fff 0 50%,#dc143c 50%)' },
-  { code: 'ru', name: 'Русский', locale: 'ru-RU', flag: 'linear-gradient(180deg,#fff 0 33%,#0039a6 33% 66%,#d52b1e 66%)' },
+  { code: 'en', label: 'EN', name: 'English', locale: 'en-US', flag: svg(stripes('#b22234', '#fff', 13) + '<rect x="0" y="0" width="12" height="10.8" fill="#3c3b6e"/>' + [...Array(15)].map((_, i) => `<circle cx="${1.5 + (i % 5) * 2.4}" cy="${1.6 + Math.floor(i / 5) * 3.6}" r="0.55" fill="#fff"/>`).join('')) },
+  { code: 'cs', label: 'CZ', name: 'Čeština', locale: 'cs-CZ', flag: svg('<rect width="30" height="10" fill="#fff"/><rect y="10" width="30" height="10" fill="#d7141a"/><polygon points="0,0 15,10 0,20" fill="#11457e"/>') },
+  { code: 'de', label: 'DE', name: 'Deutsch', locale: 'de-DE', flag: svg('<rect width="30" height="6.7" fill="#000"/><rect y="6.7" width="30" height="6.7" fill="#dd0000"/><rect y="13.3" width="30" height="6.7" fill="#ffce00"/>') },
+  { code: 'fr', label: 'FR', name: 'Français', locale: 'fr-FR', flag: svg('<rect width="10" height="20" fill="#0055a4"/><rect x="10" width="10" height="20" fill="#fff"/><rect x="20" width="10" height="20" fill="#ef4135"/>') },
+  { code: 'es', label: 'ES', name: 'Español', locale: 'es-ES', flag: svg('<rect width="30" height="20" fill="#aa151b"/><rect y="5" width="30" height="10" fill="#f1bf00"/>') },
+  { code: 'pl', label: 'PL', name: 'Polski', locale: 'pl-PL', flag: svg('<rect width="30" height="10" fill="#fff"/><rect y="10" width="30" height="10" fill="#dc143c"/>') },
+  { code: 'ru', label: 'RU', name: 'Русский', locale: 'ru-RU', flag: svg('<rect width="30" height="6.7" fill="#fff"/><rect y="6.7" width="30" height="6.7" fill="#0039a6"/><rect y="13.3" width="30" height="6.7" fill="#d52b1e"/>') },
 ];
 const DICTS = { en: EN, de: DE, fr: FR, es: ES, pl: PL, ru: RU };
 
@@ -88,8 +91,8 @@ export function buildLangSwitch(container) {
   container.innerHTML = '';
   for (const l of LANGS) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'lang-btn' + (l.code === lang ? ' active' : ''); b.title = l.name;
-    const f = document.createElement('span'); f.className = 'flag'; f.style.background = l.flag; b.appendChild(f);
-    const c = document.createElement('span'); c.textContent = l.code.toUpperCase(); b.appendChild(c);
+    const f = document.createElement('span'); f.className = 'flag'; f.style.backgroundImage = l.flag; f.style.backgroundSize = '100% 100%'; b.appendChild(f);
+    const c = document.createElement('span'); c.textContent = l.label || l.code.toUpperCase(); b.appendChild(c);
     b.onclick = () => { if (l.code === lang) return; setLang(l.code); location.reload(); };
     container.appendChild(b);
   }
