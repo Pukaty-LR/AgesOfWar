@@ -1,6 +1,6 @@
 // Isometric renderer: terrain chunks with elevation, water animation, entities, effects, fog of war.
 import { T, ERAS, TEAM_COLORS } from '../../shared/data.js';
-import { TW, TH, S, iso, facingToDir, unitSprite, buildingSprite, treeSprite, mineSprite, decoSprite, blit, rgb, shade, mix, teamRgb, animFrameCount, hexToRgb } from './sprites.js';
+import { TW, TH, S, iso, facingToDir, clearSpriteCache, unitSprite, buildingSprite, treeSprite, mineSprite, decoSprite, blit, rgb, shade, mix, teamRgb, animFrameCount, hexToRgb } from './sprites.js';
 
 const CHUNK = 12;
 const ELEV = 56;            // px per height unit above sea level
@@ -26,7 +26,7 @@ export class Renderer {
     this.canvas.width = Math.floor(this.W * this.dpr); this.canvas.height = Math.floor(this.H * this.dpr);
   }
   setMap(map, era) {
-    this.map = map; this.era = era; this.eraDef = ERAS[era]; this.chunks.clear();
+    this.map = map; this.era = era; this.eraDef = ERAS[era]; for (const c of this.chunks.values()) c.canvas.width = 0; this.chunks.clear(); clearSpriteCache();
     const { w, h } = map;
     // vertex heights (w+1)*(h+1)
     this.vh = new Float32Array((w + 1) * (h + 1));
@@ -85,10 +85,12 @@ export class Renderer {
     const map = this.map, w = map.w, h = map.h;
     const x0 = cx * CHUNK, y0 = cy * CHUNK, x1 = Math.min(w, x0 + CHUNK), y1 = Math.min(h, y0 + CHUNK);
     // bounds in iso px
-    const left = iso(x0, y1)[0] - TW, right = iso(x1, y0)[0] + TW, top = iso(x0, y0)[1] - ELEV - 100 - TH, bottom = iso(x1, y1)[1] + TH;
+    let maxE = 0; for (let vy = Math.max(0, y0 - 1); vy <= Math.min(h, y1 + 1); vy++) for (let vx = Math.max(0, x0 - 1); vx <= Math.min(w, x1 + 1); vx++) maxE = Math.max(maxE, this.elevV(vx, vy));
+    const left = iso(x0, y1)[0] - TW, right = iso(x1, y0)[0] + TW, top = iso(x0 - 1, y0 - 1)[1] - maxE - TH - 8, bottom = iso(x1, y1)[1] + TH;
     const cw = Math.ceil(right - left), ch = Math.ceil(bottom - top);
-    const canvas = document.createElement('canvas'); canvas.width = cw * 1.5; canvas.height = ch * 1.5;
-    const ctx = canvas.getContext('2d'); ctx.scale(1.5, 1.5); ctx.translate(-left, -top);
+    const ss = this.dpr > 1.2 ? 1.5 : 1; // supersample only on high-dpi screens: chunk canvases are the biggest memory user
+    const canvas = document.createElement('canvas'); canvas.width = Math.ceil(cw * ss); canvas.height = Math.ceil(ch * ss);
+    const ctx = canvas.getContext('2d'); ctx.scale(ss, ss); ctx.translate(-left, -top);
     const pal = this.eraDef.palette;
     // pass 1: base quads (with 1 tile margin so splats blend across chunks)
     const m = 1;
@@ -147,8 +149,13 @@ export class Renderer {
     // grid-ish subtle edge darkening for land/water boundary
     return { canvas, left, top, cw, ch };
   }
-  getChunk(cx, cy) { const k = cy * 1000 + cx; let c = this.chunks.get(k); if (!c) { c = this.buildChunk(cx, cy); this.chunks.set(k, c); } return c; }
-  prebuild() { const nx = Math.ceil(this.map.w / CHUNK), ny = Math.ceil(this.map.h / CHUNK); for (let cy = 0; cy < ny; cy++) for (let cx = 0; cx < nx; cx++) this.getChunk(cx, cy); }
+  getChunk(cx, cy) {
+    const k = cy * 1000 + cx; let c = this.chunks.get(k);
+    if (!c) { c = this.buildChunk(cx, cy); this.chunks.set(k, c); if (this.chunks.size > 40) { let oldK = null, oldT = Infinity; for (const [kk, cc] of this.chunks) if (cc.last < oldT) { oldT = cc.last; oldK = kk; } if (oldK !== null) { const old = this.chunks.get(oldK); old.canvas.width = 0; this.chunks.delete(oldK); } } }
+    c.last = this.chunkTick = (this.chunkTick || 0) + 1; return c;
+  }
+  /** warm the chunks around the camera; the rest are built lazily (LRU-capped, see getChunk) */
+  prebuild() { const nx = Math.ceil(this.map.w / CHUNK), ny = Math.ceil(this.map.h / CHUNK); const ccx = Math.floor(this.cam.x / CHUNK), ccy = Math.floor(this.cam.y / CHUNK); for (let cy = Math.max(0, ccy - 1); cy <= Math.min(ny - 1, ccy + 1); cy++) for (let cx = Math.max(0, ccx - 1); cx <= Math.min(nx - 1, ccx + 1); cx++) this.getChunk(cx, cy); }
 
   // ---------- fog ----------
   updateFog(ents, myTeam, players) {

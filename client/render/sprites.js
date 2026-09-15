@@ -17,9 +17,12 @@ export function mix(a, b, t) { return a.map((v, i) => v + (b[i] - v) * t); }
 export function teamRgb(idx) { return hexToRgb(TEAM_COLORS[idx % TEAM_COLORS.length].hex); }
 
 const cache = new Map();
+const CACHE_MAX = 5000;
+export function clearSpriteCache() { for (const c of cache.values()) c.canvas.width = 0; cache.clear(); }
 export function cached(key, w, h, ax, ay, draw) {
   let c = cache.get(key);
   if (c) return c;
+  if (cache.size >= CACHE_MAX) { let n = 0; for (const [k, v] of cache) { v.canvas.width = 0; cache.delete(k); if (++n >= CACHE_MAX / 5) break; } } // drop the oldest fifth
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(w * S); canvas.height = Math.ceil(h * S);
   const ctx = canvas.getContext('2d');
@@ -565,7 +568,10 @@ const ANIM_FRAMES = { idle: 4, walk: 6, attack: 4, work: 4 };
 
 export function unitSprite(sprite, colorIdx, dir, anim, frame, extra = {}) {
   const frames = ANIM_FRAMES[anim] || 1; frame = frame % frames;
-  const key = `u|${sprite}|${colorIdx}|${dir}|${anim}|${frame}|${extra.carry || ''}|${extra.faction || ''}|${extra.workKind || ''}|${extra.cargo || 0}`;
+  // only parameters that change the drawing go into the key (workKind affects the work/attack pose, cargo tops out at 4 visible passengers)
+  const workKind = anim === 'work' || anim === 'attack' ? (extra.workKind || '') : '';
+  const cargo = extra.cargo ? Math.min(4, extra.cargo) : 0;
+  const key = `u|${sprite}|${colorIdx}|${dir}|${anim}|${frame}|${extra.carry || ''}|${extra.faction || ''}|${workKind}|${cargo}`;
   const box = UNIT_BOX[sprite] || UNIT_BOX.default;
   return cached(key, box[0], box[1], box[2], box[3], ctx => {
     const fn = UNIT_DRAW[sprite]; if (!fn) { ellipse(ctx, 0, -8, 8, 8, '#f0f', '#000'); return; }

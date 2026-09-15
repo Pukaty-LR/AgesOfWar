@@ -32,16 +32,19 @@ const SQRT2 = Math.SQRT2;
  * @param hx,hy heuristic target (tile)
  * @returns array of tile coords [{x,y}] excluding start, or null. If goal unreachable returns path to closest tile.
  */
+const SCR = {}; // reusable A* scratch buffers
 export function astar(pass, w, h, sx, sy, goalTest, hx, hy, maxNodes = 12000) {
   if (sx < 0 || sy < 0 || sx >= w || sy >= h) return null;
   const startI = sy * w + sx;
   if (goalTest(sx, sy)) return [];
-  const g = new Float32Array(w * h).fill(Infinity);
-  const parent = new Int32Array(w * h).fill(-1);
-  const closed = new Uint8Array(w * h);
+  // scratch arrays are reused between calls; a generation stamp replaces per-call fills
+  if (!SCR.g || SCR.g.length < w * h) { SCR.g = new Float32Array(w * h); SCR.parent = new Int32Array(w * h); SCR.closed = new Uint8Array(w * h); SCR.stamp = new Uint32Array(w * h); SCR.gen = 0; }
+  const gen = ++SCR.gen; if (gen === 0xffffffff) { SCR.stamp.fill(0); SCR.gen = 1; }
+  const g = SCR.g, parent = SCR.parent, closed = SCR.closed, stamp = SCR.stamp;
+  const touch = i => { if (stamp[i] !== gen) { stamp[i] = gen; g[i] = Infinity; parent[i] = -1; closed[i] = 0; } };
   const heap = new Heap();
   const heur = (x, y) => { const dx = Math.abs(x - hx), dy = Math.abs(y - hy); return Math.max(dx, dy) + (SQRT2 - 1) * Math.min(dx, dy); };
-  g[startI] = 0;
+  touch(startI); g[startI] = 0;
   heap.push({ i: startI, f: heur(sx, sy) });
   let best = startI, bestH = heur(sx, sy);
   let expanded = 0;
@@ -61,7 +64,7 @@ export function astar(pass, w, h, sx, sy, goalTest, hx, hy, maxNodes = 12000) {
       const nx = x + ox, ny = y + oy;
       if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
       const j = ny * w + nx;
-      if (!pass[j] || closed[j]) continue;
+      if (!pass[j]) continue; touch(j); if (closed[j]) continue;
       if (ox && oy) { if (!pass[y * w + nx] || !pass[ny * w + x]) continue; }
       const ng = g[i] + (ox && oy ? SQRT2 : 1);
       if (ng < g[j]) { g[j] = ng; parent[j] = i; heap.push({ i: j, f: ng + heur(nx, ny) }); }
@@ -85,8 +88,10 @@ export function losClear(pass, w, h, x0, y0, x1, y1) {
     if (x < 0 || y < 0 || x >= w || y >= h || !pass[y * w + x]) return false;
     if (x === x1 && y === y1) return true;
     const e2 = 2 * err;
-    if (e2 > -dy) { err -= dy; x += sx; if (!pass[y * w + x]) return false; }
-    if (e2 < dx) { err += dx; y += sy; if (!pass[y * w + x]) return false; }
+    const stepX = e2 > -dy, stepY = e2 < dx;
+    if (stepX && stepY) { if (!pass[y * w + x + sx] || !pass[(y + sy) * w + x]) return false; } // diagonal step: both orthogonal cells must be free (same rule as A*)
+    if (stepX) { err -= dy; x += sx; if (!pass[y * w + x]) return false; }
+    if (stepY) { err += dx; y += sy; if (!pass[y * w + x]) return false; }
   }
 }
 

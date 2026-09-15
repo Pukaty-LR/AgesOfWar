@@ -126,13 +126,16 @@ export class Audio {
     this.style = styleDef; this.running = true; this.bar = 0; this.beat = 0;
     this.nextTime = this.ctx.currentTime + 0.1;
     this.melodyIdx = 0; this.phraseSeed = Math.random();
+    this.fadeOutBus(); this.musicBus = this.ctx.createGain(); this.musicBus.connect(this.musicGain); // one bus per session so a style switch fades instead of overlapping
     clearInterval(this.musicTimer);
     this.musicTimer = setInterval(() => this.schedule(), 90);
   }
-  stopMusic() { this.running = false; clearInterval(this.musicTimer); }
+  stopMusic() { this.running = false; clearInterval(this.musicTimer); this.fadeOutBus(); }
+  fadeOutBus() { const b = this.musicBus; if (!b) return; this.musicBus = null; try { const t = this.ctx.currentTime; b.gain.setValueAtTime(b.gain.value, t); b.gain.linearRampToValueAtTime(0.0001, t + 0.4); setTimeout(() => { try { b.disconnect(); } catch {} }, 700); } catch {} }
   schedule() {
     if (!this.running || !this.ctx) return;
     const c = this.ctx;
+    if (this.nextTime < c.currentTime) this.nextTime = c.currentTime + 0.05; // timer was starved (hidden tab): do not replay missed beats
     while (this.nextTime < c.currentTime + 0.35) {
       this.playBeat(this.nextTime);
       const tempo = this.style.tempo * (1 + this.intensity * 0.12);
@@ -148,7 +151,7 @@ export class Audio {
   }
   playBeat(t) {
     const st = this.style; const e = this.beat % 8; const bar = this.bar; const I = this.intensity;
-    const g = this.musicGain;
+    const g = this.musicBus || this.musicGain;
     const beatLen = 60 / st.tempo;
     if (st.style === 'lyre') {
       // ambient pad: slow sine chord, changes every 2 bars

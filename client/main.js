@@ -26,7 +26,7 @@ class App {
   }
   save() { localStorage.setItem('aow-settings', JSON.stringify(this.settings)); }
   menuMusic() { if (this.screen === 'game' || !this.audio.ctx) return; const era = ERAS[this.hostEra] || ERAS.antiquity; if (!this.audio.running || this.audio.style !== era.music) { this.audio.era = this.hostEra; this.audio.setIntensity(0); this.audio.startMusic(era.music); } }
-  show(name) { for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); $('bg').style.display = name === 'game' ? 'none' : 'block'; this.screen = name; if (name === 'game') this.game.renderer.resize(); }
+  show(name) { if (name === 'game' && this.bgRenderer) { for (const c of this.bgRenderer.chunks.values()) c.canvas.width = 0; this.bgRenderer.chunks.clear(); } for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); $('bg').style.display = name === 'game' ? 'none' : 'block'; this.screen = name; if (name === 'game') this.game.renderer.resize(); }
   toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(this.toastT); this.toastT = setTimeout(() => t.classList.add('hidden'), 3500); }
   token() { if (!this.settings.token) { this.settings.token = Math.random().toString(36).slice(2) + Date.now().toString(36); this.save(); } return this.settings.token; }
   name() { const n = $('name').value.trim(); if (!n) { $('name').focus(); this.toast('Zadej svoje jméno.'); return null; } this.settings.name = n; this.save(); this.net.send({ t: 'hello', name: n, token: this.token() }); return n; }
