@@ -108,4 +108,5 @@ export default {
   'Hover jezdec': 'Cavalier aéroglisseur',
   'Vrhač': 'Lanceur',
   'Hover korzár': 'Corsaire aéroglisseur',
+  'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Muraille : %1 segments · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – ressources insuffisantes',
 };

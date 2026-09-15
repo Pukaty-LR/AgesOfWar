@@ -23,7 +23,7 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - Dvě suroviny: hlavní z dolů (Zlato / Ropa – dělník vejde dovnitř a vynese náklad) a vedlejší ze stromů (Dřevo).
 - Budovy: Radnice, Kasárna, Stáje / Tanková továrna, Obléhací dílna / Dělostřelecký park (úroveň 1 protijednotková zbraň, úroveň 3 těžké obléhání), Přístav / Loděnice, Věž / Bunkr, Hradba (+ Brána).
 - **Tiery**: každou vojenskou budovu lze vylepšit (klávesa U) – každá úroveň odemkne nové jednotky. Radnici lze vylepšit až na úroveň 4 (Radnice → Město → Metropole → Císařské město), vyšší úroveň je podmínkou pro tiery ostatních budov a úroveň 4 odemkne **hrdinu** (jen jeden, spojenci v okolí +20 % útok).
-- **Hradby** se pokládají klikem na začátek a konec – cesta obejde stromy, budovy i vodu. Vybraný segment lze změnit na **bránu** (G), kterou projdou jen tvé jednotky a spojenci.
+- **Hradby** se pokládají klikem na začátek a konec (během tažení se ukazuje délka a cena, červeně při nedostatku surovin) – cesta obejde stromy, budovy i vodu. Vybraný segment lze změnit na **bránu** (G), kterou projdou jen tvé jednotky a spojenci.
 - **Věže / bunkry** mají 3 úrovně (U): víc útoku, dosahu i pancíře, a jiný vzhled.
 - **Výzkumy** (styl kovárny z Age of Empires): v kasárnách, stájích a dílně lze zkoumat útok a pancíř pro pěchotu, jezdectvo/vozidla a obléhací stroje (klávesy I / O), každá éra má vlastní názvy.
 - **Domy** (+10 populace, vylepšitelné na +15 a +20) ve všech érách, AI je staví, když se blíží limitu. AI také expanduje: když domácí důl dochází, postaví novou radnici u dalšího dolu (a nejdřív vyčistí jeho hlídače).

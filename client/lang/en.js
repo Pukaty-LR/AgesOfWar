@@ -242,4 +242,5 @@ export default {
   'Vrhač': 'Hurler',
   'Hover korzár': 'Hover corsair',
   ' (ty)': ' (you)',
+  'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Wall: %1 segments · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – not enough resources',
 };

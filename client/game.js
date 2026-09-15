@@ -275,7 +275,12 @@ export class Game {
     if (p.lastReqKey === p.hover.x + ',' + p.hover.y) return; p.lastReqKey = p.hover.x + ',' + p.hover.y;
     const id = ++this.wallReqId; this.net.send({ t: 'wallPreview', id, x0: p.start.x, y0: p.start.y, x1: p.hover.x, y1: p.hover.y });
   }
-  onWallPreview(m) { const p = this.state.placing; if (!p || p.type !== 'wall' || m.id !== this.wallReqId) return; p.preview = m.tiles; }
+  onWallPreview(m) {
+    const p = this.state.placing; if (!p || p.type !== 'wall' || m.id !== this.wallReqId) return; p.preview = m.tiles;
+    // AoE-style readout while dragging a wall: length and total cost, red when unaffordable
+    if (!m.tiles) this.ui.placementHint(t('Hradbu tudy nelze postavit.'));
+    else { const def = this.tech.buildings.wall, n = m.tiles.length, res = this.players[this.me].res, cp = def.cost.p * n, cs = def.cost.s * n; const R = this.eraDef.resources; this.ui.placementHint(tf('Hradba: %1 segmentů · %2 %3 / %4 %5%6', n, cp, R.p.short, cs, R.s.short, (cp > res.p || cs > res.s) ? t(' – nedostatek surovin') : '')); }
+  }
 
   // ---------- selection ----------
   select(ents, add = false) {

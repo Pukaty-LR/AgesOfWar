@@ -108,4 +108,5 @@ export default {
   'Hover jezdec': 'Jeździec poduszkowy',
   'Vrhač': 'Miotacz',
   'Hover korzár': 'Korsarz poduszkowy',
+  'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Mur: %1 segmentów · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – za mało surowców',
 };

@@ -108,4 +108,5 @@ export default {
   'Hover jezdec': 'Jinete flotante',
   'Vrhač': 'Lanzador',
   'Hover korzár': 'Corsario flotante',
+  'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Muralla: %1 segmentos · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – recursos insuficientes',
 };
