@@ -36,7 +36,7 @@ export class Game {
     this.players = g.players; this.me = g.me; this.myTeam = this.players[this.me].team;
     this.tech = makeTechTable(this.era, this.players[this.me].faction);
     this.techs = this.players.map(p => makeTechTable(this.era, p.faction));
-    this.ents.clear(); this.selection.clear(); this.groups = {};
+    this.ents.clear(); this.selection.clear(); this.groups = {}; this.pendingBlocks = []; this.chatOpen = false;
     this.blocked = new Uint8Array(this.map.w * this.map.h); this.wallGrid.clear();
     delete this.renderer.updateFog; // undo the end-of-game map reveal from a previous match
     this.renderer.setMap(this.map, this.era); this.renderer.prebuild();
@@ -51,7 +51,8 @@ export class Game {
     if (this.renderer.weather === 'rain') this.audio.startAmbient('rain'); else this.audio.stopAmbient();
     this.renderer.resize();
     this.lastFrame = performance.now();
-    requestAnimationFrame(t => this.loop(t));
+    this.loopId = (this.loopId || 0) + 1; const loopId = this.loopId; // a rejoin must not start a second loop
+    requestAnimationFrame(t => this.loop(t, loopId));
   }
   stop() { this.running = false; this.audio.stopMusic(); this.audio.stopAmbient(); }
   tickNow() { return this.paused ? this.tick : this.tick + Math.min(20, (performance.now() - this.lastSnapAt) / (1000 / TICK_RATE)); }
@@ -129,8 +130,12 @@ export class Game {
     this.players = snap.players;
     for (const d of snap.ents) this.applyEntity(d);
     for (const id of snap.rem) this.removeEntity(id);
+    // know about the game end before events so the eliminated handler does not double the defeat sting
+    const justOver = snap.gameOver && !this.gameOver; if (justOver) this.gameOver = snap.gameOver;
     for (const ev of snap.ev) this.onEvent(ev);
-    if (snap.gameOver && !this.gameOver) { this.gameOver = snap.gameOver; this.onGameOver(); }
+    if (justOver) this.onGameOver();
+    // roll back optimistic footprint blocks the server rejected (no building appeared there within a second)
+    if (this.pendingBlocks.length) { const now = performance.now(); this.pendingBlocks = this.pendingBlocks.filter(pb => { if (now - pb.at < 1000) return true; let has = false; for (const e of this.ents.values()) if (e.k === 'b' && e.tx < pb.tx + pb.w && e.tx + e.w > pb.tx && e.ty < pb.ty + pb.h && e.ty + e.h > pb.ty) { has = true; break; } if (!has) for (let y = 0; y < pb.h; y++) for (let x = 0; x < pb.w; x++) this.blocked[(pb.ty + y) * this.map.w + pb.tx + x] = 0; return false; }); }
     this.ui.dirty = true;
   }
   soundAt(name, x, y, base = 1) {
@@ -167,7 +172,7 @@ export class Game {
       }
       case 'chop': this.soundAt('chop', ev.x, ev.y, 0.6); if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(3, ev.x, ev.y, 12, { colors: [[200, 160, 100], [150, 110, 60]], speed: 1.2, vz: 25, life: 0.5, size: 1.4 }); break;
       case 'hammer': this.soundAt('hammer', ev.x, ev.y, 0.5); if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(2, ev.x + (Math.random() - 0.5), ev.y + (Math.random() - 0.5), 14, { colors: [[255, 230, 150]], speed: 0.8, vz: 25, life: 0.3, size: 1.2 }); break;
-      case 'built': if (mine && ev.ty !== 'wall') { this.audio.sfx('buildingDone', 0.8); this.ui.alert(`${this.tech.buildings[ev.ty]?.name}: stavba dokončena`, false); } break;
+      case 'built': this.ui.lastSig = ''; if (mine && ev.ty !== 'wall') { this.audio.sfx('buildingDone', 0.8); this.ui.alert(`${this.tech.buildings[ev.ty]?.name}: stavba dokončena`, false); } break;
       case 'spawn': if (mine) this.audio.sfx('unitReady', 0.5); break;
       case 'ability': { R.addEffect({ kind: 'ring', x: ev.x, y: ev.y, color: 'rgba(255,220,90,0.95)' }); R.spawnParticles(24, ev.x, ev.y, 8, { colors: [[255, 230, 120], [255, 180, 60]], speed: ev.r * 1.2, vz: 10, life: 0.7, size: 2, gravity: 0, drag: 0.96 }); this.soundAt('horn', ev.x, ev.y, 1); if (mine) this.ui.alert(`${ev.name}!`, false); this.heat(ev.x, ev.y); break; }
       case 'researched': if (mine) { this.audio.sfx('buildingDone', 0.8); const rd = RESEARCH[ev.rid]; this.ui.alert(`Výzkum dokončen: ${rd ? rd.names[this.era] : ev.rid} ${['I', 'II', 'III'][ev.level - 1] || ev.level}`, false); this.ui.lastSig = ''; this.ui.dirty = true; } break;
@@ -233,9 +238,9 @@ export class Game {
   orderStop() { const ids = this.myUnitsSelected(); if (ids.length) { this.send({ t: 'stop', ids }); this.audio.sfx('click'); } }
   orderHold() { const ids = this.myUnitsSelected(); if (ids.length) { this.send({ t: 'hold', ids }); this.audio.sfx('click'); } }
   train(type) { const blds = this.myBuildingsSelected(); if (!blds.length) return; const def = this.tech.units[type]; const p = this.players[this.me]; if (p.res.p < def.cost.p || p.res.s < def.cost.s) { this.ui.alert('Nedostatek surovin.', true); this.audio.sfx('error'); return; } // pick building with shortest queue
-    let best = null; for (const id of blds) { const b = this.ents.get(id); if (!b.bl || !this.tech.buildings[b.t].trains.includes(type)) continue; if (!best || b.q.length < best.q.length) best = b; } if (!best) return; this.send({ t: 'train', id: best.i, type }); this.audio.sfx('click'); }
+    let best = null; for (const id of blds) { const b = this.ents.get(id); if (!b.bl || !this.availableTrains(b).includes(type)) continue; if (!best || b.q.length < best.q.length) best = b; } if (!best) return; this.send({ t: 'train', id: best.i, type }); this.audio.sfx('click'); }
   cancelTrain(bid, index) { this.send({ t: 'cancelTrain', id: bid, index }); this.audio.sfx('click'); }
-  cancelBuild(bid) { this.send({ t: 'cancelBuild', id: bid }); this.audio.sfx('click'); }
+  cancelBuild(bid) { const b = this.ents.get(bid); if (!b || b.bl) return; this.send({ t: 'cancelBuild', id: bid }); this.audio.sfx('click'); }
   startPlacing(type) {
     const def = this.tech.buildings[type]; const p = this.players[this.me];
     if (type !== 'wall' && (p.res.p < def.cost.p || p.res.s < def.cost.s)) { this.ui.alert('Nedostatek surovin.', true); this.audio.sfx('error'); return; }
@@ -259,6 +264,7 @@ export class Game {
     const def = this.tech.buildings[p.type];
     // optimistic block to avoid double placement at the same spot
     for (let y = 0; y < def.h; y++) for (let x = 0; x < def.w; x++) this.blocked[(p.hover.y + y) * this.map.w + p.hover.x + x] = 1;
+    this.pendingBlocks.push({ tx: p.hover.x, ty: p.hover.y, w: def.w, h: def.h, at: performance.now() });
     if (!this.state.shift) this.cancelPlacing();
   }
   requestWallPreview() {
@@ -276,6 +282,7 @@ export class Game {
     // if selection has own units, drop buildings & foreign
     const own = [...this.selection].some(id => { const e = this.ents.get(id); return e && e.k === 'u' && e.o === this.me; });
     if (own) for (const id of [...this.selection]) { const e = this.ents.get(id); if (!e || e.k !== 'u' || e.o !== this.me) this.selection.delete(id); }
+    if (this.selection.size > 1) for (const id of [...this.selection]) { const e = this.ents.get(id); if (!e || e.o === undefined) this.selection.delete(id); } // trees/mines only alone
     if (this.selection.size > 60) { const arr = [...this.selection].slice(0, 60); this.selection = new Set(arr); }
     this.ui.dirty = true; this.ui.selectionChanged = true;
     if (ents.length) this.audio.sfx('select', 0.5);
@@ -344,7 +351,9 @@ export class Game {
     window.addEventListener('keydown', e => {
       if (!this.running) return;
       if (this.chatOpen) { if (e.key === 'Escape') this.ui.closeChat(); return; }
-      if (e.target && e.target.tagName === 'INPUT') return;
+      if (e.target && e.target.closest && e.target.closest('input, select, textarea, [contenteditable]')) return;
+      const overlay = ['pause-menu', 'help-overlay', 'endscreen'].find(id => !document.getElementById(id).classList.contains('hidden'));
+      if (overlay) { if (e.key === 'Escape') { if (overlay === 'help-overlay') document.getElementById('help-overlay').classList.add('hidden'); else if (overlay === 'pause-menu') this.ui.togglePause(false); } return; }
       const k = e.key.toLowerCase();
       this.keys[k] = true; st.shift = e.shiftKey; st.ctrl = e.ctrlKey; st.altHeld = e.altKey;
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
@@ -357,8 +366,9 @@ export class Game {
       if (/^F[5-8]$/.test(e.key)) { e.preventDefault(); const k = e.key; this.bookmarks = this.bookmarks || {}; if (e.ctrlKey) { this.bookmarks[k] = { x: this.renderer.cam.x, y: this.renderer.cam.y, z: this.renderer.cam.zoom }; this.ui.alert(`Pozice kamery uložena (${k})`, false); } else if (this.bookmarks[k]) { const b = this.bookmarks[k]; this.renderer.cam.zoom = b.z; this.centerOn(b.x, b.y); } return; }
       if (e.key === 'Backspace') { e.preventDefault(); const halls = [...this.ents.values()].filter(o => o.k === 'b' && o.o === this.me && o.t === 'hall'); if (halls.length) { this.hallIdx = ((this.hallIdx || 0) + 1) % halls.length; const h = halls[this.hallIdx]; this.centerOn(h.x, h.y); this.select([h]); } return; }
       if (k === '.') { this.selectIdleWorker(); return; }
-      if (/^[0-9]$/.test(k)) {
-        if (e.ctrlKey || e.shiftKey) { this.groups[k] = [...this.selection]; this.ui.alert(`Skupina ${k} uložena`, false); }
+      const dg = /^(Digit|Numpad)(\d)$/.exec(e.code || '');
+      if (dg) { const k = dg[2]; e.preventDefault();
+        if (e.ctrlKey || e.altKey) { this.groups[k] = [...this.selection]; this.ui.alert(`Skupina ${k} uložena`, false); }
         else { const ids = (this.groups[k] || []).map(id => this.ents.get(id)).filter(Boolean); if (ids.length) { const now = performance.now(); if (this.lastGroupKey === k && now - this.lastGroupAt < 350) { this.centerOn(ids[0].x, ids[0].y); } this.lastGroupKey = k; this.lastGroupAt = now; this.select(ids); } }
         return;
       }
@@ -367,7 +377,8 @@ export class Game {
       if (this.ui.handleHotkey(this, k, e.shiftKey)) { e.preventDefault(); return; }
     });
     window.addEventListener('keyup', e => { this.keys[e.key.toLowerCase()] = false; st.shift = e.shiftKey; st.ctrl = e.ctrlKey; st.altHeld = e.altKey; });
-    window.addEventListener('blur', () => { this.keys = {}; });
+    window.addEventListener('blur', () => { this.keys = {}; st.mouse = { x: -1, y: -1 }; });
+    document.addEventListener('mouseleave', () => { st.mouse = { x: -1, y: -1 }; });
     window.addEventListener('resize', () => this.renderer.resize());
   }
   updateCursor() {
@@ -391,8 +402,12 @@ export class Game {
   }
 
   // ---------- loop ----------
-  loop(t) {
-    if (!this.running) return;
+  loop(t, loopId) {
+    if (!this.running || loopId !== this.loopId) return;
+    requestAnimationFrame(tt => this.loop(tt, loopId)); // scheduled first so an exception below cannot kill rendering
+    try { this.frame(t); } catch (err) { console.error(err); }
+  }
+  frame(t) {
     const dt = Math.min(0.1, (t - this.lastFrame) / 1000); this.lastFrame = t;
     // camera
     const sp = this.settings.scrollSpeed * 12 * dt; let dx = 0, dy = 0;
@@ -414,6 +429,5 @@ export class Game {
     this.renderer.showHp = this.settings.showHp;
     this.renderer.draw(dt, this.state);
     this.ui.frame(this, dt);
-    requestAnimationFrame(tt => this.loop(tt));
   }
 }

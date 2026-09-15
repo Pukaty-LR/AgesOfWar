@@ -44,10 +44,11 @@ export class UI {
     $('btn-help').onclick = () => { $('help-overlay').classList.remove('hidden'); };
     $('btn-help-close').onclick = () => { $('help-overlay').classList.add('hidden'); };
     const chat = $('chat-input');
+    chat.addEventListener('blur', () => { if (this.game && this.game.chatOpen) this.closeChat(); });
     chat.addEventListener('keydown', e => { if (e.key === 'Enter') { const t = chat.value.trim(); if (t) this.app.net.send({ t: 'chat', text: t }); this.closeChat(); } else if (e.key === 'Escape') this.closeChat(); e.stopPropagation(); });
   }
   onGameStart(game) {
-    this.game = game; this.buildMenu = false; this.lastSig = ''; this.dirty = true; this.selectionChanged = true; this.pings = [];
+    this.game = game; this.buildMenu = false; this.lastSig = ''; this.dirty = true; this.selectionChanged = true; this.pings = []; this.closeChat();
     $('endscreen').classList.add('hidden'); $('pause-menu').classList.add('hidden'); $('help-overlay').classList.add('hidden'); $('pause-banner').classList.add('hidden'); $('alerts').innerHTML = ''; $('chatlog').innerHTML = '';
     this.buildMiniTerrain(game);
     const era = game.eraDef; const p = game.players[game.me];
@@ -159,7 +160,7 @@ export class UI {
   }
   updateSelection(game) {
     const sel = [...game.selection].map(id => game.ents.get(id)).filter(Boolean);
-    const sig = sel.map(e => e.i).join(',') + '|' + this.buildMenu + '|' + game.state.mode;
+    const sig = sel.map(e => e.i + ':' + (e.bl ?? '') + ':' + (e.q ? e.q.length : 0) + ':' + (e.lv || 1)).join(',') + '|' + this.buildMenu + '|' + game.state.mode;
     const single = $('sel-single'), multi = $('sel-multi'), empty = $('sel-empty');
     if (!sel.length) { empty.classList.remove('hidden'); single.classList.add('hidden'); multi.classList.add('hidden'); if (sig !== this.lastSig) { this.lastSig = sig; this.buildCommandCard(game, []); } return; }
     empty.classList.add('hidden');
@@ -269,7 +270,12 @@ export class UI {
   /** Run a command-card action; Shift on a training button queues five (Age of Empires style). */
   fire(game, d, shift) {
     const n = shift && d.repeat ? 5 : 1;
-    for (let i = 0; i < n; i++) { if (d.canAfford && !d.canAfford()) { if (i === 0) { game.audio.sfx('error'); this.alert('Nedostatek surovin.', true); } break; } d.act(); }
+    const p = game.players[game.me]; let sp = 0, ss = 0;
+    for (let i = 0; i < n; i++) {
+      if (d.canAfford && !d.canAfford()) { if (i === 0) { game.audio.sfx('error'); this.alert('Nedostatek surovin.', true); } break; }
+      if (d.cost && i > 0 && (p.res.p - sp < d.cost.p || p.res.s - ss < d.cost.s)) break;
+      d.act(); if (d.cost) { sp += d.cost.p; ss += d.cost.s; }
+    }
     this.refreshCommandCardState(game);
   }
   handleHotkey(game, k, shift = false) {

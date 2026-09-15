@@ -172,7 +172,7 @@ wss.on('connection', (ws, req) => {
             for (const other of candidates) if (other !== lobby) for (const s of other.slots) if (s.token === c.token) s.token = null;
             const idx = lobby.slots.indexOf(slot); slot.id = c.id; slot.name = c.name; slot.connected = true; c.lobby = lobby; lobby.emptySince = null;
             const sim = lobby.game.sim;
-            send(ws, { t: 'start', game: { era: lobby.era, seed: lobby.game.seed, map: sim.mapData(), me: idx, players: sim.players.map(p => sim.serializePlayer(p)), lobbyName: lobby.name, rejoin: true, reveal: !!lobby.reveal, explored: sim.exploredFor(sim.players[idx].team) } });
+            send(ws, { t: 'start', game: { era: lobby.era, seed: lobby.game.seed, map: sim.mapData(), me: idx, players: sim.players.map(p => sim.serializePlayer(p)), lobbyName: lobby.name, rejoin: true, reveal: !!lobby.reveal, explored: sim.exploredFor(sim.players[idx].team), speed: lobby.game.speed || 1, paused: !!lobby.game.paused } });
             send(ws, sim.fullSnapshot());
             lobby.game.chat(`${c.name} se znovu připojil.`);
             break;

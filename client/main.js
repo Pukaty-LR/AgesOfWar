@@ -126,7 +126,7 @@ class App {
     n.on('lobby', m => { this.lobby = m.lobby; if (this.screen !== 'lobby' && this.screen !== 'game') { this.show('lobby'); $('lobby-chat').innerHTML = ''; } this.renderLobby(); if (this.quick && m.lobby.hostId === this.myId) { this.quick = false; if (m.lobby.slots.length < 2) n.send({ t: 'addBot', diff: this.settings.diff || 'normal' }); } });
     n.on('lobbyLeft', () => { this.lobby = null; if (this.screen === 'game') this.leaveGame(true); else this.show('menu'); });
     n.on('chat', m => { if (this.screen === 'game') this.ui.chat(m.from, m.text, m.sys, m.color); else { const c = $('lobby-chat'); const d = document.createElement('div'); if (m.sys) { d.className = 'sys'; d.textContent = m.text; } else { d.innerHTML = `<b style="color:${m.color !== undefined ? TEAM_COLORS[m.color].hex : '#f1d36a'}">${esc(m.from)}:</b> ${esc(m.text)}`; } c.appendChild(d); c.scrollTop = c.scrollHeight; } });
-    n.on('start', m => { clearTimeout(this.toastT); $('toast').classList.add('hidden'); this.show('game'); $('game-speed').value = '1'; this.game.start(m); });
+    n.on('start', m => { clearTimeout(this.toastT); $('toast').classList.add('hidden'); this.show('game'); $('game-speed').value = String(m.game.speed || 1); this.game.start(m); if (m.game.rejoin && m.game.paused) this.net.send({ t: 'pause', v: false }); });
     n.on('speed', m => { $('game-speed').value = String(m.v); this.ui.alert(`Rychlost hry: ${m.v}×`, false); });
     n.on('full', m => this.game.onFull(m));
     n.on('snap', m => this.game.onSnap(m));
