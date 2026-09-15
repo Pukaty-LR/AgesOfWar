@@ -49,6 +49,14 @@ export class AIPlayer {
         else if (mineNode) sim.command(this.pid, { t: 'gather', ids: [u.id], targetId: mineNode.id });
       }
     }
+    // rebalance: when one resource piles up while the other starves, move a worker over (every 5 s)
+    if (tick % 100 === 0 && workers.length >= 6) {
+      const onGold = workers.filter(u => u.order.type === 'gather' && u.order.kind === 'mine' && !u.carry && !u.hidden);
+      const onWood = workers.filter(u => u.order.type === 'gather' && u.order.kind === 'tree' && !u.carry);
+      const tree = sim.nearestNode({ x: hall.x, y: hall.y, owner: this.pid }, 'tree', 22);
+      if (p.res.s < 120 && p.res.p > 500 && onGold.length > 3 && tree) sim.command(this.pid, { t: 'gather', ids: [onGold[0].id], targetId: tree.id });
+      else if (p.res.p < 120 && p.res.s > 500 && onWood.length > 3 && mineNode) sim.command(this.pid, { t: 'gather', ids: [onWood[0].id], targetId: mineNode.id });
+    }
     // train workers
     for (const h of halls) {
       if (workers.length + h.queue.length < targetWorkers && h.queue.length < 2) sim.command(this.pid, { t: 'train', id: h.id, type: 'worker' });
