@@ -37,7 +37,9 @@ export class AIPlayer {
     if (impossible) { p.res.p += 4; p.res.s += 3; p.dirty = true; } // impossible AI gets a resource trickle
 
     // 1. Economy: keep workers gathering
-    const mineNode = sim.nearestNode({ x: hall.x, y: hall.y, owner: this.pid }, 'mine', 16);
+    // nearest live mine to any of our halls; when the home mine is exhausted, walk to a distant one and expand there
+    const mineFor = radius => { let best = null, bd = Infinity; for (const e of sim.ents.values()) { if (e.kind !== 'mine' || e.dead || e.amount <= 0) continue; for (const h of (halls.length ? halls : [hall])) { const d = Math.hypot(e.x - h.x, e.y - h.y); if (d < bd && d <= radius) { bd = d; best = e; } } } return best; };
+    const nearMine = mineFor(16); const mineNode = nearMine || mineFor(70); const mineFar = !nearMine && !!mineNode;
     const goldWorkers = workers.filter(u => u.order.type === 'gather' && u.order.kind === 'mine').length;
     for (const u of workers) {
       if (u.order.type !== 'idle') continue;
@@ -64,6 +66,12 @@ export class AIPlayer {
 
     // 2. Build order
     const unfinished = buildings.filter(b => !b.built && b.type !== 'wall');
+    // emergency expansion: home mine exhausted -> new hall next to the nearest free mine (before anything else in the plan)
+    const mineRunningOut = nearMine && nearMine.amount < 3500 && halls.length < 2 && hard; // hard AI expands proactively before the home mine is empty
+    if ((mineFar || mineRunningOut) && !unfinished.some(b => b.type === 'hall') && tick - this.lastBuildTick > 40 && workers.length >= 3) {
+      const def = p.tech.buildings.hall;
+      if (p.res.p >= def.cost.p && p.res.s >= def.cost.s) { const spot = this.findSpot('hall', hall); const w = this.pickWorker(workers); if (spot && w) { sim.command(this.pid, { t: 'build', ids: [w.id], type: 'hall', tx: spot.x, ty: spot.y }); this.lastBuildTick = tick; } }
+    }
     if (unfinished.length && !units.some(u => u.order.type === 'build')) {
       const w = this.pickWorker(workers);
       if (w) sim.command(this.pid, { t: 'smart', ids: [w.id], x: unfinished[0].x, y: unfinished[0].y, targetId: unfinished[0].id });
