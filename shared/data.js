@@ -114,6 +114,7 @@ export const ERAS = {
       ballista: { ...tierUnits.ballista,   name: 'Balista',     sprite: 'ant_ballista', desc: 'Přesná dalekonosná zbraň proti jednotkám.' },
       heavyship: { ...tierUnits.heavyship, name: 'Těžká loď',   sprite: 'ant_heavyship', desc: 'Velká válečná loď.' },
       hero:     { ...tierUnits.hero,       name: 'Vojevůdce',   sprite: 'ant_hero', desc: 'Jediný hrdina. Spojenci v okolí +20 % útok.' },
+      creep:    { ...commonUnits.infantry, name: 'Bandita',     sprite: 'ant_creep', hp: 140, dmg: 14, armor: 1, creep: true, desc: 'Neutrální lupiči hlídající doly v divočině.' },
     },
     buildings: {
       hall:     { ...commonBuildings.hall,     name: 'Radnice',         sprite: 'ant_hall',     desc: 'Hlavní budova. Cvičí dělníky, sklad surovin, +40 populace.' },
@@ -170,6 +171,7 @@ export const ERAS = {
       ballista: { ...tierUnits.rocketart,  name: 'Raketomet',   sprite: 'ww2_rockets', desc: 'Salva raket s velkým rozptylem.' },
       heavyship: { ...tierUnits.cruiser,   name: 'Křižník',     sprite: 'ww2_cruiser', desc: 'Těžká válečná loď.' },
       hero:     { ...tierUnits.hero2,      name: 'Polní maršál', sprite: 'ww2_hero', desc: 'Jediný hrdina. Spojenci v okolí +20 % útok.' },
+      creep:    { ...commonUnits.infantry, name: 'Partyzán',    sprite: 'ww2_creep', hp: 120, dmg: 10, armor: 1, range: 3.5, projectile: 'bullet', cooldown: 0.7, creep: true, desc: 'Neutrální partyzáni hlídající ropná pole.' },
     },
     buildings: {
       hall:     { ...commonBuildings.hall,     name: 'Velitelství',     sprite: 'ww2_hall',     desc: 'Hlavní budova. Cvičí ženisty, sklad surovin, +40 populace.' },
@@ -224,6 +226,7 @@ export const ERAS = {
       ballista: { ...tierUnits.ballista,   name: 'Laserová platforma', sprite: 'sf_laser', desc: 'Přesný dalekonosný laser.', range: 10, projectile: 'rail' },
       heavyship: { ...tierUnits.heavyship, name: 'Hover křižník',   sprite: 'sf_cruiser', desc: 'Těžká hover válečná loď.', range: 8, projectile: 'plasmaShell', splash: 1.0 },
       hero:     { ...tierUnits.hero2,      name: 'Velitel v mechu', sprite: 'sf_hero', desc: 'Jediný hrdina. Spojenci v okolí +20 % útok.', range: 4, projectile: 'plasma', hp: 700, dmg: 34, ability: { ...tierUnits.hero2.ability, name: 'Přetížení zbraní' } },
+      creep:    { ...commonUnits.cavalry,  name: 'Xeno šelma',  sprite: 'sf_creep', hp: 180, dmg: 16, armor: 2, speed: 3.6, size: 0.4, pop: 0, creep: true, desc: 'Mimozemské šelmy hlídající krystaly.' },
     },
     buildings: {
       hall:     { ...commonBuildings.hall,     name: 'Nexus',              sprite: 'sf_hall',     desc: 'Hlavní budova. Vyrábí drony, sklad surovin, +40 populace.' },

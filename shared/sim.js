@@ -21,7 +21,7 @@ export class Sim {
     this.events = [];
     this.removed = [];
     this.gameOver = null;
-    this.map = generateMap(seed, size, Math.max(2, players.length), mapStyle);
+    this.map = generateMap(seed, size, Math.max(2, players.filter(p => !p.neutral).length), mapStyle);
     const { w, h } = this.map;
     this.w = w; this.h = h;
     this.blockId = new Int32Array(w * h);      // entity id occupying tile (static)
@@ -33,7 +33,7 @@ export class Sim {
     this.players = players.map((p, idx) => {
       const tech = makeTechTable(eraId, p.faction);
       return {
-        id: idx, name: p.name, faction: tech.faction.id, team: p.team ?? idx, color: p.color ?? idx, isAI: !!p.isAI,
+        id: idx, name: p.name, faction: tech.faction.id, team: p.team ?? idx, color: p.color ?? idx, isAI: !!p.isAI, neutral: !!p.neutral,
         tech, res: { p: START.p, s: START.s }, pop: 0, popCap: 0, alive: true, research: Object.fromEntries(Object.keys(RESEARCH).map(k => [k, 0])),
         stats: { unitsBuilt: 0, unitsLost: 0, unitsKilled: 0, buildingsBuilt: 0, buildingsLost: 0, buildingsRazed: 0, gatheredP: 0, gatheredS: 0 },
         lastAlert: -1000, spawn: this.map.spawns[idx],
@@ -62,7 +62,7 @@ export class Sim {
     if (b) { const e = this.ents.get(this.blockId[i]); if (e && e.kind === 'building' && e.type === 'gate' && e.built) gateTeam = this.players[e.owner].team; }
     for (let tm = 0; tm < MAX_TEAMS; tm++) this.passTeam[tm][i] = (land && (!b || gateTeam === tm)) ? 1 : 0;
   }
-  passFor(domain, team = -1) { if (domain === 'sea') return this.passSea; return team >= 0 ? this.passTeam[team] : this.passLand; }
+  passFor(domain, team = -1) { if (domain === 'sea') return this.passSea; return team >= 0 && team < MAX_TEAMS ? this.passTeam[team] : this.passLand; }
   teamOf(e) { return e && e.owner !== undefined ? this.players[e.owner].team : -1; }
   block(tx, ty, w, h, id) {
     for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) {
@@ -124,6 +124,7 @@ export class Sim {
       this.block(e.tx, e.ty, 2, 2, e.id);
     }
     for (const p of this.players) {
+      if (p.neutral) continue;
       const s = p.spawn;
       const hall = this.placeBuilding(p, 'hall', s.x - 1, s.y - 1, true);
       hall.built = true; hall.progress = 1; hall.hp = hall.maxHp;
@@ -132,6 +133,22 @@ export class Sim {
         this.spawnUnit(p, 'worker', s.x + 0.5 + Math.cos(a) * 2.6, s.y + 0.5 + Math.sin(a) * 2.6);
       }
       this.recountPop(p);
+    }
+    // neutral creeps guard the mines far from every base (WC3 style)
+    const neutral = this.players.find(p => p.neutral);
+    if (neutral && this.era.units.creep) {
+      for (const mn of m.mines) {
+        const far = m.spawns.every(s => Math.hypot(s.x - mn.tx, s.y - mn.ty) > 14);
+        if (!far) continue;
+        const n = 3 + Math.floor(this.rng() * 2);
+        for (let i = 0; i < n; i++) {
+          const a = this.rng() * Math.PI * 2, d = 2.6 + this.rng() * 1.2;
+          const x = mn.tx + Math.cos(a) * d, y = mn.ty + Math.sin(a) * d;
+          if (!this.inBounds(x | 0, y | 0) || !this.passLand[(y | 0) * this.w + (x | 0)]) continue;
+          const u = this.spawnUnit(neutral, 'creep', x, y); u.order = { type: 'idle' }; u.home = { x: u.x, y: u.y };
+        }
+      }
+      neutral.stats.unitsBuilt = 0;
     }
   }
 
@@ -188,7 +205,7 @@ export class Sim {
     let pop = 0, cap = 0;
     for (const e of this.ents.values()) {
       if (e.owner !== p.id) continue;
-      if (e.kind === 'unit') pop += p.tech.units[e.type].pop;
+      if (e.kind === 'unit') { if (!p.tech.units[e.type].creep) pop += p.tech.units[e.type].pop; }
       else if (e.kind === 'building' && e.built && p.tech.buildings[e.type].popCap) { cap += p.tech.buildings[e.type].popCap; for (const up of p.tech.buildings[e.type].upgrades || []) if (up.level <= (e.level || 1) && up.popCap) cap += up.popCap; }
     }
     p.pop = pop; p.popCap = Math.min(200, cap); p.dirty = true;
@@ -991,7 +1008,7 @@ export class Sim {
   checkVictory() {
     if (this.gameOver) return;
     for (const p of this.players) {
-      if (!p.alive) continue;
+      if (!p.alive || p.neutral) continue;
       let hasBuilding = false;
       for (const e of this.ents.values()) if (e.kind === 'building' && e.owner === p.id && e.type !== 'wall' && !e.dead) { hasBuilding = true; break; }
       if (!hasBuilding) {
@@ -1000,7 +1017,7 @@ export class Sim {
         for (const e of Array.from(this.ents.values())) if (e.owner === p.id && !e.dead) { e.dead = true; this.remove(e); }
       }
     }
-    const teams = new Set(this.players.filter(p => p.alive).map(p => p.team));
+    const teams = new Set(this.players.filter(p => p.alive && !p.neutral).map(p => p.team));
     if (teams.size <= 1) {
       const winner = teams.size === 1 ? [...teams][0] : -1;
       this.gameOver = { winnerTeam: winner, tick: this.tick };
@@ -1020,7 +1037,7 @@ export class Sim {
     return null;
   }
   serializePlayer(p) {
-    return { id: p.id, name: p.name, faction: p.faction, team: p.team, color: p.color, isAI: p.isAI, res: { p: Math.floor(p.res.p), s: Math.floor(p.res.s) }, pop: p.pop, popCap: p.popCap, alive: p.alive, stats: p.stats, research: p.research };
+    return { id: p.id, name: p.name, faction: p.faction, team: p.team, color: p.color, isAI: p.isAI, res: { p: Math.floor(p.res.p), s: Math.floor(p.res.s) }, pop: p.pop, popCap: p.popCap, alive: p.alive, stats: p.stats, research: p.research, neutral: !!p.neutral };
   }
   fullSnapshot() {
     return { t: 'full', tick: this.tick, players: this.players.map(p => this.serializePlayer(p)), ents: Array.from(this.ents.values()).map(e => this.serializeEntity(e)), gameOver: this.gameOver };

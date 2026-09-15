@@ -81,6 +81,7 @@ function leaveLobby(c, silent = false, explicit = false) {
 function startGame(l) {
   const seed = (Math.random() * 0x7fffffff) | 0;
   const players = l.slots.map(s => ({ name: s.name, faction: s.faction, team: s.team, color: s.color, isAI: s.isAI }));
+  players.push({ name: 'Divočina', faction: ERAS[l.era].factions[0].id, team: 99, color: 7, isAI: false, neutral: true }); // neutral creeps
   const sim = new Sim({ seed, size: (MAP_SIZES[l.mapSize] || MAP_SIZES.medium).size, eraId: l.era, players, mapStyle: l.mapStyle || 'continent', startRes: l.startRes || 'normal' });
   const ais = l.slots.map((s, i) => s.isAI ? new AIPlayer(sim, i, s.diff || 'normal') : null).filter(Boolean);
   const game = { sim, ais, seed, interval: null, acc: 0, last: Date.now(), chat(text) { for (const s of l.slots) if (!s.isAI) { const c = clients.get(s.id); if (c) send(c.ws, { t: 'chat', from: '', text, sys: true }); } } };

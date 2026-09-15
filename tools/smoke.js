@@ -13,8 +13,9 @@ for (const era of Object.keys(ERAS)) {
   const fs = ERAS[era].factions;
   for (const style of Object.keys(MAP_STYLES)) {
     const t0 = Date.now();
-    const sim = new Sim({ seed: 1234 + era.length + style.length, size: 96, eraId: era, mapStyle: style, players: [0, 1, 2, 3].map(i => ({ name: 'P' + i, faction: fs[i % fs.length].id, team: i, color: i, isAI: true })) });
-    const ais = sim.players.map((p, i) => new AIPlayer(sim, p.id, ['easy', 'normal', 'hard', 'impossible'][i]));
+    const sim = new Sim({ seed: 1234 + era.length + style.length, size: 96, eraId: era, mapStyle: style, players: [...[0, 1, 2, 3].map(i => ({ name: 'P' + i, faction: fs[i % fs.length].id, team: i, color: i, isAI: true })), { name: 'Divočina', faction: fs[0].id, team: 99, color: 7, isAI: false, neutral: true }] });
+    const ais = sim.players.filter(p => !p.neutral).map((p, i) => new AIPlayer(sim, p.id, ['easy', 'normal', 'hard', 'impossible'][i]));
+    check([...sim.ents.values()].some(e => e.kind === 'unit' && e.type === 'creep'), `${era}/${style}: no creeps spawned`);
     let err = null;
     try { for (let i = 0; i < TICKS; i++) { if (i % 20 === 0) for (const a of ais) a.update(); sim.step(); const snap = sim.deltaSnapshot(); JSON.stringify(snap); if (sim.gameOver) break; } } catch (e) { err = e; }
     check(!err, `${era}/${style}: exception ${err && err.stack}`);

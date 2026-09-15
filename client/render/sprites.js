@@ -327,6 +327,15 @@ const UNIT_DRAW = {
   ww2_rockets: (ctx, o) => rocketTruck(ctx, o),
   ww2_cruiser: (ctx, o) => { ctx.save(); ctx.scale(1.3, 1.3); destroyer(ctx, o); ctx.restore(); },
   ww2_hero: (ctx, o) => commandCar(ctx, o),
+  // ---- neutral creeps ----
+  ant_creep: (ctx, o) => humanoid(ctx, { ...o, team: [120, 90, 60], torso: [110, 80, 50], helmet: 'hair', weapon: 'axe', shield: 'round', legs: [70, 55, 40], belt: [60, 40, 25] }),
+  ww2_creep: (ctx, o) => humanoid(ctx, { ...o, team: [90, 80, 60], torso: [80, 70, 50], helmet: 'cap', weapon: 'rifle', legs: [60, 55, 45], sleeves: [90, 80, 60] }),
+  sf_creep: (ctx, o) => { const { dir, anim, frame } = o; const sa = DIR_ANGLE(dir); const fx = Math.cos(sa), fy = Math.sin(sa); const ph = anim === 'walk' ? (frame / 6) * Math.PI * 2 : 0; const bob = Math.abs(Math.sin(ph)) * 2;
+    ellipse(ctx, 0, 0, 12, 6, 'rgba(0,0,0,0.35)');
+    for (let i = 0; i < 6; i++) { const s = i % 2 ? 1 : -1, f = (i / 6 - 0.5) * 1.6; const lift = anim === 'walk' ? Math.max(0, Math.sin(ph + i)) * 4 : 0; line(ctx, fx * f * 6 - fy * 4 * s, -6 - bob, fx * f * 10 - fy * 10 * s, -lift, rgb([70, 40, 90]), 2.2); }
+    ctx.save(); ctx.translate(0, -8 - bob); ctx.rotate(Math.atan2(fy * 0.6, fx)); ellipse(ctx, 0, 0, 12, 6, rgb([110, 60, 140]), OUT, 0.9); ellipse(ctx, -2, -2, 7, 3, rgb([150, 90, 190], 0.8)); for (let i = -1; i <= 1; i++) ellipse(ctx, i * 5, -4, 1.8, 1.8, 'rgba(197,106,255,0.9)'); ctx.restore();
+    const hx = fx * 12, hy = -9 - bob + fy * 3; ellipse(ctx, hx, hy, 5, 4, rgb([120, 70, 150]), OUT, 0.8); ctx.fillStyle = 'rgba(255,240,120,0.95)'; ctx.fillRect(hx - 3 + fx, hy - 1.5, 2, 2); ctx.fillRect(hx + 1 + fx, hy - 1.5, 2, 2);
+    if (anim === 'attack' && frame % 4 === 1) { line(ctx, hx, hy, hx + fx * 8, hy + fy * 4, 'rgba(255,255,255,0.8)', 2); } },
   // ---- sci-fi ----
   sf_worker: (ctx, o) => drone(ctx, o, 'worker'),
   sf_infantry: (ctx, o) => humanoid(ctx, { ...o, torso: mix([120, 128, 140], o.team, 0.5), helmet: o.faction === 'synth' ? 'android' : 'visor', weapon: 'plasmaRifle', legs: [70, 74, 86], sleeves: mix([120, 128, 140], o.team, 0.35), belt: [50, 60, 80], emblem: [80, 220, 255] }),
@@ -347,7 +356,7 @@ const UNIT_DRAW = {
 const UNIT_BOX = { default: [24, 44, 12, 40], ant_cavalry: [44, 56, 22, 50], ant_siege: [56, 70, 28, 62], ant_ship: [80, 80, 40, 70], ww2_tank: [64, 56, 32, 48], ww2_artillery: [56, 52, 28, 44], ww2_destroyer: [90, 80, 45, 70],
   ant_veteran: [30, 52, 15, 46], ant_heavycav: [44, 56, 22, 50], ant_chariot: [64, 60, 32, 52], ant_ballista: [56, 60, 28, 52], ant_heavyship: [100, 100, 50, 88], ant_hero: [46, 58, 23, 52],
   ww2_atgun: [48, 44, 24, 38], ww2_heavytank: [80, 70, 40, 60], ww2_td: [64, 56, 32, 48], ww2_rockets: [66, 66, 33, 56], ww2_cruiser: [118, 104, 59, 90], ww2_hero: [56, 50, 28, 42],
-  sf_worker: [30, 40, 15, 34], sf_snipedrone: [70, 44, 35, 36], sf_tank: [64, 62, 32, 54], sf_heavytank: [82, 78, 41, 68], sf_walker: [56, 66, 28, 58], sf_boat: [80, 70, 40, 60], sf_cruiser: [108, 92, 54, 80], sf_mech: [44, 66, 22, 60], sf_hero: [58, 90, 29, 82], sf_laser: [60, 60, 30, 52], sf_exo: [30, 54, 15, 48], sf_jet: [28, 56, 14, 50] };
+  sf_creep: [48, 44, 24, 36], sf_worker: [30, 40, 15, 34], sf_snipedrone: [70, 44, 35, 36], sf_tank: [64, 62, 32, 54], sf_heavytank: [82, 78, 41, 68], sf_walker: [56, 66, 28, 58], sf_boat: [80, 70, 40, 60], sf_cruiser: [108, 92, 54, 80], sf_mech: [44, 66, 22, 60], sf_hero: [58, 90, 29, 82], sf_laser: [60, 60, 30, 52], sf_exo: [30, 54, 15, 48], sf_jet: [28, 56, 14, 50] };
 
 function chariot(ctx, o) {
   const { dir, team } = o; const a = worldAngleForDir(dir);
