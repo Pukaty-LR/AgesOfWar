@@ -106,7 +106,9 @@ export class Renderer {
       let c = shade(this.tileColor(t, i), k);
       if (t === T.WATER) { const d = Math.max(0, SEA - map.height[i]); c = mix(pal.water, pal.deep, Math.min(1, d * 6)); }
       if (t === T.ROCK) c = shade(c, 0.78);
-      tiles.push({ x, y, t, q, c, k });
+      const margin = x < x0 || x >= x1 || y < y0 || y >= y1; // margin tiles only feed the splat blending; the neighbour chunk owns their fill and details
+      tiles.push({ x, y, t, q, c, k, margin });
+      if (margin) continue;
       ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]); ctx.lineTo(q[1][0], q[1][1]); ctx.lineTo(q[2][0], q[2][1]); ctx.lineTo(q[3][0], q[3][1]); ctx.closePath();
       ctx.fillStyle = rgb(c); ctx.fill();
     }
@@ -120,6 +122,7 @@ export class Renderer {
     }
     // pass 3: details
     for (const tl of tiles) {
+      if (tl.margin) continue;
       if (tl.x < x0 || tl.x >= x1 || tl.y < y0 || tl.y >= y1) continue;
       const cxp = (tl.q[0][0] + tl.q[2][0]) / 2, cyp = (tl.q[0][1] + tl.q[2][1]) / 2;
       const r = this.hash(tl.x * 3, tl.y * 7);
