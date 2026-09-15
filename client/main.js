@@ -190,7 +190,7 @@ class App {
     const mr = $('map-res'), mv = $('map-reveal');
     if (!mr.dataset.wired) { mr.dataset.wired = '1'; mr.onchange = () => this.net.send({ t: 'setMap', startRes: mr.value }); mv.onchange = () => this.net.send({ t: 'setMap', reveal: mv.checked }); }
     mr.value = l.startRes || 'normal'; mv.checked = !!l.reveal; mr.disabled = !isHost; mv.disabled = !isHost;
-    $('map-desc').textContent = (MAP_STYLES[l.mapStyle] || MAP_STYLES.continent).desc;
+    $('map-desc').textContent = (MAP_STYLES[l.mapStyle] || MAP_STYLES.continent).desc + ' Vzdálené doly hlídají neutrální jednotky.';
     const tb = $('slot-list'); tb.innerHTML = '';
     l.slots.forEach((s, idx) => {
       const tr = document.createElement('tr'); const mine = s.id === this.myId; const editable = mine || (isHost && s.isAI);
