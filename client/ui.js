@@ -56,6 +56,8 @@ export class UI {
     $('res-pop').querySelector('.ico').style.backgroundImage = resIcon('pop');
     this.placementHint(null);
     setTimeout(() => { if (this.game === game && game.running) { this.alert('Cíl: znič všechny nepřátelské budovy. Pošli dělníky těžit (G / F) a stav domy pro populaci (B → E).', false); } }, 1500);
+    // first game ever: open the controls overview once (pauses single-player)
+    if (!this.app.settings.seenHelp) { this.app.settings.seenHelp = true; this.app.save(); setTimeout(() => { if (this.game === game && game.running) { this.togglePause(true); $('help-overlay').classList.remove('hidden'); } }, 2500); }
     setTimeout(() => { if (this.game === game && game.running) this.alert('Esc = menu a nápověda k ovládání · Tab = podskupina · Alt+klik = označit místo', false); }, 7000);
   }
   onPlayers(game) { this.dirty = true; }
