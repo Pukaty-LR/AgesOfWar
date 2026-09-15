@@ -110,4 +110,5 @@ export default {
   'Hover korzár': 'Corsaire aéroglisseur',
   'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Muraille : %1 segments · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – ressources insuffisantes',
   'Radnice vylepšena na úroveň %1': 'Hôtel de ville amélioré au niveau %1',
+  'Nemáš hrdinu.': 'Tu n’as pas de héros.', 'F1 = celá armáda · F2 = hrdina · . = nečinný dělník': 'F1 = whole army · F2 = hero · . = idle worker',
 };

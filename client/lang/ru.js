@@ -117,4 +117,5 @@ export default {
   'Hover korzár': 'Ховеркорсар',
   'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Стена: %1 сегментов · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – недостаточно ресурсов',
   'Radnice vylepšena na úroveň %1': 'Ратуша улучшена до уровня %1',
+  'Nemáš hrdinu.': 'У вас нет героя.', 'F1 = celá armáda · F2 = hrdina · . = nečinný dělník': 'F1 = whole army · F2 = hero · . = idle worker',
 };

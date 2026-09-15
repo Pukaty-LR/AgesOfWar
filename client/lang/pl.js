@@ -110,4 +110,5 @@ export default {
   'Hover korzár': 'Korsarz poduszkowy',
   'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Mur: %1 segmentów · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – za mało surowców',
   'Radnice vylepšena na úroveň %1': 'Ratusz ulepszony do poziomu %1',
+  'Nemáš hrdinu.': 'Nie masz bohatera.', 'F1 = celá armáda · F2 = hrdina · . = nečinný dělník': 'F1 = whole army · F2 = hero · . = idle worker',
 };

@@ -369,6 +369,7 @@ export class Game {
       if (e.key === 'Escape') { if (st.placing) this.cancelPlacing(); else if (st.mode) st.mode = null; else if (this.ui.buildMenu) { this.ui.buildMenu = false; this.ui.selectionChanged = true; } else if (this.selection.size) this.select([]); else this.ui.togglePause(); return; }
       if (e.key === ' ') { if (this.lastAlert) this.centerOn(this.lastAlert.x, this.lastAlert.y); return; }
       if (e.key === 'F1') { e.preventDefault(); this.selectArmy(); return; }
+      if (e.key === 'F2') { e.preventDefault(); const hero = [...this.ents.values()].find(o => o.k === 'u' && o.o === this.me && !o.hd && this.unitDef(o)?.aura); if (hero) { this.select([hero]); this.centerOn(hero.x, hero.y); } else this.ui.alert(t('Nemáš hrdinu.'), true); return; } // WC3: F2 jumps to the hero
       if (e.key === 'F3') { e.preventDefault(); this.ui.toggleScoreboard(); return; }
       if (e.key === 'Tab') { e.preventDefault(); this.cycleSubgroup(); return; }
       if (/^F[5-8]$/.test(e.key)) { e.preventDefault(); const k = e.key; this.bookmarks = this.bookmarks || {}; if (e.ctrlKey) { this.bookmarks[k] = { x: this.renderer.cam.x, y: this.renderer.cam.y, z: this.renderer.cam.zoom }; this.ui.alert(tf(t('Pozice kamery uložena (%1)'), k), false); } else if (this.bookmarks[k]) { const b = this.bookmarks[k]; this.renderer.cam.zoom = b.z; this.centerOn(b.x, b.y); } return; }
