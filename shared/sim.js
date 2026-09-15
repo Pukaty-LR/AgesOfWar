@@ -584,7 +584,7 @@ export class Sim {
       if (def.heal) { let best = null, bf = 0.9; this.unitsNear(u.x, u.y, 14, e => { if (e === u || e.dead || e.owner === undefined || this.players[e.owner].team !== p.team) return; const f = e.hp / e.maxHp; if (f < bf) { bf = f; best = e; } }); if (best && Math.hypot(best.x - u.x, best.y - u.y) > def.heal.range * 0.8) { u.order = { type: 'move', x: best.x, y: best.y, thenIdle: true }; u.path = null; u.dirty = true; return; } }
     }
     // stuck inside a footprint (a building was raised around it): step to the nearest free tile
-    if ((this.tick + u.id) % 10 === 0 && !u.hidden && !u.inside) { const pass = this.passFor(u.domain, this.teamOf(u)); if (!pass[(u.y | 0) * this.w + (u.x | 0)]) { const t = nearestTile(pass, this.w, this.h, u.x | 0, u.y | 0, 6); if (t) { u.x = t.x + 0.5; u.y = t.y + 0.5; u.path = null; u.dirty = true; } } }
+    if ((this.tick + u.id) % 10 === 0 && !u.hidden && !u.inside) { const pass = this.passFor(u.domain, this.teamOf(u)); if (!pass[(u.y | 0) * this.w + (u.x | 0)]) { const t = nearestTile(this.w, this.h, u.x | 0, u.y | 0, (px, py) => pass[py * this.w + px] === 1, 6); if (t) { u.x = t.x + 0.5; u.y = t.y + 0.5; u.path = null; u.dirty = true; } } }
     switch (o.type) {
       case 'idle':
       case 'hold': {

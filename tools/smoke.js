@@ -52,6 +52,8 @@ for (const era of Object.keys(ERAS)) {
   // malformed coordinates must be rejected, never create entities with NaN positions
   const before = sim.ents.size; sim.command(0, { t: 'build', ids: ws(), type: 'barracks' }); sim.command(0, { t: 'build', ids: ws(), type: 'barracks', tx: 'abc', ty: 5 }); sim.command(0, { t: 'move', ids: ws(), x: NaN, y: 3 }); sim.command(0, { t: 'build', ids: ws(), type: 'barracks', tx: 5000, ty: 5000 });
   check(sim.ents.size === before && ![...sim.ents.values()].some(e => !Number.isFinite(e.x)), 'malformed coordinates rejected');
+  // a unit standing on a tile that became impassable steps free
+  { const w0 = sim.ents.get(ws()[0]); const tree = [...sim.ents.values()].find(e => e.kind === 'tree'); w0.x = tree.x; w0.y = tree.y; w0.order = { type: 'idle' }; run(30); check(!(w0.x | 0) || sim.passLand[(w0.y | 0) * sim.w + (w0.x | 0)] === 1, 'stuck unit steps free'); }
   // audit regressions: no friendly fire / attacking trees, hidden miners reappear when reordered, a lone gate does not keep a player alive
   { const w = ws(); const tree = [...sim.ents.values()].find(e => e.kind === 'tree'); sim.command(0, { t: 'attack', ids: [w[0]], targetId: tree.id }); sim.command(0, { t: 'attack', ids: [w[0]], targetId: w[1] }); run(40); check(sim.ents.get(w[0]).order.type !== 'attack', 'attack on tree/own unit ignored');
     const mine = [...sim.ents.values()].find(e => e.kind === 'mine'); sim.command(0, { t: 'gather', ids: [w[1]], targetId: mine.id }); let hid = false; for (let i = 0; i < 800 && !hid; i++) { sim.step(); if (sim.ents.get(w[1]).hidden) hid = true; } sim.command(0, { t: 'stop', ids: [w[1]] }); sim.step(); check(hid && !sim.ents.get(w[1]).hidden, 'hidden miner reappears after stop');
