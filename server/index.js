@@ -120,7 +120,8 @@ function startGame(l, presetSim = null, aiStates = null) {
         if (sim.tick % 20 === 0) for (const a of ais) a.update();
         sim.step();
       } catch (err) { console.error('sim error', err); }
-      if (sim.tick % netEvery === 0) {
+      // big games (many entities) fall back to every other tick to keep bandwidth sane; the client interpolates over the measured interval
+      if (sim.tick % (sim.ents.size > 500 ? netEvery * 2 : netEvery) === 0) {
         const snap = sim.deltaSnapshot();
         const str = JSON.stringify(snap);
         for (const s of l.slots) if (!s.isAI) { const c = clients.get(s.id); if (c && c.lobby === l && c.ws.readyState === 1) c.ws.send(str); }
