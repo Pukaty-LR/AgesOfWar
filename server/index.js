@@ -52,6 +52,16 @@ function freeColor(l) { const used = new Set(l.slots.map(s => s.color)); for (le
 function freeTeam(l) { const used = new Set(l.slots.map(s => s.team)); for (let i = 0; i < MAX_PLAYERS; i++) if (!used.has(i)) return i; return 0; }
 function defaultFaction(era) { return ERAS[era].factions[0].id; }
 function validDiff(d) { return ['easy', 'normal', 'hard', 'impossible'].includes(d) ? d : 'normal'; }
+function writeSave(l, c, rawName) {
+  try {
+    const sim = l.game.sim;
+    const data = sim.saveState({ savedAt: Date.now(), lobbyName: l.name, era: l.era, ais: l.game.ais.map(a => ({ pid: a.pid, diff: a.diff, wave: a.wave, buildStep: a.buildStep, lastAttackTick: a.lastAttackTick, lastBuildTick: a.lastBuildTick, wallGateAt: a.wallGateAt, rallyPoint: a.rallyPoint })), humanSlot: l.slots.findIndex(s => s.id === c.id), humanName: c.name });
+    fs.mkdirSync(SAVES, { recursive: true });
+    const name = String(rawName || 'uloz').replace(/[^\w\-áéíóúůýčďěňřšťžÁÉÍÓÚŮÝČĎĚŇŘŠŤŽ ]/g, '').slice(0, 30) || 'uloz';
+    fs.writeFileSync(path.join(SAVES, `${c.token}__${name}.json`), JSON.stringify(data));
+    return name;
+  } catch (err) { console.error('save failed', err); return null; }
+}
 function lobbyChat(l, text) { for (const s of l.slots) if (!s.isAI) { const c = clients.get(s.id); if (c && c.lobby === l) send(c.ws, { t: 'chat', from: '', text, sys: true }); } }
 function botName(l, fac) { const base = fac.leader || fac.name; let name = base, k = 2; while (l.slots.some(s => s.name === name)) name = `${base} ${k++}`; return name; }
 
@@ -97,7 +107,7 @@ function startGame(l, presetSim = null, aiStates = null) {
   });
   game.tickMs = 1000 / TICK_RATE;
   const netEvery = Math.round(TICK_RATE / NET_RATE);
-  game.last = Date.now();
+  game.last = Date.now(); game.last0 = game.last;
   game.interval = setInterval(() => {
     const now = Date.now();
     const tickMs = game.tickMs;
@@ -118,6 +128,11 @@ function startGame(l, presetSim = null, aiStates = null) {
       if (sim.gameOver && !game.overAt) { game.overAt = Date.now(); l.state = 'over'; broadcastLobbyList(); }
     }
     if (game.acc > tickMs * 10) game.acc = 0; // avoid spiral of death
+    if (!sim.gameOver && now - (game.lastAutosave || game.last0) > 3 * 60 * 1000) {
+      game.lastAutosave = now;
+      const humans = l.slots.filter(s => !s.isAI && s.token);
+      if (humans.length === 1) { const c = clients.get(humans[0].id); if (c && c.lobby === l && c.token) { const n = writeSave(l, c, "autosave"); if (n) send(c.ws, { t: "chat", from: "", text: "Hra automaticky uložena.", sys: true }); } }
+    }
     if (game.overAt && Date.now() - game.overAt > 5 * 60 * 1000) { stopGame(l); lobbies.delete(l.id); broadcastLobbyList(); return; }
     if (l.emptySince && !connectedHumans(l).length && Date.now() - l.emptySince > 3 * 60 * 1000) { console.log(`[game] "${l.name}" closed: nobody reconnected`); stopGame(l); lobbies.delete(l.id); broadcastLobbyList(); }
   }, 1000 / TICK_RATE / 4);
@@ -275,14 +290,8 @@ wss.on('connection', (ws, req) => {
       case 'save': { // single-player: write the whole simulation to disk
         if (!l || !l.game || !c.token) return;
         if (l.slots.filter(s => !s.isAI && s.token).length > 1) return send(ws, { t: 'error', msg: 'Ukládat lze jen hru proti AI.' });
-        try {
-          const sim = l.game.sim;
-          const data = sim.saveState({ savedAt: Date.now(), lobbyName: l.name, era: l.era, ais: l.game.ais.map(a => ({ pid: a.pid, diff: a.diff, wave: a.wave, buildStep: a.buildStep, lastAttackTick: a.lastAttackTick, lastBuildTick: a.lastBuildTick, wallGateAt: a.wallGateAt, rallyPoint: a.rallyPoint })), humanSlot: l.slots.findIndex(s => s.id === c.id), humanName: c.name });
-          fs.mkdirSync(SAVES, { recursive: true });
-          const name = String(m.name || 'uloz').replace(/[^\w\-áéíóúůýčďěňřšťžÁÉÍÓÚŮÝČĎĚŇŘŠŤŽ ]/g, '').slice(0, 30) || 'uloz';
-          fs.writeFileSync(path.join(SAVES, `${c.token}__${name}.json`), JSON.stringify(data));
-          send(ws, { t: 'saved', name });
-        } catch (err) { console.error('save failed', err); send(ws, { t: 'error', msg: 'Uložení selhalo.' }); }
+        const name = writeSave(l, c, m.name);
+        if (name) send(ws, { t: 'saved', name }); else send(ws, { t: 'error', msg: 'Uložení selhalo.' });
         break;
       }
       case 'saves': { // list this player's saves
