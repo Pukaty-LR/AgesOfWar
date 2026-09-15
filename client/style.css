@@ -236,3 +236,5 @@ table.stats .winner { color: var(--gold2); font-weight: 700; font-size: 11px; ma
 button.secondary { filter: saturate(0.6) brightness(0.9); }
 
 .slots th:nth-child(3), .slots td:nth-child(3) { min-width: 96px; }
+
+#sel-stats em { color: #8fe38f; font-style: normal; font-weight: 700; }
