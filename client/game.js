@@ -1,4 +1,5 @@
 // Client game state + input handling.
+import { t, tf, tsys } from './i18n.js';
 import { ERAS, T, makeTechTable, TEAM_COLORS, TICK_RATE, RESEARCH } from '../shared/data.js';
 import { Renderer } from './render/renderer.js';
 import { TW, TH } from './render/sprites.js';
@@ -32,7 +33,7 @@ export class Game {
   start(msg) {
     const g = msg.game;
     document.getElementById('loading').classList.remove('hidden');
-    { const tips = ['Shift + klik na tlačítko výcviku zařadí 5 jednotek najednou.', 'Ctrl nebo Alt + 1–9 uloží skupinu, 1–9 ji vybere, dvojí stisk na ni přesune kameru.', 'Útok z kopce dolů dává +25 % poškození, do kopce −25 %.', 'Věže lze vylepšit až na třetí úroveň (klávesa U): víc útoku, dosahu i pancíře.', 'Radnice úrovně 4 odemkne hrdinu – jeho aura posiluje spojence a sbírá zkušenosti.', 'Nepřátelské budovy, které jsi jednou viděl, zůstávají pod mlhou zakreslené.', 'Místo srazu (Y) na dole nebo lese pošle nové dělníky rovnou těžit.', 'Vybraný segment hradby lze klávesou G změnit na bránu – projdou jí jen tvoje jednotky.', 'Léčitelé z radnice úrovně 2 sami léčí zraněné spojence v okolí.', 'Tab přepíná podskupinu ve smíšeném výběru, F1 vybere celou armádu.', 'Domácí důl se jednou vytěží – včas expanduj k dalšímu, hlídají ho neutrální hlídači.', 'Hru proti AI lze uložit v menu (Esc); každé 3 minuty se ukládá i automaticky.']; document.getElementById('loading-text').textContent = 'Tip: ' + tips[Math.floor(Math.random() * tips.length)]; }
+    { const tips = ['Shift + klik na tlačítko výcviku zařadí 5 jednotek najednou.', 'Ctrl nebo Alt + 1–9 uloží skupinu, 1–9 ji vybere, dvojí stisk na ni přesune kameru.', 'Útok z kopce dolů dává +25 % poškození, do kopce −25 %.', 'Věže lze vylepšit až na třetí úroveň (klávesa U): víc útoku, dosahu i pancíře.', 'Radnice úrovně 4 odemkne hrdinu – jeho aura posiluje spojence a sbírá zkušenosti.', 'Nepřátelské budovy, které jsi jednou viděl, zůstávají pod mlhou zakreslené.', 'Místo srazu (Y) na dole nebo lese pošle nové dělníky rovnou těžit.', 'Vybraný segment hradby lze klávesou G změnit na bránu – projdou jí jen tvoje jednotky.', 'Léčitelé z radnice úrovně 2 sami léčí zraněné spojence v okolí.', 'Tab přepíná podskupinu ve smíšeném výběru, F1 vybere celou armádu.', 'Domácí důl se jednou vytěží – včas expanduj k dalšímu, hlídají ho neutrální hlídači.', 'Hru proti AI lze uložit v menu (Esc); každé 3 minuty se ukládá i automaticky.']; document.getElementById('loading-text').textContent = t('Tip: ') + t(tips[Math.floor(Math.random() * tips.length)]); }
     this.era = g.era; this.eraDef = ERAS[g.era]; this.map = g.map; this.map.tiles = Uint8Array.from(g.map.tiles); this.map.height = Float32Array.from(g.map.height);
     this.players = g.players; this.me = g.me; this.myTeam = this.players[this.me].team;
     this.tech = makeTechTable(this.era, this.players[this.me].faction);
@@ -53,14 +54,14 @@ export class Game {
     this.renderer.resize();
     this.lastFrame = performance.now();
     this.loopId = (this.loopId || 0) + 1; const loopId = this.loopId; // a rejoin must not start a second loop
-    requestAnimationFrame(t => this.loop(t, loopId));
+    requestAnimationFrame(ts => this.loop(ts, loopId));
   }
   stop() { this.running = false; this.audio.stopMusic(); this.audio.stopAmbient(); }
   tickNow() { return this.paused ? this.tick : this.tick + Math.min(20, (performance.now() - this.lastSnapAt) / (1000 / TICK_RATE)); }
   gameTime() { return this.tick / TICK_RATE; }
   unitDef(e) { return this.techs[e.o]?.units[e.t] || this.eraDef.units[e.t]; }
   buildingDef(e) { return this.techs[e.o]?.buildings[e.t] || this.eraDef.buildings[e.t]; }
-  entName(e) { if (e.k === 'u') return this.unitDef(e)?.name; if (e.k === 'b') return this.buildingName(e); if (e.k === 't') return this.eraDef.nodes.secondary.name + (e.big ? ' – prastarý strom (nevyčerpatelný)' : ''); if (e.k === 'm') return this.eraDef.nodes.mine.name + (e.big ? ' – nevyčerpatelná žíla' : ''); return '?'; }
+  entName(e) { if (e.k === 'u') return this.unitDef(e)?.name; if (e.k === 'b') return this.buildingName(e); if (e.k === 't') return this.eraDef.nodes.secondary.name + (e.big ? t(' – prastarý strom (nevyčerpatelný)') : ''); if (e.k === 'm') return this.eraDef.nodes.mine.name + (e.big ? t(' – nevyčerpatelná žíla') : ''); return '?'; }
 
   // ---------- snapshots ----------
   applyEntity(d, full) {
@@ -99,7 +100,7 @@ export class Game {
   availableTrains(b) { const def = this.tech.buildings[b.t]; const out = [...(def.trains || [])]; for (const up of def.upgrades || []) if (up.level <= (b.lv || 1)) out.push(...up.unlocks); return out; }
   nextUpgrade(b) { const def = this.tech.buildings[b.t]; return (def.upgrades || []).find(u => u.level === (b.lv || 1) + 1) || null; }
   hallLevel() { let lv = 0; for (const e of this.ents.values()) if (e.k === 'b' && e.o === this.me && e.t === 'hall' && e.bl) lv = Math.max(lv, e.lv || 1); return lv; }
-  upgrade(bid) { const b = this.ents.get(bid); if (!b) return; const up = this.nextUpgrade(b); if (!up) return; const p = this.players[this.me]; if (up.hall && this.hallLevel() < up.hall) { this.ui.alert(`Vyžaduje ${this.eraDef.hallNames[up.hall - 1]} (radnice úrovně ${up.hall}).`, true); this.audio.sfx('error'); return; } if (p.res.p < up.cost.p || p.res.s < up.cost.s) { this.ui.alert('Nedostatek surovin.', true); this.audio.sfx('error'); return; } this.send({ t: 'upgrade', id: bid }); this.audio.sfx('click'); }
+  upgrade(bid) { const b = this.ents.get(bid); if (!b) return; const up = this.nextUpgrade(b); if (!up) return; const p = this.players[this.me]; if (up.hall && this.hallLevel() < up.hall) { this.ui.alert(tf(t('Vyžaduje %1 (radnice úrovně %2).'), this.eraDef.hallNames[up.hall - 1], up.hall), true); this.audio.sfx('error'); return; } if (p.res.p < up.cost.p || p.res.s < up.cost.s) { this.ui.alert('Nedostatek surovin.', true); this.audio.sfx('error'); return; } this.send({ t: 'upgrade', id: bid }); this.audio.sfx('click'); }
   transportsSelected() { return this.selectedIds(e => e.k === 'u' && e.o === this.me && this.unitDef(e).capacity); }
   unloadAt(wx, wy) { const ids = this.transportsSelected(); if (!ids.length) return; this.send({ t: 'unload', ids, x: wx, y: wy, queue: this.state.shift }); this.audio.sfx('ack', 0.7); this.renderer.addEffect({ kind: 'marker', x: wx, y: wy, color: 'rgba(120,200,255,0.9)' }); }
   unloadHere() { const ids = this.transportsSelected(); if (!ids.length) return; this.send({ t: 'unload', ids }); this.audio.sfx('ack', 0.7); }
@@ -107,7 +108,7 @@ export class Game {
   research(bid, rid) { this.send({ t: 'research', id: bid, rid }); this.audio.sfx('click'); }
   pingMap(wx, wy) { this.net.send({ t: 'mping', x: wx, y: wy }); }
   toggleGate() { const ids = this.selectedIds(e => e.k === 'b' && e.o === this.me && (e.t === 'wall' || e.t === 'gate')); if (!ids.length) return; this.send({ t: 'gate', ids }); this.audio.sfx('placed', 0.5); }
-  buildingName(e) { const def = this.buildingDef(e); if (!def) return '?'; if (e.t === 'hall' && this.eraDef.hallNames) return this.eraDef.hallNames[Math.min(this.eraDef.hallNames.length, e.lv || 1) - 1]; return def.name + ((e.lv || 1) > 1 ? ` (úroveň ${e.lv})` : ''); }
+  buildingName(e) { const def = this.buildingDef(e); if (!def) return '?'; if (e.t === 'hall' && this.eraDef.hallNames) return this.eraDef.hallNames[Math.min(this.eraDef.hallNames.length, e.lv || 1) - 1]; return def.name + ((e.lv || 1) > 1 ? tf(t(' (úroveň %1)'), e.lv) : ''); }
   wallAt(tx, ty, owner) { const o = this.wallGrid.get(tx + ',' + ty); return o !== undefined && this.players[o].team === this.players[owner].team; }
   tileBuildable(tx, ty) { const w = this.map.w; if (tx < 0 || ty < 0 || tx >= w || ty >= this.map.h) return false; const t = this.map.tiles[ty * w + tx]; return (t === T.GRASS || t === T.DIRT || t === T.SAND) && !this.blocked[ty * w + tx]; }
   canPlace(type, tx, ty) {
@@ -167,26 +168,26 @@ export class Game {
           R.addEffect({ kind: 'rubble', x: ev.x, y: ev.y, w: ev.w, h: ev.h }); this.soundAt('collapse', ev.x, ev.y, 1);
           R.spawnParticles(40, ev.x, ev.y, 10, { colors: [[110, 100, 85], [80, 72, 60], [150, 140, 120]], speed: 3, vz: 50, life: 1.6, size: 4, grow: 4, gravity: 40, drag: 0.94, z: 30 });
           R.addEffect({ kind: 'explosion', x: ev.x, y: ev.y, r: Math.max(1, ev.w * 0.6) });
-          if (ev.o === this.me) this.ui.alert(`Přišli jsme o budovu: ${this.techs[ev.o].buildings[ev.ty]?.name}`, true);
+          if (ev.o === this.me) this.ui.alert(tf(t('Přišli jsme o budovu: %1'), this.techs[ev.o].buildings[ev.ty]?.name), true);
         } else if (ev.k === 'tree') { R.addEffect({ kind: 'stump', x: ev.x, y: ev.y }); R.spawnParticles(8, ev.x, ev.y, 20, { colors: [[70, 130, 50], [110, 75, 40]], speed: 1.5, vz: 10, life: 0.9, size: 2.5, gravity: 60 }); }
         break;
       }
       case 'chop': this.soundAt('chop', ev.x, ev.y, 0.6); if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(3, ev.x, ev.y, 12, { colors: [[200, 160, 100], [150, 110, 60]], speed: 1.2, vz: 25, life: 0.5, size: 1.4 }); break;
       case 'hammer': this.soundAt('hammer', ev.x, ev.y, 0.5); if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(2, ev.x + (Math.random() - 0.5), ev.y + (Math.random() - 0.5), 14, { colors: [[255, 230, 150]], speed: 0.8, vz: 25, life: 0.3, size: 1.2 }); break;
-      case 'built': this.ui.lastSig = ''; if (mine && ev.ty !== 'wall') { this.audio.sfx('buildingDone', 0.8); this.ui.alert(`${this.tech.buildings[ev.ty]?.name}: stavba dokončena`, false); } break;
+      case 'built': this.ui.lastSig = ''; if (mine && ev.ty !== 'wall') { this.audio.sfx('buildingDone', 0.8); this.ui.alert(tf(t('%1: stavba dokončena'), this.tech.buildings[ev.ty]?.name), false); } break;
       case 'spawn': if (mine) this.audio.sfx('unitReady', 0.5); break;
       case 'ability': { R.addEffect({ kind: 'ring', x: ev.x, y: ev.y, color: 'rgba(255,220,90,0.95)' }); R.spawnParticles(24, ev.x, ev.y, 8, { colors: [[255, 230, 120], [255, 180, 60]], speed: ev.r * 1.2, vz: 10, life: 0.7, size: 2, gravity: 0, drag: 0.96 }); this.soundAt('horn', ev.x, ev.y, 1); if (mine) this.ui.alert(`${ev.name}!`, false); this.heat(ev.x, ev.y); break; }
-      case 'researched': if (mine) { this.audio.sfx('buildingDone', 0.8); const rd = RESEARCH[ev.rid]; this.ui.alert(`Výzkum dokončen: ${rd ? rd.names[this.era] : ev.rid} ${['I', 'II', 'III'][ev.level - 1] || ev.level}`, false); this.ui.lastSig = ''; this.ui.dirty = true; } break;
-      case 'upgraded': if (mine) { this.audio.sfx('buildingDone', 0.8); const b = this.ents.get(ev.id); if (b) b.lv = ev.level; this.ui.alert(`${this.tech.buildings[ev.ty]?.name}: vylepšeno na úroveň ${ev.level}`, false); this.ui.lastSig = ''; this.ui.dirty = true; } break;
+      case 'researched': if (mine) { this.audio.sfx('buildingDone', 0.8); const rd = RESEARCH[ev.rid]; this.ui.alert(tf(t('Výzkum dokončen: %1 %2'), rd ? rd.names[this.era] : ev.rid, ['I', 'II', 'III'][ev.level - 1] || ev.level), false); this.ui.lastSig = ''; this.ui.dirty = true; } break;
+      case 'upgraded': if (mine) { this.audio.sfx('buildingDone', 0.8); const b = this.ents.get(ev.id); if (b) b.lv = ev.level; this.ui.alert(tf(t('%1: vylepšeno na úroveň %2'), this.tech.buildings[ev.ty]?.name, ev.level), false); this.ui.lastSig = ''; this.ui.dirty = true; } break;
       case 'place': if (mine) this.audio.sfx('placed', 0.6); break;
-      case 'msg': if (ev.owner === this.me || ev.owner === -1) { this.ui.alert(ev.text, ev.owner === this.me); if (ev.owner === this.me) this.audio.sfx('error', 0.6); } break;
-      case 'alert': if (ev.owner === this.me) { this.lastAlert = { x: ev.x, y: ev.y, t: performance.now() }; this.ui.alert(ev.k === 'building' ? 'Naše budova je pod útokem!' : 'Naše jednotky jsou pod útokem!', true); this.audio.sfx('alarm', 0.6); this.ui.minimapPing(ev.x, ev.y); } break;
-      case 'eliminated': { const p = this.players[ev.owner]; this.ui.chat('', `${p?.name} byl vyřazen ze hry.`, true); if (ev.owner !== this.me) this.audio.sfx('horn', 0.6); else if (!this.gameOver) { this.audio.sfx('defeat', 1); this.eliminated = true; setTimeout(() => { if (!this.gameOver) this.ui.showEnd(this, false, true); }, 1200); } break; }
+      case 'msg': if (ev.owner === this.me || ev.owner === -1) { this.ui.alert(tsys(ev.text), ev.owner === this.me); if (ev.owner === this.me) this.audio.sfx('error', 0.6); } break;
+      case 'alert': if (ev.owner === this.me) { this.lastAlert = { x: ev.x, y: ev.y, t: performance.now() }; this.ui.alert(ev.k === 'building' ? t('Naše budova je pod útokem!') : t('Naše jednotky jsou pod útokem!'), true); this.audio.sfx('alarm', 0.6); this.ui.minimapPing(ev.x, ev.y); } break;
+      case 'eliminated': { const p = this.players[ev.owner]; this.ui.chat('', tf(t('%1 byl vyřazen ze hry.'), p?.name), true); if (ev.owner !== this.me) this.audio.sfx('horn', 0.6); else if (!this.gameOver) { this.audio.sfx('defeat', 1); this.eliminated = true; setTimeout(() => { if (!this.gameOver) this.ui.showEnd(this, false, true); }, 1200); } break; }
       case 'chat': this.ui.chat(ev.from, ev.text, false, ev.color); break;
       case 'board': this.soundAt('splash', ev.x, ev.y, 0.5); break;
       case 'unload': this.soundAt('splash', ev.x, ev.y, 0.7); if (mine) this.ui.alert('Jednotky vyloděny.', false); break;
       case 'heal': if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(5, ev.x, ev.y, 10, { colors: [[140, 255, 170], [220, 255, 230]], speed: 0.6, vz: 22, life: 0.7, size: 1.6, gravity: -10, drag: 0.97 }); break;
-      case 'levelup': { R.addEffect({ kind: 'ring', x: ev.x, y: ev.y, color: 'rgba(255,240,160,0.95)' }); R.addEffect({ kind: 'text', x: ev.x, y: ev.y, text: `Úroveň ${ev.level}!`, color: '#f1d36a' }); R.spawnParticles(20, ev.x, ev.y, 6, { colors: [[255, 240, 160], [255, 200, 80]], speed: 1.5, vz: 40, life: 0.9, size: 2, gravity: 30 }); if (mine) { this.audio.sfx('unitReady', 0.8); this.ui.alert(`${ev.name} dosáhl úrovně ${ev.level}.`, false); this.ui.dirty = true; } break; }
+      case 'levelup': { R.addEffect({ kind: 'ring', x: ev.x, y: ev.y, color: 'rgba(255,240,160,0.95)' }); R.addEffect({ kind: 'text', x: ev.x, y: ev.y, text: tf(t('Úroveň %1!'), ev.level), color: '#f1d36a' }); R.spawnParticles(20, ev.x, ev.y, 6, { colors: [[255, 240, 160], [255, 200, 80]], speed: 1.5, vz: 40, life: 0.9, size: 2, gravity: 30 }); if (mine) { this.audio.sfx('unitReady', 0.8); this.ui.alert(tf(t('%1 dosáhl úrovně %2.'), ev.name, ev.level), false); this.ui.dirty = true; } break; }
       case 'gameover': break;
     }
   }
@@ -246,7 +247,7 @@ export class Game {
     const def = this.tech.buildings[type]; const p = this.players[this.me];
     if (type !== 'wall' && (p.res.p < def.cost.p || p.res.s < def.cost.s)) { this.ui.alert('Nedostatek surovin.', true); this.audio.sfx('error'); return; }
     this.state.placing = { type, hover: null, start: null, preview: [] }; this.state.mode = null; this.audio.sfx('click');
-    this.ui.placementHint(type === 'wall' ? 'Hradba: klikni na začátek, pak na konec. Shift = pokračovat. Pravé tlačítko / Esc = zrušit.' : `${def.name}: levé tlačítko postaví, Shift = více staveb, pravé / Esc = zrušit.`);
+    this.ui.placementHint(type === 'wall' ? t('Hradba: klikni na začátek, pak na konec. Shift = pokračovat. Pravé tlačítko / Esc = zrušit.') : tf(t('%1: levé tlačítko postaví, Shift = více staveb, pravé / Esc = zrušit.'), def.name));
   }
   cancelPlacing() { this.state.placing = null; this.state.mode = null; this.ui.placementHint(null); this.ui.dirty = true; }
   confirmPlacement() {
@@ -364,12 +365,12 @@ export class Game {
       if (e.key === 'F1') { e.preventDefault(); this.selectArmy(); return; }
       if (e.key === 'F3') { e.preventDefault(); this.ui.toggleScoreboard(); return; }
       if (e.key === 'Tab') { e.preventDefault(); this.cycleSubgroup(); return; }
-      if (/^F[5-8]$/.test(e.key)) { e.preventDefault(); const k = e.key; this.bookmarks = this.bookmarks || {}; if (e.ctrlKey) { this.bookmarks[k] = { x: this.renderer.cam.x, y: this.renderer.cam.y, z: this.renderer.cam.zoom }; this.ui.alert(`Pozice kamery uložena (${k})`, false); } else if (this.bookmarks[k]) { const b = this.bookmarks[k]; this.renderer.cam.zoom = b.z; this.centerOn(b.x, b.y); } return; }
+      if (/^F[5-8]$/.test(e.key)) { e.preventDefault(); const k = e.key; this.bookmarks = this.bookmarks || {}; if (e.ctrlKey) { this.bookmarks[k] = { x: this.renderer.cam.x, y: this.renderer.cam.y, z: this.renderer.cam.zoom }; this.ui.alert(tf(t('Pozice kamery uložena (%1)'), k), false); } else if (this.bookmarks[k]) { const b = this.bookmarks[k]; this.renderer.cam.zoom = b.z; this.centerOn(b.x, b.y); } return; }
       if (e.key === 'Backspace') { e.preventDefault(); const halls = [...this.ents.values()].filter(o => o.k === 'b' && o.o === this.me && o.t === 'hall'); if (halls.length) { this.hallIdx = ((this.hallIdx || 0) + 1) % halls.length; const h = halls[this.hallIdx]; this.centerOn(h.x, h.y); this.select([h]); } return; }
       if (k === '.') { this.selectIdleWorker(); return; }
       const dg = /^(Digit|Numpad)(\d)$/.exec(e.code || '');
       if (dg) { const k = dg[2]; e.preventDefault();
-        if (e.ctrlKey || e.altKey) { this.groups[k] = [...this.selection]; this.ui.alert(`Skupina ${k} uložena`, false); }
+        if (e.ctrlKey || e.altKey) { this.groups[k] = [...this.selection]; this.ui.alert(tf(t('Skupina %1 uložena'), k), false); }
         else { const ids = (this.groups[k] || []).map(id => this.ents.get(id)).filter(Boolean); if (ids.length) { const now = performance.now(); if (this.lastGroupKey === k && now - this.lastGroupAt < 350) { this.centerOn(ids[0].x, ids[0].y); } this.lastGroupKey = k; this.lastGroupAt = now; this.select(ids); } }
         return;
       }
@@ -403,13 +404,13 @@ export class Game {
   }
 
   // ---------- loop ----------
-  loop(t, loopId) {
+  loop(ts, loopId) {
     if (!this.running || loopId !== this.loopId) return;
     requestAnimationFrame(tt => this.loop(tt, loopId)); // scheduled first so an exception below cannot kill rendering
-    try { this.frame(t); } catch (err) { console.error(err); }
+    try { this.frame(ts); } catch (err) { console.error(err); }
   }
-  frame(t) {
-    const dt = Math.min(0.1, (t - this.lastFrame) / 1000); this.lastFrame = t;
+  frame(ts) {
+    const dt = Math.min(0.1, (ts - this.lastFrame) / 1000); this.lastFrame = ts;
     // camera
     const sp = this.settings.scrollSpeed * 12 * dt; let dx = 0, dy = 0;
     if (this.keys['arrowleft']) dx -= sp; if (this.keys['arrowright']) dx += sp; if (this.keys['arrowup']) dy -= sp; if (this.keys['arrowdown']) dy += sp;

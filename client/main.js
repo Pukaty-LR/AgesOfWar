@@ -7,6 +7,7 @@ import { Audio } from './audio.js';
 import { UI } from './ui.js';
 import { Game } from './game.js';
 import { Renderer } from './render/renderer.js';
+import { t, tf, tsys, setLang, detectLang, translateDom, localizeData, buildLangSwitch, langDef } from './i18n.js';
 
 const $ = id => document.getElementById(id);
 const screens = ['menu', 'browser', 'host', 'lobby', 'settings', 'game', 'codex', 'saves'];
@@ -60,7 +61,7 @@ class App {
     $('btn-quick').onclick = () => { if (!this.name()) return; this.quick = true; this.net.send({ t: 'host', name: `${this.settings.name} vs AI`, era: this.hostEra, max: 2 }); };
     $('btn-host').onclick = () => { if (!this.name()) return; $('host-name').value = `${this.settings.name}ova hra`; this.renderEraCards($('host-eras'), this.hostEra, e => { this.hostEra = e; this.renderEraCards($('host-eras'), e, null, true); }); this.show('host'); };
     $('btn-host-back').onclick = () => this.show('menu');
-    $('btn-host-create').onclick = () => { this.quick = false; this.net.send({ t: 'host', name: $('host-name').value.trim() || 'Nová hra', era: this.hostEra, max: +$('host-max').value }); };
+    $('btn-host-create').onclick = () => { this.quick = false; this.net.send({ t: 'host', name: $('host-name').value.trim() || t('Nová hra'), era: this.hostEra, max: +$('host-max').value }); };
     $('btn-join').onclick = () => { if (!this.name()) return; this.show('browser'); this.net.send({ t: 'list' }); };
     $('btn-browser-back').onclick = () => this.show('menu');
     $('btn-refresh').onclick = () => this.net.send({ t: 'list' });
@@ -71,7 +72,7 @@ class App {
     $('btn-codex-back').onclick = () => this.show('menu');
     $('btn-load').onclick = () => { if (!this.name()) return; this.show('saves'); this.net.send({ t: 'saves' }); };
     $('btn-saves-back').onclick = () => this.show('menu');
-    $('btn-save').onclick = () => { const name = prompt('Název uložené hry:', `${ERAS[this.game.era].name} ${new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}`); if (name === null) return; this.net.send({ t: 'save', name }); };
+    $('btn-save').onclick = () => { const name = prompt('Název uložené hry:', `${ERAS[this.game.era].name} ${new Date().toLocaleTimeString(langDef().locale, { hour: '2-digit', minute: '2-digit' })}`); if (name === null) return; this.net.send({ t: 'save', name }); };
     for (const b of document.querySelectorAll('.codex-tab')) b.onclick = () => { this.codexTab = b.dataset.tab; this.renderCodex(); };
     $('btn-settings-back').onclick = () => this.show('menu');
     $('btn-lobby-leave').onclick = () => { this.net.send({ t: 'leave' }); this.lobby = null; this.show('menu'); };
@@ -119,46 +120,46 @@ class App {
   // ---------- net ----------
   bindNet() {
     const n = this.net;
-    n.on('status', s => { const el = $('conn-status'); if (s.state === 'open') { el.textContent = 'Připojeno k serveru ' + s.url.replace(/^ws:\/\//, ''); el.className = 'conn-status ok'; n.send({ t: 'hello', name: this.settings.name || 'Hráč', token: this.token() }); } else if (s.state === 'closed' || s.state === 'error') { el.textContent = 'Server nedostupný – zkouším znovu…'; el.className = 'conn-status err'; if (this.screen === 'lobby' || this.screen === 'browser') { this.show('menu'); this.lobby = null; } if (this.screen === 'game') this.toast('Spojení se serverem bylo přerušeno.'); } else { el.textContent = 'Připojuji se…'; el.className = 'conn-status'; } });
+    n.on('status', s => { const el = $('conn-status'); if (s.state === 'open') { el.textContent = t('Připojeno k serveru ') + s.url.replace(/^ws:\/\//, ''); el.className = 'conn-status ok'; n.send({ t: 'hello', name: this.settings.name || t('Hráč'), token: this.token() }); } else if (s.state === 'closed' || s.state === 'error') { el.textContent = t('Server nedostupný – zkouším znovu…'); el.className = 'conn-status err'; if (this.screen === 'lobby' || this.screen === 'browser') { this.show('menu'); this.lobby = null; } if (this.screen === 'game') this.toast('Spojení se serverem bylo přerušeno.'); } else { el.textContent = t('Připojuji se…'); el.className = 'conn-status'; } });
     n.on('welcome', m => { this.myId = m.id; });
-    n.on('error', m => this.toast(m.msg));
+    n.on('error', m => this.toast(tsys(m.msg)));
     n.on('lobbies', m => this.renderServerList(m.list));
     n.on('lobby', m => { this.lobby = m.lobby; if (this.screen !== 'lobby' && this.screen !== 'game') { this.show('lobby'); $('lobby-chat').innerHTML = ''; } this.renderLobby();
       if (this.rematch && m.lobby.hostId === this.myId) { const r = this.rematch; const bots = m.lobby.slots.filter(s => s.isAI); if (bots.length < r.bots.length) n.send({ t: 'addBot', diff: r.bots[bots.length].diff }); else { this.rematch = null; if (r.me && r.me.faction) n.send({ t: 'set', faction: r.me.faction, team: r.me.team }); n.send({ t: 'setMap', style: r.style, size: r.size, startRes: r.startRes, reveal: r.reveal, seed: '' }); setTimeout(() => n.send({ t: 'start' }), 300); } } if (this.quick && m.lobby.hostId === this.myId) { this.quick = false; if (m.lobby.slots.length < 2) n.send({ t: 'addBot', diff: this.settings.diff || 'normal' }); } });
     n.on('lobbyLeft', () => { this.lobby = null; if (this.screen === 'game') this.leaveGame(true); else this.show('menu'); });
-    n.on('chat', m => { if (this.screen === 'game') this.ui.chat(m.from, m.text, m.sys, m.color); else { const c = $('lobby-chat'); const d = document.createElement('div'); if (m.sys) { d.className = 'sys'; d.textContent = m.text; } else { d.innerHTML = `<b style="color:${m.color !== undefined ? TEAM_COLORS[m.color].hex : '#f1d36a'}">${esc(m.from)}:</b> ${esc(m.text)}`; } c.appendChild(d); c.scrollTop = c.scrollHeight; } });
+    n.on('chat', m => { if (this.screen === 'game') this.ui.chat(m.from, m.sys ? tsys(m.text) : m.text, m.sys, m.color); else { const c = $('lobby-chat'); const d = document.createElement('div'); if (m.sys) { d.className = 'sys'; d.textContent = tsys(m.text); } else { d.innerHTML = `<b style="color:${m.color !== undefined ? TEAM_COLORS[m.color].hex : '#f1d36a'}">${esc(m.from)}:</b> ${esc(m.text)}`; } c.appendChild(d); c.scrollTop = c.scrollHeight; } });
     n.on('start', m => { this.lastSetup = this.lobby && !m.game.rejoin ? { era: this.lobby.era, style: this.lobby.mapStyle, size: this.lobby.mapSize, startRes: this.lobby.startRes, reveal: this.lobby.reveal, bots: this.lobby.slots.filter(s => s.isAI).map(s => ({ diff: s.diff || 'normal', faction: s.faction, team: s.team })), me: (() => { const s = this.lobby.slots.find(s => s.id === this.myId); return s ? { faction: s.faction, team: s.team } : null; })(), sp: this.lobby.slots.filter(s => !s.isAI).length === 1 } : null; clearTimeout(this.toastT); $('toast').classList.add('hidden'); this.show('game'); $('game-speed').value = String(m.game.speed || 1); this.game.start(m); if (m.game.rejoin && m.game.paused) this.net.send({ t: 'pause', v: false }); });
     n.on('speed', m => { $('game-speed').value = String(m.v); this.ui.alert(`Rychlost hry: ${m.v}×`, false); });
     n.on('full', m => this.game.onFull(m));
     n.on('snap', m => this.game.onSnap(m));
     n.on('wallPreview', m => this.game.onWallPreview(m));
     n.on('paused', m => this.ui.setPaused(!!m.v));
-    n.on('saved', m => { this.ui.alert(`Hra uložena jako „${m.name}".`, false); this.audio.sfx('buildingDone', 0.6); });
+    n.on('saved', m => { this.ui.alert(tf(t('Hra uložena jako „%1".'), m.name), false); this.audio.sfx('buildingDone', 0.6); });
     n.on('saves', m => this.renderSaves(m.list));
-    n.on('countdown', m => { let n2 = m.n; const btn = $('btn-start'); const tick = () => { if (this.screen !== 'lobby') return; this.toast(`Hra začíná za ${n2}…`); this.audio.sfx('click', 0.5); if (--n2 > 0) setTimeout(tick, 1000); }; tick(); btn.disabled = true; setTimeout(() => { btn.disabled = false; }, m.n * 1000 + 500); });
-    n.on('mping', m => { if (this.screen !== 'game') return; this.ui.minimapPing(m.x, m.y); this.game.renderer.addEffect({ kind: 'ring', x: m.x, y: m.y, color: 'rgba(255,230,90,0.9)' }); this.game.lastAlert = { x: m.x, y: m.y, t: performance.now() }; this.ui.alert(`${m.from} označil místo na mapě (Space = kamera)`, false); this.audio.sfx('select', 0.6); });
+    n.on('countdown', m => { let n2 = m.n; const btn = $('btn-start'); const tick = () => { if (this.screen !== 'lobby') return; this.toast(tf(t('Hra začíná za %1…'), n2)); this.audio.sfx('click', 0.5); if (--n2 > 0) setTimeout(tick, 1000); }; tick(); btn.disabled = true; setTimeout(() => { btn.disabled = false; }, m.n * 1000 + 500); });
+    n.on('mping', m => { if (this.screen !== 'game') return; this.ui.minimapPing(m.x, m.y); this.game.renderer.addEffect({ kind: 'ring', x: m.x, y: m.y, color: 'rgba(255,230,90,0.9)' }); this.game.lastAlert = { x: m.x, y: m.y, t: performance.now() }; this.ui.alert(tf(t('%1 označil místo na mapě (Space = kamera)'), m.from), false); this.audio.sfx('select', 0.6); });
   }
   renderCodex() {
     const era = this.codexEra; const e = ERAS[era]; const tech = makeTechTable(era, e.factions[0].id);
     this.renderEraCards($('codex-eras'), era, id => { this.codexEra = id; this.renderCodex(); }, true);
     for (const b of document.querySelectorAll('.codex-tab')) b.classList.toggle('active', b.dataset.tab === this.codexTab);
     const body = $('codex-body'); body.innerHTML = '';
-    const ROLE = { infantry: 'pěchota', ranged: 'střelci', cavalry: 'jezdectvo/vozidla', siege: 'obléhací', ship: 'lodě', building: 'budovy', wall: 'hradby', worker: 'dělníci', support: 'podpora' };
+    const ROLE = { infantry: t('pěchota'), ranged: t('střelci'), cavalry: 'jezdectvo/vozidla', siege: t('obléhací'), ship: t('lodě'), building: 'budovy', wall: 'hradby', worker: t('dělníci'), support: 'podpora' };
     const card = (canvas, title, sub, rows, desc) => { const d = document.createElement('div'); d.className = 'codex-card'; d.appendChild(canvas); const t = document.createElement('div'); t.className = 'codex-info'; t.innerHTML = `<div class="codex-title">${title}</div><div class="codex-sub">${sub}</div><div class="codex-rows">${rows.map(([k, v]) => `<span>${k} <b>${v}</b></span>`).join('')}</div>${desc ? `<div class="codex-desc">${desc}</div>` : ''}`; d.appendChild(t); body.appendChild(d); };
     if (this.codexTab === 'units') {
       for (const [k, u] of Object.entries(tech.units)) {
         const bon = Object.entries(u.bonus || {}).filter(([, v]) => v > 1).map(([r, v]) => `${ROLE[r] || r} ×${v}`).join(', ');
-        const unlock = u.creep ? 'neutrální hlídač dolů (nelze cvičit)' : k === 'worker' || ['infantry', 'ranged', 'cavalry', 'siege', 'ship', 'transport'].includes(k) ? `${tech.buildings[u.building]?.name}` : (() => { for (const [bk, b] of Object.entries(tech.buildings)) for (const up of b.upgrades || []) if (up.unlocks.includes(k)) return `${b.name} úroveň ${up.level}`; return '?'; })();
-        card(unitPortrait(u.sprite, 0, 88, { faction: e.factions[0].id }), u.name, `${ROLE[u.role]} · ${unlock}${u.unique ? ' · hrdina' : ''}`, [['HP', u.hp], ...(u.heal ? [['Léčení', u.heal.amount + ' HP/s']] : [['Útok', u.dmg]]), ['Pancíř', u.armor], ...(u.heal || u.capacity ? [] : [['Dosah', u.range >= 1 ? u.range.toFixed(1) : 'blízko']]), ...(u.capacity ? [['Kapacita', u.capacity + ' jednotek']] : []), ['Rychlost', u.speed.toFixed(1)], ['Cena', `${u.cost.p} ${e.resources.p.short} / ${u.cost.s} ${e.resources.s.short}`], ['Populace', u.pop], ['Výcvik', Math.round(u.trainTime) + ' s']], (u.desc || '') + (u.heal ? ` Léčí ${u.heal.amount} HP/s v okruhu ${u.heal.range}.` : '') + (bon ? ` Bonus proti: ${bon}.` : '') + (u.aura ? ` Aura +${Math.round((u.aura.dmg - 1) * 100)} % útok v okruhu ${u.aura.range}.` : '') + (u.ability ? ` Schopnost: ${u.ability.name} – ${u.ability.desc}` : ''));
+        const unlock = u.creep ? t('neutrální hlídač dolů (nelze cvičit)') : k === 'worker' || ['infantry', 'ranged', 'cavalry', 'siege', 'ship', 'transport'].includes(k) ? `${tech.buildings[u.building]?.name}` : (() => { for (const [bk, b] of Object.entries(tech.buildings)) for (const up of b.upgrades || []) if (up.unlocks.includes(k)) return `${b.name} úroveň ${up.level}`; return '?'; })();
+        card(unitPortrait(u.sprite, 0, 88, { faction: e.factions[0].id }), u.name, `${ROLE[u.role]} · ${unlock}${u.unique ? ' · hrdina' : ''}`, [['HP', u.hp], ...(u.heal ? [[t('Léčení'), u.heal.amount + ' HP/s']] : [[t('Útok'), u.dmg]]), [t('Pancíř'), u.armor], ...(u.heal || u.capacity ? [] : [['Dosah', u.range >= 1 ? u.range.toFixed(1) : t('blízko')]]), ...(u.capacity ? [['Kapacita', u.capacity + ' jednotek']] : []), ['Rychlost', u.speed.toFixed(1)], ['Cena', `${u.cost.p} ${e.resources.p.short} / ${u.cost.s} ${e.resources.s.short}`], ['Populace', u.pop], [t('Výcvik'), Math.round(u.trainTime) + ' s']], (u.desc || '') + (u.heal ? ` Léčí ${u.heal.amount} HP/s v okruhu ${u.heal.range}.` : '') + (bon ? ` Bonus proti: ${bon}.` : '') + (u.aura ? ` Aura +${Math.round((u.aura.dmg - 1) * 100)} % útok v okruhu ${u.aura.range}.` : '') + (u.ability ? ` Schopnost: ${u.ability.name} – ${u.ability.desc}` : ''));
       }
     } else if (this.codexTab === 'buildings') {
       for (const [k, b] of Object.entries(tech.buildings)) {
         if (k === 'gate') continue;
         const ups = (b.upgrades || []).map(up => `úroveň ${up.level}: ${up.cost.p}/${up.cost.s}${up.unlocks.length ? ' → ' + up.unlocks.map(u => tech.units[u]?.name).join(', ') : ''}${up.desc ? ' – ' + up.desc : ''}${up.popCap ? ` +${up.popCap} pop` : ''}`).join('; ');
-        card(buildingPortrait(b.sprite, b.w, b.h, 0, 88, era), b.name, `${b.w}×${b.h}${b.trains.length ? ' · cvičí: ' + b.trains.map(u => tech.units[u]?.name).join(', ') : ''}`, [['HP', b.hp], ['Pancíř', b.armor], ['Cena', `${b.cost.p} ${e.resources.p.short} / ${b.cost.s} ${e.resources.s.short}`], ['Stavba', b.buildTime + ' s'], ...(b.attack ? [['Útok', b.attack.dmg], ['Dosah', b.attack.range]] : []), ...(b.popCap ? [['Populace', '+' + b.popCap]] : [])], (b.desc || '') + (ups ? ` Vylepšení – ${ups}.` : ''));
+        card(buildingPortrait(b.sprite, b.w, b.h, 0, 88, era), b.name, `${b.w}×${b.h}${b.trains.length ? t(' · cvičí: ') + b.trains.map(u => tech.units[u]?.name).join(', ') : ''}`, [['HP', b.hp], [t('Pancíř'), b.armor], ['Cena', `${b.cost.p} ${e.resources.p.short} / ${b.cost.s} ${e.resources.s.short}`], ['Stavba', b.buildTime + ' s'], ...(b.attack ? [[t('Útok'), b.attack.dmg], ['Dosah', b.attack.range]] : []), ...(b.popCap ? [['Populace', '+' + b.popCap]] : [])], (b.desc || '') + (ups ? ` Vylepšení – ${ups}.` : ''));
       }
     } else {
-      for (const f of e.factions) { const d = document.createElement('div'); d.className = 'codex-card codex-faction'; d.innerHTML = `<div class="codex-info"><div class="codex-title">${f.name}</div><div class="codex-sub">Vůdce: ${f.leader || '–'}</div><div class="codex-desc">${f.desc}</div><div class="codex-desc">Jednotky: ${Object.entries(f.unitNames || {}).map(([, n]) => n).join(', ')}</div></div>`; body.appendChild(d); }
+      for (const f of e.factions) { const d = document.createElement('div'); d.className = 'codex-card codex-faction'; d.innerHTML = `<div class="codex-info"><div class="codex-title">${f.name}</div><div class="codex-sub">${t('Vůdce')}: ${f.leader || '–'}</div><div class="codex-desc">${f.desc}</div><div class="codex-desc">${t('Jednotky')}: ${Object.entries(f.unitNames || {}).map(([, n]) => n).join(', ')}</div></div>`; body.appendChild(d); }
       for (const [rid, rd] of Object.entries(RESEARCH)) { const d = document.createElement('div'); d.className = 'codex-card codex-faction'; d.innerHTML = `<div class="codex-info"><div class="codex-title">${rd.names[era]}</div><div class="codex-sub">${tech.buildings[rd.building]?.name} · ${rd.maxLevel} úrovně · ${rd.cost.p}/${rd.cost.s} × úroveň · ${rd.time} s</div><div class="codex-desc">${rd.desc}</div></div>`; body.appendChild(d); }
     }
   }
@@ -177,19 +178,19 @@ class App {
   renderSaves(list) {
     const tb = $('saves-list'); tb.innerHTML = ''; $('saves-empty').classList.toggle('hidden', list.length > 0);
     for (const s of list) {
-      const tr = document.createElement('tr'); const t = Math.floor((s.tick || 0) / 20); const when = new Date(s.time);
-      tr.innerHTML = `<td>${s.name === 'autosave' ? '<i>Automatické uložení</i>' : esc(s.name)}</td><td>${ERAS[s.era]?.name || '?'}</td><td>${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}</td><td>${when.toLocaleDateString('cs-CZ')} ${when.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}</td><td></td>`;
-      const b = document.createElement('button'); b.textContent = 'Načíst'; b.onclick = () => this.net.send({ t: 'load', name: s.name }); tr.lastElementChild.appendChild(b);
-      const d = document.createElement('button'); d.textContent = 'Smazat'; d.className = 'secondary'; d.onclick = () => { if (confirm(`Smazat uloženou hru „${s.name}“?`)) this.net.send({ t: 'deleteSave', name: s.name }); }; tr.lastElementChild.appendChild(d); tb.appendChild(tr);
+      const tr = document.createElement('tr'); const secs = Math.floor((s.tick || 0) / 20); const when = new Date(s.time);
+      tr.innerHTML = `<td>${s.name === 'autosave' ? '<i>Automatické uložení</i>' : esc(s.name)}</td><td>${ERAS[s.era]?.name || '?'}</td><td>${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}</td><td>${when.toLocaleDateString(langDef().locale)} ${when.toLocaleTimeString(langDef().locale, { hour: '2-digit', minute: '2-digit' })}</td><td></td>`;
+      const b = document.createElement('button'); b.textContent = t('Načíst'); b.onclick = () => this.net.send({ t: 'load', name: s.name }); tr.lastElementChild.appendChild(b);
+      const d = document.createElement('button'); d.textContent = t('Smazat'); d.className = 'secondary'; d.onclick = () => { if (confirm(tf(t('Smazat uloženou hru „%1“?'), s.name))) this.net.send({ t: 'deleteSave', name: s.name }); }; tr.lastElementChild.appendChild(d); tb.appendChild(tr);
     }
   }
   renderServerList(list) {
     const tb = $('server-list'); tb.innerHTML = ''; $('server-empty').classList.toggle('hidden', list.length > 0);
     for (const l of list) {
       const tr = document.createElement('tr');
-      const state = l.state === 'lobby' ? 'Čeká na hráče' : (l.state === 'game' ? `Probíhá (${Math.floor(l.tick / 20 / 60)} min)` : 'Dohráno');
+      const state = l.state === 'lobby' ? t('Čeká na hráče') : (l.state === 'game' ? tf(t('Probíhá (%1 min)'), Math.floor(l.tick / 20 / 60)) : t('Dohráno'));
       tr.innerHTML = `<td>${esc(l.name)}</td><td>${esc(l.host)}</td><td>${ERAS[l.era].name}</td><td>${l.players}/${l.max}</td><td>${state}</td><td></td>`;
-      const b = document.createElement('button'); b.textContent = 'Připojit'; b.disabled = l.state !== 'lobby' || l.players >= l.max; b.onclick = () => this.net.send({ t: 'join', id: l.id }); tr.lastElementChild.appendChild(b); tb.appendChild(tr);
+      const b = document.createElement('button'); b.textContent = t('Připojit'); b.disabled = l.state !== 'lobby' || l.players >= l.max; b.onclick = () => this.net.send({ t: 'join', id: l.id }); tr.lastElementChild.appendChild(b); tb.appendChild(tr);
     }
   }
   renderLobby() {
@@ -208,24 +209,24 @@ class App {
     mr.value = l.startRes || 'normal'; mv.checked = !!l.reveal; mr.disabled = !isHost; mv.disabled = !isHost;
     const sd = $('map-seed'); if (!sd.dataset.wired) { sd.dataset.wired = '1'; sd.onchange = () => this.net.send({ t: 'setMap', seed: sd.value }); }
     if (document.activeElement !== sd) sd.value = l.seedText || ''; sd.disabled = !isHost;
-    $('map-desc').textContent = (MAP_STYLES[l.mapStyle] || MAP_STYLES.continent).desc + ' Vzdálené doly hlídají neutrální jednotky.';
+    $('map-desc').textContent = (MAP_STYLES[l.mapStyle] || MAP_STYLES.continent).desc + t(' Vzdálené doly hlídají neutrální jednotky.');
     const tb = $('slot-list'); tb.innerHTML = '';
     l.slots.forEach((s, idx) => {
       const tr = document.createElement('tr'); const mine = s.id === this.myId; const editable = mine || (isHost && s.isAI);
       const tdName = document.createElement('td'); tdName.innerHTML = `${esc(s.name)}${s.id === l.hostId ? '<span class="host-tag">HOST</span>' : ''}`;
-      if (s.isAI) { const sd = document.createElement('select'); sd.className = 'diff-sel'; sd.title = 'Lehká: pomalé reakce a malá armáda. Střední: vyrovnaný soupeř. Těžká: hradby, expanze, výzkumy, časté útoky. Nemožná: jako těžká plus přísun surovin navíc.'; for (const [v, t] of [['easy', 'AI lehká'], ['normal', 'AI střední'], ['hard', 'AI těžká'], ['impossible', 'AI nemožná']]) { const o = document.createElement('option'); o.value = v; o.textContent = t; if ((s.diff || 'normal') === v) o.selected = true; sd.appendChild(o); } sd.disabled = !isHost; sd.onchange = () => this.net.send({ t: 'setSlot', slot: idx, diff: sd.value }); tdName.appendChild(sd); }
+      if (s.isAI) { const sd = document.createElement('select'); sd.className = 'diff-sel'; sd.title = t('Lehká: pomalé reakce a malá armáda. Střední: vyrovnaný soupeř. Těžká: hradby, expanze, výzkumy, časté útoky. Nemožná: jako těžká plus přísun surovin navíc.'); for (const [v, txt] of [['easy', t('AI lehká')], ['normal', t('AI střední')], ['hard', t('AI těžká')], ['impossible', t('AI nemožná')]]) { const o = document.createElement('option'); o.value = v; o.textContent = txt; if ((s.diff || 'normal') === v) o.selected = true; sd.appendChild(o); } sd.disabled = !isHost; sd.onchange = () => this.net.send({ t: 'setSlot', slot: idx, diff: sd.value }); tdName.appendChild(sd); }
       tr.appendChild(tdName);
-      const tdF = document.createElement('td'); const sel = document.createElement('select'); for (const f of [...era.factions, { id: 'random', name: 'Náhodná' }]) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; if (f.id === s.faction) o.selected = true; sel.appendChild(o); } sel.disabled = !editable; sel.onchange = () => this.net.send(mine ? { t: 'set', faction: sel.value } : { t: 'setSlot', slot: idx, faction: sel.value }); tdF.appendChild(sel); tr.appendChild(tdF);
-      const tdT = document.createElement('td'); const selT = document.createElement('select'); for (let i = 0; i < MAX_PLAYERS; i++) { const o = document.createElement('option'); o.value = i; o.textContent = 'Tým ' + (i + 1); if (i === s.team) o.selected = true; selT.appendChild(o); } selT.disabled = !editable; selT.onchange = () => this.net.send(mine ? { t: 'set', team: +selT.value } : { t: 'setSlot', slot: idx, team: +selT.value }); tdT.appendChild(selT); tr.appendChild(tdT);
-      const tdC = document.createElement('td'); const dot = document.createElement('span'); dot.className = 'color-dot'; dot.style.background = TEAM_COLORS[s.color].hex; dot.title = TEAM_COLORS[s.color].name + (editable ? ' – klik změní' : ''); if (editable) dot.onclick = () => { let c = (s.color + 1) % TEAM_COLORS.length; while (l.slots.some(o => o !== s && o.color === c)) c = (c + 1) % TEAM_COLORS.length; this.net.send(mine ? { t: 'set', color: c } : { t: 'setSlot', slot: idx, color: c }); }; tdC.appendChild(dot); tr.appendChild(tdC);
-      const tdS = document.createElement('td'); tdS.innerHTML = s.isAI ? '<span class="ready">Bot</span>' : (s.ready || s.id === l.hostId ? '<span class="ready">Připraven</span>' : '<span class="notready">Čeká…</span>'); tr.appendChild(tdS);
+      const tdF = document.createElement('td'); const sel = document.createElement('select'); for (const f of [...era.factions, { id: 'random', name: t('Náhodná') }]) { const o = document.createElement('option'); o.value = f.id; o.textContent = f.name; if (f.id === s.faction) o.selected = true; sel.appendChild(o); } sel.disabled = !editable; sel.onchange = () => this.net.send(mine ? { t: 'set', faction: sel.value } : { t: 'setSlot', slot: idx, faction: sel.value }); tdF.appendChild(sel); tr.appendChild(tdF);
+      const tdT = document.createElement('td'); const selT = document.createElement('select'); for (let i = 0; i < MAX_PLAYERS; i++) { const o = document.createElement('option'); o.value = i; o.textContent = t('Tým ') + (i + 1); if (i === s.team) o.selected = true; selT.appendChild(o); } selT.disabled = !editable; selT.onchange = () => this.net.send(mine ? { t: 'set', team: +selT.value } : { t: 'setSlot', slot: idx, team: +selT.value }); tdT.appendChild(selT); tr.appendChild(tdT);
+      const tdC = document.createElement('td'); const dot = document.createElement('span'); dot.className = 'color-dot'; dot.style.background = TEAM_COLORS[s.color].hex; dot.title = TEAM_COLORS[s.color].name + (editable ? t(' – klik změní') : ''); if (editable) dot.onclick = () => { let c = (s.color + 1) % TEAM_COLORS.length; while (l.slots.some(o => o !== s && o.color === c)) c = (c + 1) % TEAM_COLORS.length; this.net.send(mine ? { t: 'set', color: c } : { t: 'setSlot', slot: idx, color: c }); }; tdC.appendChild(dot); tr.appendChild(tdC);
+      const tdS = document.createElement('td'); tdS.innerHTML = s.isAI ? '<span class="ready">Bot</span>' : (s.ready || s.id === l.hostId ? t('<span class="ready">Připraven</span>') : t('<span class="notready">Čeká…</span>')); tr.appendChild(tdS);
       const tdK = document.createElement('td'); if (isHost && !mine) { const b = document.createElement('button'); b.textContent = '✕'; b.title = 'Vyhodit'; b.onclick = () => this.net.send({ t: 'kick', slot: idx }); tdK.appendChild(b); } tr.appendChild(tdK);
       tb.appendChild(tr);
     });
     const me = l.slots.find(s => s.id === this.myId);
-    $('btn-start').classList.toggle('hidden', !isHost); $('btn-ready').classList.toggle('hidden', isHost); $('btn-ready').textContent = me && me.ready ? 'Zrušit připravenost' : 'Připraven';
+    $('btn-start').classList.toggle('hidden', !isHost); $('btn-ready').classList.toggle('hidden', isHost); $('btn-ready').textContent = me && me.ready ? t('Zrušit připravenost') : t('Připraven');
     $('btn-add-bot').classList.toggle('hidden', !isHost); $('btn-add-bot-hard').classList.toggle('hidden', !isHost); $('btn-add-bot-easy').classList.toggle('hidden', !isHost); $('btn-add-bot-impossible').classList.toggle('hidden', !isHost);
-    const f = me && era.factions.find(x => x.id === me.faction); $('faction-desc').textContent = f ? `${f.name}: ${f.desc}` : (me && me.faction === 'random' ? 'Náhodná frakce se vylosuje při startu hry.' : '');
+    const f = me && era.factions.find(x => x.id === me.faction); $('faction-desc').textContent = f ? `${f.name}: ${f.desc}` : (me && me.faction === 'random' ? t('Náhodná frakce se vylosuje při startu hry.') : '');
   }
   /** Play again against the same bots on the same kind of map (single-player only). */
   playAgain() {
@@ -239,5 +240,7 @@ class App {
 }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
-window.addEventListener('error', e => { console.error(e.error || e.message); if (window.app) window.app.toast('Chyba: ' + (e.message || 'neznámá').slice(0, 120)); });
+window.addEventListener('error', e => { console.error(e.error || e.message); if (window.app) window.app.toast('Chyba: ' + (e.message || t('neznámá')).slice(0, 120)); });
+setLang(detectLang()); localizeData(); translateDom(); document.documentElement.lang = langDef().code;
 window.app = new App();
+buildLangSwitch(document.getElementById('lang-switch'));
