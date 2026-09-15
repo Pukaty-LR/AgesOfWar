@@ -114,4 +114,16 @@ export default {
   'DRŽÍ STŘED': 'HÄLT DIE MITTE',
   'Uprostřed mapy je nevyčerpatelná zlatá žíla a prastaré stromy – kdo drží střed, nikdy nevyhladoví (F3 ukáže, kdo ho drží).': 'In der Kartenmitte liegen eine unerschöpfliche Goldader und uralte Bäume – wer die Mitte hält, geht nie leer aus (F3 zeigt, wer sie hält).',
   'Jazyk': 'Sprache',
+  // AI taunts
+  'Legie, vpřed!': 'Legionen, vorwärts!',
+  'Dnes padnou vaše hradby.': 'Heute fallen eure Mauern.',
+  'Bohové jsou s námi!': 'Die Götter sind mit uns!',
+  'Vpřed, útok!': 'Vorwärts, Angriff!',
+  'Tanky, jeďte!': 'Panzer, marsch!',
+  'Dělostřelectvo, pal!': 'Artillerie, Feuer!',
+  'Bez milosti.': 'Keine Gnade.',
+  'Aktivuji útočné jednotky.': 'Aktiviere Angriffseinheiten.',
+  'Vaše základna bude asimilována.': 'Eure Basis wird assimiliert.',
+  'Hover flotila vyráží.': 'Schwebeflotte rückt aus.',
+  'Odpor je zbytečný.': 'Widerstand ist zwecklos.',
 };

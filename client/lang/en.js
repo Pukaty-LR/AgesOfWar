@@ -250,4 +250,16 @@ export default {
   '%1 úroveň %2': '%1 level %2', ' Léčí %1 HP/s v okruhu %2.': ' Heals %1 HP/s within %2.', ' Aura +%1 % útok v okruhu %2.': ' Aura +%1 % attack within %2.', ' Vylepšení – %1.': ' Upgrades – %1.',
   ' Bonus proti: ': ' Bonus vs: ', ' pop': ' pop',
   'Jazyk': 'Language',
+  // AI taunts
+  'Legie, vpřed!': 'Legions, forward!',
+  'Dnes padnou vaše hradby.': 'Your walls fall today.',
+  'Bohové jsou s námi!': 'The gods are with us!',
+  'Vpřed, útok!': 'Forward, attack!',
+  'Tanky, jeďte!': 'Tanks, roll out!',
+  'Dělostřelectvo, pal!': 'Artillery, fire!',
+  'Bez milosti.': 'No mercy.',
+  'Aktivuji útočné jednotky.': 'Activating assault units.',
+  'Vaše základna bude asimilována.': 'Your base will be assimilated.',
+  'Hover flotila vyráží.': 'Hover fleet moving out.',
+  'Odpor je zbytečný.': 'Resistance is futile.',
 };

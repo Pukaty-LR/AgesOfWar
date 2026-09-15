@@ -114,4 +114,16 @@ export default {
   'DRŽÍ STŘED': 'TIENT LE CENTRE',
   'Uprostřed mapy je nevyčerpatelná zlatá žíla a prastaré stromy – kdo drží střed, nikdy nevyhladoví (F3 ukáže, kdo ho drží).': 'Au centre de la carte : un filon d’or inépuisable et des arbres anciens – qui tient le centre ne manque jamais de rien (F3 montre qui le tient).',
   'Jazyk': 'Langue',
+  // AI taunts
+  'Legie, vpřed!': 'Légions, en avant !',
+  'Dnes padnou vaše hradby.': 'Vos murailles tombent aujourd’hui.',
+  'Bohové jsou s námi!': 'Les dieux sont avec nous !',
+  'Vpřed, útok!': 'En avant, à l’attaque !',
+  'Tanky, jeďte!': 'Chars, en route !',
+  'Dělostřelectvo, pal!': 'Artillerie, feu !',
+  'Bez milosti.': 'Sans pitié.',
+  'Aktivuji útočné jednotky.': 'Activation des unités d’assaut.',
+  'Vaše základna bude asimilována.': 'Votre base sera assimilée.',
+  'Hover flotila vyráží.': 'La flotte aéroglisseur se met en route.',
+  'Odpor je zbytečný.': 'Toute résistance est futile.',
 };

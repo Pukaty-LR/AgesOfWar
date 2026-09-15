@@ -114,4 +114,16 @@ export default {
   'DRŽÍ STŘED': 'TRZYMA ŚRODEK',
   'Uprostřed mapy je nevyčerpatelná zlatá žíla a prastaré stromy – kdo drží střed, nikdy nevyhladoví (F3 ukáže, kdo ho drží).': 'Na środku mapy jest niewyczerpana żyła złota i prastare drzewa – kto trzyma środek, nigdy nie zbiednieje (F3 pokazuje, kto go trzyma).',
   'Jazyk': 'Język',
+  // AI taunts
+  'Legie, vpřed!': 'Legiony, naprzód!',
+  'Dnes padnou vaše hradby.': 'Dziś padną wasze mury.',
+  'Bohové jsou s námi!': 'Bogowie są z nami!',
+  'Vpřed, útok!': 'Naprzód, do ataku!',
+  'Tanky, jeďte!': 'Czołgi, jazda!',
+  'Dělostřelectvo, pal!': 'Artyleria, ognia!',
+  'Bez milosti.': 'Bez litości.',
+  'Aktivuji útočné jednotky.': 'Aktywuję jednostki szturmowe.',
+  'Vaše základna bude asimilována.': 'Wasza baza zostanie zasymilowana.',
+  'Hover flotila vyráží.': 'Flota poduszkowa wyrusza.',
+  'Odpor je zbytečný.': 'Opór jest daremny.',
 };

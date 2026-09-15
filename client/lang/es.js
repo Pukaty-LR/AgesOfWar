@@ -114,4 +114,16 @@ export default {
   'DRŽÍ STŘED': 'DOMINA EL CENTRO',
   'Uprostřed mapy je nevyčerpatelná zlatá žíla a prastaré stromy – kdo drží střed, nikdy nevyhladoví (F3 ukáže, kdo ho drží).': 'En el centro del mapa hay una veta de oro inagotable y árboles ancestrales: quien domina el centro nunca se queda sin recursos (F3 muestra quién lo domina).',
   'Jazyk': 'Idioma',
+  // AI taunts
+  'Legie, vpřed!': '¡Legiones, adelante!',
+  'Dnes padnou vaše hradby.': 'Hoy caen vuestras murallas.',
+  'Bohové jsou s námi!': '¡Los dioses están con nosotros!',
+  'Vpřed, útok!': '¡Adelante, al ataque!',
+  'Tanky, jeďte!': '¡Tanques, en marcha!',
+  'Dělostřelectvo, pal!': '¡Artillería, fuego!',
+  'Bez milosti.': 'Sin piedad.',
+  'Aktivuji útočné jednotky.': 'Activando unidades de asalto.',
+  'Vaše základna bude asimilována.': 'Vuestra base será asimilada.',
+  'Hover flotila vyráží.': 'La flota flotante sale.',
+  'Odpor je zbytečný.': 'La resistencia es inútil.',
 };

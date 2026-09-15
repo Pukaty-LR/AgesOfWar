@@ -121,4 +121,16 @@ export default {
   'DRŽÍ STŘED': 'ДЕРЖИТ ЦЕНТР',
   'Uprostřed mapy je nevyčerpatelná zlatá žíla a prastaré stromy – kdo drží střed, nikdy nevyhladoví (F3 ukáže, kdo ho drží).': 'В центре карты — неисчерпаемая золотая жила и древние деревья: кто держит центр, никогда не останется без ресурсов (F3 показывает, кто его держит).',
   'Jazyk': 'Язык',
+  // AI taunts
+  'Legie, vpřed!': 'Легионы, вперёд!',
+  'Dnes padnou vaše hradby.': 'Сегодня падут ваши стены.',
+  'Bohové jsou s námi!': 'Боги с нами!',
+  'Vpřed, útok!': 'Вперёд, в атаку!',
+  'Tanky, jeďte!': 'Танки, вперёд!',
+  'Dělostřelectvo, pal!': 'Артиллерия, огонь!',
+  'Bez milosti.': 'Без пощады.',
+  'Aktivuji útočné jednotky.': 'Активирую штурмовые юниты.',
+  'Vaše základna bude asimilována.': 'Ваша база будет ассимилирована.',
+  'Hover flotila vyráží.': 'Ховерфлот выдвигается.',
+  'Odpor je zbytečný.': 'Сопротивление бесполезно.',
 };
