@@ -123,10 +123,11 @@ class App {
     n.on('welcome', m => { this.myId = m.id; });
     n.on('error', m => this.toast(m.msg));
     n.on('lobbies', m => this.renderServerList(m.list));
-    n.on('lobby', m => { this.lobby = m.lobby; if (this.screen !== 'lobby' && this.screen !== 'game') { this.show('lobby'); $('lobby-chat').innerHTML = ''; } this.renderLobby(); if (this.quick && m.lobby.hostId === this.myId) { this.quick = false; if (m.lobby.slots.length < 2) n.send({ t: 'addBot', diff: this.settings.diff || 'normal' }); } });
+    n.on('lobby', m => { this.lobby = m.lobby; if (this.screen !== 'lobby' && this.screen !== 'game') { this.show('lobby'); $('lobby-chat').innerHTML = ''; } this.renderLobby();
+      if (this.rematch && m.lobby.hostId === this.myId) { const r = this.rematch; const bots = m.lobby.slots.filter(s => s.isAI); if (bots.length < r.bots.length) n.send({ t: 'addBot', diff: r.bots[bots.length].diff }); else { this.rematch = null; if (r.me && r.me.faction) n.send({ t: 'set', faction: r.me.faction, team: r.me.team }); n.send({ t: 'setMap', style: r.style, size: r.size, startRes: r.startRes, reveal: r.reveal, seed: '' }); setTimeout(() => n.send({ t: 'start' }), 300); } } if (this.quick && m.lobby.hostId === this.myId) { this.quick = false; if (m.lobby.slots.length < 2) n.send({ t: 'addBot', diff: this.settings.diff || 'normal' }); } });
     n.on('lobbyLeft', () => { this.lobby = null; if (this.screen === 'game') this.leaveGame(true); else this.show('menu'); });
     n.on('chat', m => { if (this.screen === 'game') this.ui.chat(m.from, m.text, m.sys, m.color); else { const c = $('lobby-chat'); const d = document.createElement('div'); if (m.sys) { d.className = 'sys'; d.textContent = m.text; } else { d.innerHTML = `<b style="color:${m.color !== undefined ? TEAM_COLORS[m.color].hex : '#f1d36a'}">${esc(m.from)}:</b> ${esc(m.text)}`; } c.appendChild(d); c.scrollTop = c.scrollHeight; } });
-    n.on('start', m => { clearTimeout(this.toastT); $('toast').classList.add('hidden'); this.show('game'); $('game-speed').value = String(m.game.speed || 1); this.game.start(m); if (m.game.rejoin && m.game.paused) this.net.send({ t: 'pause', v: false }); });
+    n.on('start', m => { this.lastSetup = this.lobby && !m.game.rejoin ? { era: this.lobby.era, style: this.lobby.mapStyle, size: this.lobby.mapSize, startRes: this.lobby.startRes, reveal: this.lobby.reveal, bots: this.lobby.slots.filter(s => s.isAI).map(s => ({ diff: s.diff || 'normal', faction: s.faction, team: s.team })), me: (() => { const s = this.lobby.slots.find(s => s.id === this.myId); return s ? { faction: s.faction, team: s.team } : null; })(), sp: this.lobby.slots.filter(s => !s.isAI).length === 1 } : null; clearTimeout(this.toastT); $('toast').classList.add('hidden'); this.show('game'); $('game-speed').value = String(m.game.speed || 1); this.game.start(m); if (m.game.rejoin && m.game.paused) this.net.send({ t: 'pause', v: false }); });
     n.on('speed', m => { $('game-speed').value = String(m.v); this.ui.alert(`Rychlost hry: ${m.v}×`, false); });
     n.on('full', m => this.game.onFull(m));
     n.on('snap', m => this.game.onSnap(m));
@@ -225,6 +226,12 @@ class App {
     $('btn-start').classList.toggle('hidden', !isHost); $('btn-ready').classList.toggle('hidden', isHost); $('btn-ready').textContent = me && me.ready ? 'Zrušit připravenost' : 'Připraven';
     $('btn-add-bot').classList.toggle('hidden', !isHost); $('btn-add-bot-hard').classList.toggle('hidden', !isHost); $('btn-add-bot-easy').classList.toggle('hidden', !isHost); $('btn-add-bot-impossible').classList.toggle('hidden', !isHost);
     const f = me && era.factions.find(x => x.id === me.faction); $('faction-desc').textContent = f ? `${f.name}: ${f.desc}` : (me && me.faction === 'random' ? 'Náhodná frakce se vylosuje při startu hry.' : '');
+  }
+  /** Play again against the same bots on the same kind of map (single-player only). */
+  playAgain() {
+    const r = this.lastSetup; if (!r || !r.sp) return;
+    this.rematch = r; this.leaveGame(); this.quick = false;
+    this.net.send({ t: 'host', name: `${this.settings.name} vs AI`, era: r.era, max: Math.max(2, r.bots.length + 1) });
   }
   leaveGame(silent = false) {
     this.game.stop(); if (!silent) this.net.send({ t: 'leave' }); this.lobby = null; $('pause-menu').classList.add('hidden'); this.show('menu'); this.net.send({ t: 'list' }); this.menuMusic();

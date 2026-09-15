@@ -40,6 +40,7 @@ export class UI {
     $('btn-resume').onclick = () => this.togglePause(false);
     $('btn-surrender').onclick = () => this.app.leaveGame();
     $('btn-end-menu').onclick = () => this.app.leaveGame();
+    $('btn-end-again').onclick = () => this.app.playAgain();
     $('btn-end-spectate').onclick = () => { $('endscreen').classList.add('hidden'); this.alert('Sleduješ hru dál. Menu (Esc) → Vzdát se a odejít.', false); };
     $('btn-help').onclick = () => { $('help-overlay').classList.remove('hidden'); };
     $('btn-help-close').onclick = () => { $('help-overlay').classList.add('hidden'); };
@@ -291,6 +292,7 @@ export class UI {
     const t = Math.floor(game.gameTime()); $('end-sub').textContent = `${win ? 'Nepřítel byl rozdrcen.' : (eliminatedOnly ? 'Byli jsme vyřazeni, ostatní bojují dál.' : 'Naše říše padla.')} Délka hry ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} · ${game.eraDef.name}`;
     const winner = game.gameOver ? game.gameOver.winnerTeam : -2;
     $('btn-end-spectate').classList.toggle('hidden', !eliminatedOnly);
+    $('btn-end-again').classList.toggle('hidden', !(this.app.lastSetup && this.app.lastSetup.sp));
     const tbl = $('end-stats'); tbl.innerHTML = '<tr><th>Hráč</th><th>Frakce</th><th>Tým</th><th>Jednotky</th><th>Ztráty</th><th>Zabito</th><th>Budovy</th><th>Zničeno</th><th>Suroviny</th></tr>';
     for (const p of game.players) { if (p.neutral) continue; const tr = document.createElement('tr'); const s = p.stats; const fname = ERAS[game.era].factions.find(f => f.id === p.faction)?.name || p.faction; tr.innerHTML = `<td style="color:${TEAM_COLORS[p.color].hex}">${p.name}${p.isAI ? ' (AI)' : ''}${p.team === winner ? '<span class="winner">VÍTĚZ</span>' : ''}</td><td>${fname}</td><td>${p.team + 1}</td><td>${s.unitsBuilt}</td><td>${s.unitsLost}</td><td>${s.unitsKilled}</td><td>${s.buildingsBuilt}</td><td>${s.buildingsRazed}</td><td>${s.gatheredP + s.gatheredS}</td>`; tbl.appendChild(tr); }
     $('endscreen').classList.remove('hidden');
