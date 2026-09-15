@@ -42,7 +42,7 @@ export class UI {
     $('btn-surrender').onclick = () => this.app.leaveGame();
     $('btn-end-menu').onclick = () => this.app.leaveGame();
     $('btn-end-again').onclick = () => this.app.playAgain();
-    $('btn-end-spectate').onclick = () => { $('endscreen').classList.add('hidden'); this.alert('Sleduješ hru dál. Menu (Esc) → Vzdát se a odejít.', false); };
+    $('btn-end-spectate').onclick = () => { $('endscreen').classList.add('hidden'); this.alert(t('Sleduješ hru dál. Menu (Esc) → Vzdát se a odejít.'), false); };
     $('btn-help').onclick = () => { $('help-overlay').classList.remove('hidden'); };
     $('btn-help-close').onclick = () => { $('help-overlay').classList.add('hidden'); };
     const chat = $('chat-input');
@@ -61,10 +61,10 @@ export class UI {
     $('res-s').querySelector('.ico').style.backgroundImage = resIcon(era.resources.s.id); $('res-s').querySelector('.lbl').textContent = era.resources.s.name;
     $('res-pop').querySelector('.ico').style.backgroundImage = resIcon('pop');
     this.placementHint(null);
-    setTimeout(() => { if (this.game === game && game.running) { this.alert('Cíl: znič všechny nepřátelské budovy. Pošli dělníky těžit (G / F) a stav domy pro populaci (B → E).', false); } }, 1500);
+    setTimeout(() => { if (this.game === game && game.running) { this.alert(t('Cíl: znič všechny nepřátelské budovy. Pošli dělníky těžit (G / F) a stav domy pro populaci (B → E).'), false); } }, 1500);
     // first game ever: open the controls overview once (pauses single-player)
     if (!this.app.settings.seenHelp) { this.app.settings.seenHelp = true; this.app.save(); setTimeout(() => { if (this.game === game && game.running) { this.togglePause(true); $('help-overlay').classList.remove('hidden'); } }, 2500); }
-    setTimeout(() => { if (this.game === game && game.running) this.alert('Esc = menu a nápověda k ovládání · Tab = podskupina · Alt+klik = označit místo', false); }, 7000);
+    setTimeout(() => { if (this.game === game && game.running) this.alert(t('Esc = menu a nápověda k ovládání · Tab = podskupina · Alt+klik = označit místo'), false); }, 7000);
   }
   onPlayers(game) { this.dirty = true; }
   togglePause(force) { const el = $('pause-menu'); const show = force === undefined ? el.classList.contains('hidden') : force; el.classList.toggle('hidden', !show); if (show) { $('vol-music2').value = this.app.settings.music; $('vol-sfx2').value = this.app.settings.sfx; } if (this.game && this.game.running) this.app.net.send({ t: 'pause', v: show }); }

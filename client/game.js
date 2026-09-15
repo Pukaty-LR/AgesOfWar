@@ -186,7 +186,7 @@ export class Game {
       case 'eliminated': { const p = this.players[ev.owner]; this.ui.chat('', tf(t('%1 byl vyřazen ze hry.'), p?.name), true); if (ev.owner !== this.me) this.audio.sfx('horn', 0.6); else if (!this.gameOver) { this.audio.sfx('defeat', 1); this.eliminated = true; setTimeout(() => { if (!this.gameOver) this.ui.showEnd(this, false, true); }, 1200); } break; }
       case 'chat': this.ui.chat(ev.from, ev.text, false, ev.color); break;
       case 'board': this.soundAt('splash', ev.x, ev.y, 0.5); break;
-      case 'unload': this.soundAt('splash', ev.x, ev.y, 0.7); if (mine) this.ui.alert('Jednotky vyloděny.', false); break;
+      case 'unload': this.soundAt('splash', ev.x, ev.y, 0.7); if (mine) this.ui.alert(t('Jednotky vyloděny.'), false); break;
       case 'heal': if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(5, ev.x, ev.y, 10, { colors: [[140, 255, 170], [220, 255, 230]], speed: 0.6, vz: 22, life: 0.7, size: 1.6, gravity: -10, drag: 0.97 }); break;
       case 'levelup': { R.addEffect({ kind: 'ring', x: ev.x, y: ev.y, color: 'rgba(255,240,160,0.95)' }); R.addEffect({ kind: 'text', x: ev.x, y: ev.y, text: tf(t('Úroveň %1!'), ev.level), color: '#f1d36a' }); R.spawnParticles(20, ev.x, ev.y, 6, { colors: [[255, 240, 160], [255, 200, 80]], speed: 1.5, vz: 40, life: 0.9, size: 2, gravity: 30 }); if (mine) { this.audio.sfx('unitReady', 0.8); this.ui.alert(tf(t('%1 dosáhl úrovně %2.'), ev.name, ev.level), false); this.ui.dirty = true; } break; }
       case 'gameover': break;
@@ -262,7 +262,7 @@ export class Game {
       if (this.state.shift) { p.start = { ...p.hover }; p.preview = []; } else this.cancelPlacing();
       return;
     }
-    if (!this.canPlace(p.type, p.hover.x, p.hover.y)) { this.audio.sfx('error'); this.ui.alert('Tady stavět nelze.', true); return; }
+    if (!this.canPlace(p.type, p.hover.x, p.hover.y)) { this.audio.sfx('error'); this.ui.alert(t('Tady stavět nelze.'), true); return; }
     this.send({ t: 'build', ids, type: p.type, tx: p.hover.x, ty: p.hover.y, queue: this.state.shift });
     const def = this.tech.buildings[p.type];
     // optimistic block to avoid double placement at the same spot
@@ -297,7 +297,7 @@ export class Game {
   }
   selectAllOfType(e) { const out = []; for (const o of this.ents.values()) if (o.k === 'u' && o.o === this.me && o.t === e.t && o.sx !== undefined && o.sx > -50 && o.sx < this.renderer.W + 50 && o.sy > -50 && o.sy < this.renderer.H + 50) out.push(o); this.select(out, this.state.shift); }
   selectArmy() { const out = []; for (const o of this.ents.values()) if (o.k === 'u' && o.o === this.me && this.unitDef(o).role !== 'worker') out.push(o); this.select(out); }
-  selectIdleWorker() { const idle = []; for (const o of this.ents.values()) if (o.k === 'u' && o.o === this.me && this.unitDef(o).role === 'worker' && o.o2 === 'idle') idle.push(o); if (!idle.length) { this.ui.alert('Žádný nečinný dělník.', false); return; } this.idleIdx = ((this.idleIdx || 0) + 1) % idle.length; const e = idle[this.idleIdx]; this.select([e]); this.centerOn(e.x, e.y); }
+  selectIdleWorker() { const idle = []; for (const o of this.ents.values()) if (o.k === 'u' && o.o === this.me && this.unitDef(o).role === 'worker' && o.o2 === 'idle') idle.push(o); if (!idle.length) { this.ui.alert(t('Žádný nečinný dělník.'), false); return; } this.idleIdx = ((this.idleIdx || 0) + 1) % idle.length; const e = idle[this.idleIdx]; this.select([e]); this.centerOn(e.x, e.y); }
   centerOn(x, y) { this.renderer.cam.x = x; this.renderer.cam.y = y; this.renderer.clampCamera(); }
 
   // ---------- input ----------

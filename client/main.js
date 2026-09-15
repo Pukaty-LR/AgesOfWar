@@ -30,7 +30,7 @@ class App {
   show(name) { if (name === 'game' && this.bgRenderer) { for (const c of this.bgRenderer.chunks.values()) c.canvas.width = 0; this.bgRenderer.chunks.clear(); } for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); $('bg').style.display = name === 'game' ? 'none' : 'block'; this.screen = name; if (name === 'game') this.game.renderer.resize(); }
   toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(this.toastT); this.toastT = setTimeout(() => t.classList.add('hidden'), 3500); }
   token() { if (!this.settings.token) { this.settings.token = Math.random().toString(36).slice(2) + Date.now().toString(36); this.save(); } return this.settings.token; }
-  name() { const n = $('name').value.trim(); if (!n) { $('name').focus(); this.toast('Zadej svoje jméno.'); return null; } this.settings.name = n; this.save(); this.net.send({ t: 'hello', name: n, token: this.token() }); return n; }
+  name() { const n = $('name').value.trim(); if (!n) { $('name').focus(); this.toast(t('Zadej svoje jméno.')); return null; } this.settings.name = n; this.save(); this.net.send({ t: 'hello', name: n, token: this.token() }); return n; }
 
   // ---------- menu background ----------
   startBackground() {
@@ -121,7 +121,7 @@ class App {
   // ---------- net ----------
   bindNet() {
     const n = this.net;
-    n.on('status', s => { const el = $('conn-status'); if (s.state === 'open') { el.textContent = t('Připojeno k serveru ') + s.url.replace(/^ws:\/\//, ''); el.className = 'conn-status ok'; n.send({ t: 'hello', name: this.settings.name || t('Hráč'), token: this.token() }); } else if (s.state === 'closed' || s.state === 'error') { el.textContent = t('Server nedostupný – zkouším znovu…'); el.className = 'conn-status err'; if (this.screen === 'lobby' || this.screen === 'browser') { this.show('menu'); this.lobby = null; } if (this.screen === 'game') this.toast('Spojení se serverem bylo přerušeno.'); } else { el.textContent = t('Připojuji se…'); el.className = 'conn-status'; } });
+    n.on('status', s => { const el = $('conn-status'); if (s.state === 'open') { el.textContent = t('Připojeno k serveru ') + s.url.replace(/^ws:\/\//, ''); el.className = 'conn-status ok'; n.send({ t: 'hello', name: this.settings.name || t('Hráč'), token: this.token() }); } else if (s.state === 'closed' || s.state === 'error') { el.textContent = t('Server nedostupný – zkouším znovu…'); el.className = 'conn-status err'; if (this.screen === 'lobby' || this.screen === 'browser') { this.show('menu'); this.lobby = null; } if (this.screen === 'game') this.toast(t('Spojení se serverem bylo přerušeno.')); } else { el.textContent = t('Připojuji se…'); el.className = 'conn-status'; } });
     n.on('welcome', m => { this.myId = m.id; });
     n.on('error', m => this.toast(tsys(m.msg)));
     n.on('lobbies', m => this.renderServerList(m.list));
