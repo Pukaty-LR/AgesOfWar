@@ -329,6 +329,10 @@ const UNIT_DRAW = {
   ww2_rockets: (ctx, o) => rocketTruck(ctx, o),
   ww2_cruiser: (ctx, o) => { ctx.save(); ctx.scale(1.3, 1.3); destroyer(ctx, o); ctx.restore(); },
   ww2_hero: (ctx, o) => commandCar(ctx, o),
+  // ---- healers ----
+  ant_medic: (ctx, o) => humanoid(ctx, { ...o, torso: [235, 230, 215], helmet: 'band', weapon: o.anim === 'work' ? 'wrench' : null, legs: [200, 195, 180], belt: [180, 150, 80], emblem: o.team }),
+  ww2_medic: (ctx, o) => { humanoid(ctx, { ...o, torso: mix([96, 100, 80], o.team, 0.35), helmet: 'garrison', weapon: null, legs: [75, 78, 62], sleeves: [220, 220, 220] }); ctx.fillStyle = '#fff'; ctx.fillRect(-6.5, -21, 5, 5); ctx.fillStyle = '#d33'; ctx.fillRect(-4.6, -20.5, 1.2, 4); ctx.fillRect(-6, -19.1, 4, 1.2); },
+  sf_medic: (ctx, o) => { drone(ctx, o, 'worker'); ctx.fillStyle = 'rgba(120,255,160,0.95)'; ctx.fillRect(-1, -14, 2, 6); ctx.fillRect(-3, -12, 6, 2); },
   // ---- neutral creeps ----
   ant_creep: (ctx, o) => humanoid(ctx, { ...o, team: [120, 90, 60], torso: [110, 80, 50], helmet: 'hair', weapon: 'axe', shield: 'round', legs: [70, 55, 40], belt: [60, 40, 25] }),
   ww2_creep: (ctx, o) => humanoid(ctx, { ...o, team: [90, 80, 60], torso: [80, 70, 50], helmet: 'cap', weapon: 'rifle', legs: [60, 55, 45], sleeves: [90, 80, 60] }),

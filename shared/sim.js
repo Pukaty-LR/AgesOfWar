@@ -433,7 +433,7 @@ export class Sim {
     const cols = Math.min(8, Math.ceil(Math.sqrt(n * 1.6))); const rows = Math.ceil(n / cols);
     const sp = 0.85 + Math.max(...units.map(u => u.size)) * 0.6;
     // sort: melee/high-hp first rows, ranged/siege behind, keep relative left-right order
-    const order = units.map((u, i) => ({ u, i, rank: u.role === 'siege' ? 3 : (u.role === 'ranged' ? 2 : (u.role === 'worker' ? 1 : 0)), side: (u.x - cx) * rx + (u.y - cy) * ry })).sort((a, b) => a.rank - b.rank || a.side - b.side);
+    const order = units.map((u, i) => ({ u, i, rank: u.role === 'siege' ? 3 : (u.role === 'ranged' || u.role === 'support' ? 2 : (u.role === 'worker' ? 1 : 0)), side: (u.x - cx) * rx + (u.y - cy) * ry })).sort((a, b) => a.rank - b.rank || a.side - b.side);
     const out = new Array(n);
     order.forEach((o, k) => {
       const r = Math.floor(k / cols), c = k % cols; const rowCount = Math.min(cols, n - r * cols);
@@ -595,6 +595,12 @@ export class Sim {
       case 'build': moved = this.stepBuild(u, def, o); break;
     }
     if (moved) u.anim = 'walk';
+    // healers: mend the most damaged ally nearby once per second while standing
+    if (def.heal && !moved && (this.tick + u.id) % 20 === 0) {
+      let best = null, bestF = 1;
+      this.unitsNear(u.x, u.y, def.heal.range, e => { if (e === u || e.dead || e.owner === undefined || this.players[e.owner].team !== p.team) return; const f = e.hp / e.maxHp; if (f < bestF && f < 1) { bestF = f; best = e; } });
+      if (best) { best.hp = Math.min(best.maxHp, best.hp + def.heal.amount); best.dirty = true; u.facing = Math.atan2(best.y - u.y, best.x - u.x); u.anim = 'work'; u.lastAttackTick = this.tick; u.dirty = true; this.events.push({ t: 'heal', x: best.x, y: best.y, o: u.owner }); }
+    }
     // separation
     if (!u.hidden && (moved || (this.tick + u.id) % 2 === 0)) this.separate(u);
     if (u.x !== u.lastX || u.y !== u.lastY) { u.dirty = true; u.lastX = u.x; u.lastY = u.y; }
