@@ -46,11 +46,12 @@ export class Game {
     this.state.mode = null; this.state.placing = null; this.state.drag = null; this.state.mouse = { x: -1, y: -1 }; this.keys = {};
     this.ui.onGameStart(this);
     this.audio.era = this.era; this.audio.startMusic(this.eraDef.music);
+    if (this.renderer.weather === 'rain') this.audio.startAmbient('rain'); else this.audio.stopAmbient();
     this.renderer.resize();
     this.lastFrame = performance.now();
     requestAnimationFrame(t => this.loop(t));
   }
-  stop() { this.running = false; this.audio.stopMusic(); }
+  stop() { this.running = false; this.audio.stopMusic(); this.audio.stopAmbient(); }
   tickNow() { return this.paused ? this.tick : this.tick + Math.min(20, (performance.now() - this.lastSnapAt) / (1000 / TICK_RATE)); }
   gameTime() { return this.tick / TICK_RATE; }
   unitDef(e) { return this.techs[e.o]?.units[e.t] || this.eraDef.units[e.t]; }

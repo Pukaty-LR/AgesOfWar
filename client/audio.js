@@ -19,6 +19,7 @@ export class Audio {
     const len = this.ctx.sampleRate * 2; const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate); const d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     this.noise = buf;
+    if (this.pendingAmbient) { const k = this.pendingAmbient; this.pendingAmbient = null; this.startAmbient(k); }
   }
   setMusicVol(v) { this.musicVol = v; if (this.musicGain) this.musicGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05); }
   setSfxVol(v) { this.sfxVol = v; if (this.sfxGain) this.sfxGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05); }
@@ -107,6 +108,17 @@ export class Audio {
       case 'flameShot': this.noiseBurst(t, 0.25, 0.22 * v, dest, { f: 700, fEnd: 400, q: 0.6, type: 'lowpass', a: 0.02 }); break;
     }
   }
+
+  // ---------- ambient loops ----------
+  startAmbient(kind) {
+    this.stopAmbient(); if (!this.ctx) { this.pendingAmbient = kind; return; }
+    const c = this.ctx; const src = c.createBufferSource(); src.buffer = this.noise; src.loop = true;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = kind === 'rain' ? 900 : 400; f.Q.value = 0.5;
+    const g = c.createGain(); g.gain.value = 0; src.connect(f); f.connect(g); g.connect(this.sfxGain);
+    src.start(); g.gain.linearRampToValueAtTime(kind === 'rain' ? 0.12 : 0.05, c.currentTime + 2);
+    this.ambient = { src, g };
+  }
+  stopAmbient() { if (this.ambient) { try { this.ambient.g.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.5); const s = this.ambient.src; setTimeout(() => { try { s.stop(); } catch {} }, 600); } catch {} this.ambient = null; } this.pendingAmbient = null; }
 
   // ---------- music ----------
   startMusic(styleDef) {

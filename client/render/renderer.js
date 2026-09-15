@@ -37,7 +37,8 @@ export class Renderer {
     this.fogRaw = document.createElement('canvas'); this.fogRaw.width = this.fw; this.fogRaw.height = this.fh; this.fogRawCtx = this.fogRaw.getContext('2d'); this.fogImg = this.fogRawCtx.createImageData(this.fw, this.fh);
     this.fogCanvas = document.createElement('canvas'); this.fogCanvas.width = this.fw; this.fogCanvas.height = this.fh; this.fogCtx = this.fogCanvas.getContext('2d');
     this.fogCtx.fillStyle = 'rgb(6,5,8)'; this.fogCtx.fillRect(0, 0, this.fw, this.fh);
-    this.particles = []; this.effects = []; this.weather = undefined; this.drops = []; this.clouds = null;
+    this.particles = []; this.effects = []; this.drops = []; this.clouds = null;
+    const wr = this.hash(map.seed & 0xffff, map.seed >>> 16); this.weather = era === 'scifi' ? 'spores' : (wr < 0.3 ? 'rain' : 'clear');
   }
   elevV(vx, vy) { const v = this.vh[vy * (this.map.w + 1) + vx]; return Math.max(0, v - SEA) * ELEV + Math.max(0, v - 0.83) * 520; }
   /** elevation (px) at world point, bilinear over vertex heights */
@@ -265,8 +266,8 @@ export class Renderer {
 
   drawWeather(ctx, dt) {
     if (!this.map) return;
-    if (this.weather === undefined) { const r = this.hash(this.map.seed & 0xffff, this.map.seed >>> 16); this.weather = this.era === 'scifi' ? 'spores' : (r < 0.3 ? 'rain' : 'clear'); this.drops = []; }
-    if (this.weather === 'clear') return;
+    if (!this.weather || this.weather === 'clear') return;
+    if (!this.drops) this.drops = [];
     const W = this.W, H = this.H;
     if (this.weather === 'rain') {
       while (this.drops.length < 260) this.drops.push({ x: Math.random() * (W + 200) - 100, y: Math.random() * H, s: 0.6 + Math.random() * 0.6 });

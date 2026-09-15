@@ -41,6 +41,7 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - **Tři éry**: Starověk (Řím, Galové, Řecko, Kartágo), Druhá světová (Německo, Polsko, SSSR, USA, Británie) a Sci-fi (Terranská federace, Marťanská republika, Syntetici, Nomádi Prázdnoty) – každá s vlastními jednotkami, budovami, surovinami, hudbou a barevným tématem HUD.
 - Když ti spadne prohlížeč nebo obnovíš stránku, hra běží dál a po načtení se **automaticky připojíš zpět** do své rozehrané hry (server ji drží 3 minuty).
 - Hudbu lze ztlumit tlačítkem v horní liště, ostatní nastavení a nápověda jsou v menu (Esc). Ve hře proti AI menu zároveň **pozastaví** simulaci.
+- Atmosféra: stíny mraků, den a noc s rozsvícenými okny, na některých mapách déšť (i se zvukem), ve sci-fi poletující spory.
 - Kurzor mění tvar podle akce (útok, stavba, těžba, hlídka), po vyřazení lze hru sledovat dál, po konci hry se odkryje celá mapa.
 - Cíl: zničit všechny nepřátelské budovy (kromě hradeb).
 
