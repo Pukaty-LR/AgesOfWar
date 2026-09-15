@@ -32,6 +32,7 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - Hrdina sbírá **zkušenosti** za zabité jednotky a budovy (úrovně 1–5: víc HP, útoku, širší aura). Neutrální **hlídači** (bandité / partyzáni / xeno šelmy) střeží vzdálené doly jako ve Warcraftu 3 – cenný zdroj zkušeností.
 - Sci-fi **hover tanky** jsou vznášedla a projedou i mělkou vodou. Přehled hráčů se skóre je na F3, týmový chat začíná `/t `.
 - **Léčitelé** (Léčitel / Zdravotník / Opravný dron) se cvičí v radnici od úrovně 2 a léčí zraněné spojence v okolí.
+- Hru proti AI lze **uložit** (Esc → Uložit hru) a později **načíst** z hlavního menu; ukládá se celý stav včetně AI (soubory ve složce `saves/`).
 - **Encyklopedie** v menu ukazuje všechny jednotky, budovy, frakce a výzkumy každé éry. V singleplayeru jde v menu (Esc) nastavit rychlost hry 1× / 1,5× / 2×.
 - Boti nesou jména vůdců frakcí (Caesar, Vercingetorix, Guderian, Žukov, Admirál Vega…), kamera si pamatuje pozice F5–F8 (Ctrl+F5 uloží).
 - V lobby lze zadat **seed** mapy (stejný seed = stejná mapa) a zvolit **náhodnou frakci** pro hráče i boty; nastavit startovní suroviny a odkrytou mapu.
