@@ -26,7 +26,7 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - **Hradby** se pokládají klikem na začátek a konec – cesta obejde stromy, budovy i vodu. Vybraný segment lze změnit na **bránu** (G), kterou projdou jen tvé jednotky a spojenci.
 - **Věže / bunkry** mají 3 úrovně (U): víc útoku, dosahu i pancíře, a jiný vzhled.
 - **Výzkumy** (styl kovárny z Age of Empires): v kasárnách, stájích a dílně lze zkoumat útok a pancíř pro pěchotu, jezdectvo/vozidla a obléhací stroje (klávesy I / O), každá éra má vlastní názvy.
-- **Domy** (+8 populace) ve všech érách, AI je staví, když se blíží limitu.
+- **Domy** (+8 populace) ve všech érách, AI je staví, když se blíží limitu. AI také expanduje: když domácí důl dochází, postaví novou radnici u dalšího dolu (a nejdřív vyčistí jeho hlídače).
 - **Ovládání jako ve Warcraftu 3**: skupina se přesouvá ve formaci (melee vpředu, střelci a obléhání vzadu), hlídkování (P), Tab přepíná podskupinu ve smíšeném výběru, Ctrl+klik vybere všechny stejného typu, Alt+klik označí místo spoluhráčům na minimapě.
 - **Hrdina** má kromě aury i aktivní schopnost (C): Válečný pokřik / Rozkaz k útoku / Přetížení zbraní – 12 s +35 % útok a +2 pancíř pro spojence v okolí, přebití 60 s.
 - Hrdina sbírá **zkušenosti** za zabité jednotky a budovy (úrovně 1–5: víc HP, útoku, širší aura). Neutrální **hlídači** (bandité / partyzáni / xeno šelmy) střeží vzdálené doly jako ve Warcraftu 3 – cenný zdroj zkušeností.
