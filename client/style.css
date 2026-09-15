@@ -250,3 +250,6 @@ html[lang="cs"] .cmd .lbl { hyphens: manual; }
 .lang-btn:hover { opacity: 1; filter: brightness(1.15); }
 .lang-btn.active { opacity: 1; border-color: var(--gold2); box-shadow: 0 0 6px rgba(201,162,39,0.5); }
 .lang-btn .flag { width: 18px; height: 12px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.6); display: inline-block; }
+
+.res .wk { font-size: 11px; color: var(--hud-dim); margin-left: 6px; font-family: var(--font-head); }
+.res .wk::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 3px; border-radius: 50% 50% 40% 40%; background: var(--parch); opacity: 0.7; vertical-align: -1px; }

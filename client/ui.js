@@ -103,6 +103,8 @@ export class UI {
     const badge = $('idle-count'); badge.textContent = idle; badge.classList.toggle('hidden', idle === 0); $('btn-idle-worker').classList.toggle('pulse', idle > 0);
     $('res-p').querySelector('.val').textContent = p.res.p; $('res-s').querySelector('.val').textContent = p.res.s;
     let gp = 0, gs = 0; for (const e of game.ents.values()) if (e.k === 'u' && e.o === game.me && e.o2 === 'gather') { const t = game.ents.get(e.tg); if (t && t.k === 'm') gp++; else if (e.c === 'p') gp++; else gs++; }
+    // Age of Empires style: number of workers on each resource next to the amount
+    for (const [id, n] of [['res-p', gp], ['res-s', gs]]) { const el = $(id); let wk = el.querySelector('.wk'); if (!wk) { wk = document.createElement('span'); wk.className = 'wk'; el.appendChild(wk); } wk.textContent = n ? `${n}` : ''; }
     $('res-p').title = tf(t('%1 · těží %2 dělníků'), game.eraDef.resources.p.name, gp); $('res-s').title = tf(t('%1 · těží %2 dělníků'), game.eraDef.resources.s.name, gs);
     const pop = $('res-pop'); pop.querySelector('.val').textContent = `${p.pop}/${p.popCap}`; pop.classList.toggle('low', p.pop >= p.popCap);
     const s = Math.floor(game.gameTime()); $('game-clock').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
