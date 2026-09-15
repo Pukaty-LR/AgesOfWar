@@ -239,4 +239,4 @@ button.secondary { filter: saturate(0.6) brightness(0.9); }
 
 #sel-stats em { color: #8fe38f; font-style: normal; font-weight: 700; }
 
-input[type=range], input[type=checkbox] { accent-color: var(--gold); }
+input[type=checkbox] { accent-color: var(--gold); }
