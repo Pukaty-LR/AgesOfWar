@@ -246,4 +246,5 @@ export default {
   'Radnice vylepšena na úroveň %1': 'Town hall upgraded to level %1',
   'Nemáš hrdinu.': 'You have no hero.', 'F1 = celá armáda · F2 = hrdina · . = nečinný dělník': 'F1 = whole army · F2 = hero · . = idle worker',
   'DRŽÍ STŘED': 'HOLDS THE CENTRE',
+  'Uprostřed mapy je nevyčerpatelná zlatá žíla a prastaré stromy – kdo drží střed, nikdy nevyhladoví (F3 ukáže, kdo ho drží).': 'The map centre holds an endless gold vein and ancient trees – whoever holds the centre never runs dry (F3 shows who holds it).',
 };

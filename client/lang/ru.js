@@ -119,4 +119,5 @@ export default {
   'Radnice vylepšena na úroveň %1': 'Ратуша улучшена до уровня %1',
   'Nemáš hrdinu.': 'У вас нет героя.', 'F1 = celá armáda · F2 = hrdina · . = nečinný dělník': 'F1 = whole army · F2 = hero · . = idle worker',
   'DRŽÍ STŘED': 'ДЕРЖИТ ЦЕНТР',
+  'Uprostřed mapy je nevyčerpatelná zlatá žíla a prastaré stromy – kdo drží střed, nikdy nevyhladoví (F3 ukáže, kdo ho drží).': 'В центре карты — неисчерпаемая золотая жила и древние деревья: кто держит центр, никогда не останется без ресурсов (F3 показывает, кто его держит).',
 };
