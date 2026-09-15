@@ -24,6 +24,9 @@ const STAT_SVG = {
   left: '<svg viewBox="0 0 24 24"><path d="M12 3v18M5 8l7-5 7 5M7 14l5 7 5-7"/></svg>',
 };
 
+// Soft hyphens for long Czech words so command-card labels wrap at syllables instead of being clipped.
+const HYPH = { 'Shromaždiště': 'Shromaž­diště', 'Dělostřelecký': 'Dělo­střelecký', 'Dělostřelectvo': 'Dělo­střelectvo', 'Energetická': 'Energe­tická', 'Kulometčík': 'Kulo­metčík', 'Lučištník': 'Lučišt­ník', 'lučištník': 'lučišt­ník', 'Marťanská': 'Mar­ťanská', 'Odstřelovací': 'Odstřelo­vací', 'Odstřelovač': 'Odstře­lovač', 'Plamenometčík': 'Plameno­metčík', 'Protitankové': 'Proti­tankové', 'Přetížení': 'Pře­tížení', 'Torpédoborec': 'Torpédo­borec', 'Velitelství': 'Velitel­ství', 'Výcviková': 'Výcvi­ková', 'Výsadkový': 'Výsad­kový', 'Výsadkář': 'Výsad­kář', 'Zdravotník': 'Zdravot­ník', 'transportér': 'trans­portér', 'Štítonoš': 'Štíto­noš' };
+function hyph(s) { return String(s).replace(/[A-Za-zÀ-ž]+/g, w => HYPH[w] || w); }
 export class UI {
   constructor(app) {
     this.app = app; this.dirty = true; this.selectionChanged = true; this.buildMenu = false; this.lastSig = '';
@@ -238,7 +241,7 @@ export class UI {
         const up = game.nextUpgrade(b);
         if (up) { const need = up.hall && game.hallLevel() < up.hall; const unlockNames = up.unlocks.map(u => game.tech.units[u]?.name).filter(Boolean); btn(8, { label: `Vylepšit (${up.level})`, key: 'U', icon: () => actionIcon('upgrade'), cost: up.cost, desc: `Vylepší budovu na úroveň ${up.level} (${Math.round(up.time)} s).${up.desc ? ' ' + up.desc : ''}${unlockNames.length ? ' Odemkne: ' + unlockNames.join(', ') + '.' : ''}${up.popCap ? ` +${up.popCap} populace.` : ''}${need ? ` Vyžaduje radnici úrovně ${up.hall}.` : ''}`, act: () => game.upgrade(b.i), canAfford: () => !need && p.res.p >= up.cost.p && p.res.s >= up.cost.s && !(b.q || []).some(q => q.t === '__up') }); }
         if (def.isWall) btn(9, { label: b.t === 'gate' ? 'Zazdít' : 'Udělat bránu', key: 'G', icon: () => actionIcon('gate'), cost: b.t === 'gate' ? null : game.tech.buildings.gate.cost, desc: b.t === 'gate' ? 'Změní bránu zpět na hradbu.' : 'Změní segment na bránu, kterou projdou jen tvoje jednotky a spojenci.', act: () => game.toggleGate() });
-        if (trains.length) btn(6, { label: 'Shromaž­diště', key: 'Y', icon: () => actionIcon('rally'), desc: 'Klikni na místo (nebo pravým tlačítkem). Na důl/les = dělníci jdou rovnou těžit.', act: () => { game.state.mode = 'rally'; }, active: () => game.state.mode === 'rally' });
+        if (trains.length) btn(6, { label: 'Shromaždiště', key: 'Y', icon: () => actionIcon('rally'), desc: 'Klikni na místo (nebo pravým tlačítkem). Na důl/les = dělníci jdou rovnou těžit.', act: () => { game.state.mode = 'rally'; }, active: () => game.state.mode === 'rally' });
         // research (AoE blacksmith style)
         const resList = Object.entries(RESEARCH).filter(([, rd]) => rd.building === b.t); const resSlots = [7, 9];
         resList.forEach(([rid, rd], i) => { const lvl = (p.research && p.research[rid]) || 0; if (lvl >= rd.maxLevel) return; const cost = { p: rd.cost.p * (lvl + 1), s: rd.cost.s * (lvl + 1) }; const busy = (b.q || []).some(q => q.t === '__res' && q.rid === rid); btn(resSlots[i], { label: `${rd.names[game.era]} ${['I', 'II', 'III'][lvl]}`, key: rd.hotkey, icon: () => actionIcon(rd.dmgAdd || rd.dmgMul ? 'research_atk' : 'research_arm'), cost, desc: `${rd.desc} (${Math.round(rd.time)} s). Úroveň ${lvl}/${rd.maxLevel}.`, act: () => game.research(b.i, rid), canAfford: () => !busy && p.res.p >= cost.p && p.res.s >= cost.s }); });
@@ -250,7 +253,7 @@ export class UI {
       const el = document.createElement('div'); el.className = 'cmd' + (d && d.cls ? ' ' + d.cls : '');
       if (!d) { el.style.visibility = 'hidden'; card.appendChild(el); return; }
       const ic = d.icon(); ic.style.opacity = '0.9'; el.appendChild(ic);
-      const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = d.label; el.appendChild(lbl);
+      const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = hyph(d.label); el.appendChild(lbl);
       const key = document.createElement('div'); key.className = 'key'; key.textContent = d.key; el.appendChild(key);
       el.onmousedown = e => e.stopPropagation();
       el.onclick = () => { if (d.canAfford && !d.canAfford()) { game.audio.sfx('error'); this.alert('Nedostatek surovin.', true); return; } d.act(); this.refreshCommandCardState(game); };
@@ -260,7 +263,7 @@ export class UI {
     });
     this.refreshCommandCardState(game);
   }
-  refreshCommandCardState(game) { for (const { el, d } of this.cmdButtons) { el.classList.toggle('disabled', !!(d.canAfford && !d.canAfford())); el.classList.toggle('active', !!(d.active && d.active())); if (d.labelFn) { const l = el.querySelector('.lbl'); const t = d.labelFn(); if (l && l.textContent !== t) l.textContent = t; } } }
+  refreshCommandCardState(game) { for (const { el, d } of this.cmdButtons) { el.classList.toggle('disabled', !!(d.canAfford && !d.canAfford())); el.classList.toggle('active', !!(d.active && d.active())); if (d.labelFn) { const l = el.querySelector('.lbl'); const t = d.labelFn(); if (l && l.textContent !== hyph(t)) l.textContent = hyph(t); } } }
   handleHotkey(game, k) {
     const K = k.toUpperCase();
     for (const { d } of this.cmdButtons) if (d.key && d.key.toUpperCase() === K) { if (d.canAfford && !d.canAfford()) { game.audio.sfx('error'); this.alert('Nedostatek surovin.', true); return true; } d.act(); this.refreshCommandCardState(game); return true; }
