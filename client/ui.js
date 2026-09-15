@@ -60,6 +60,13 @@ export class UI {
   }
   onPlayers(game) { this.dirty = true; }
   togglePause(force) { const el = $('pause-menu'); const show = force === undefined ? el.classList.contains('hidden') : force; el.classList.toggle('hidden', !show); if (show) { $('vol-music2').value = this.app.settings.music; $('vol-sfx2').value = this.app.settings.sfx; } if (this.game && this.game.running) this.app.net.send({ t: 'pause', v: show }); }
+  toggleScoreboard() { const el = $('scoreboard'); el.classList.toggle('hidden'); if (!el.classList.contains('hidden')) this.renderScoreboard(this.game); }
+  renderScoreboard(game) {
+    const t = $('sb-table'); const fname = f => ERAS[game.era].factions.find(x => x.id === f)?.name || f;
+    const score = p => p.stats.unitsKilled * 10 + p.stats.buildingsRazed * 50 + p.stats.unitsBuilt * 3 + p.stats.buildingsBuilt * 15 + Math.round((p.stats.gatheredP + p.stats.gatheredS) / 20);
+    const rows = game.players.filter(p => !p.neutral).map(p => ({ p, sc: score(p) })).sort((a, b) => b.sc - a.sc);
+    t.innerHTML = '<tr><th>Hráč</th><th>Frakce</th><th>Tým</th><th>Pop</th><th>Zabito</th><th>Zničeno</th><th>Skóre</th></tr>' + rows.map(({ p, sc }) => `<tr style="${p.alive ? '' : 'opacity:.5'}"><td style="color:${TEAM_COLORS[p.color].hex}">${p.name}${p.isAI ? ' (AI)' : ''}${p.alive ? '' : ' (vyřazen)'}</td><td>${fname(p.faction)}</td><td>${p.team + 1}</td><td>${p.pop}/${p.popCap}</td><td>${p.stats.unitsKilled}</td><td>${p.stats.buildingsRazed}</td><td><b>${sc}</b></td></tr>`).join('');
+  }
   setPaused(v) { $('pause-banner').classList.toggle('hidden', !v); if (this.game) this.game.paused = v; }
   openChat() { this.game.chatOpen = true; const c = $('chat-input'); c.classList.remove('hidden'); c.value = ''; c.focus(); }
   closeChat() { this.game.chatOpen = false; const c = $('chat-input'); c.classList.add('hidden'); c.blur(); }
@@ -79,6 +86,7 @@ export class UI {
     this.drawMinimap(game);
     const now = performance.now();
     if (this.dirty || now - this.lastUiAt > 200) { this.lastUiAt = now; this.dirty = false; this.updateTop(game); this.updateSelection(game); }
+    if (!$('scoreboard').classList.contains('hidden') && now - (this.lastSbAt || 0) > 1000) { this.lastSbAt = now; this.renderScoreboard(game); }
     if (game.hover && !game.state.placing && !game.state.drag) { const t = this.tooltip; if (!t.classList.contains('hidden')) { t.style.left = Math.min(game.state.mouse.x + 16, window.innerWidth - 300) + 'px'; t.style.top = Math.min(game.state.mouse.y + 16, window.innerHeight - 120) + 'px'; } }
   }
   updateTop(game) {

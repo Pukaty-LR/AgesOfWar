@@ -190,6 +190,9 @@ tr:hover td { background: rgba(255,220,150,0.04); }
 .loading-bar { width: 260px; height: 6px; margin: 0 auto; background: #1a140c; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
 .loading-bar > div { height: 100%; width: 40%; background: linear-gradient(90deg, transparent, var(--gold2), transparent); animation: loadslide 1.1s infinite; }
 @keyframes loadslide { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+#scoreboard { position: absolute; top: 56px; right: 14px; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); font-size: 13px; }
+#scoreboard .sb-title { font-family: var(--font-head); color: var(--gold2); letter-spacing: 1px; margin-bottom: 6px; font-size: 14px; }
+#scoreboard th { font-size: 11px; } #scoreboard td { padding: 4px 8px; font-size: 13px; text-align: center; } #scoreboard td:first-child { text-align: left; }
 #pause-banner { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-family: Georgia, serif; font-size: 42px; letter-spacing: 12px; color: var(--gold2); text-shadow: 0 2px 0 #000, 0 0 30px rgba(0,0,0,0.9); pointer-events: none !important; }
 #placement-hint { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); background: rgba(20,14,8,0.9); border: 1px solid var(--line); padding: 6px 16px; border-radius: 4px; font-size: 14px; pointer-events: none !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
 
