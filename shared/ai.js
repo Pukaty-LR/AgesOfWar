@@ -223,9 +223,9 @@ export class AIPlayer {
     const sim = this.sim, p = this.me();
     const def = p.tech.buildings[type];
     if (type === 'hall') {
-      // expansion near a free mine; clear neutral creeps first (WC3 "creeping")
-      for (const e of sim.ents.values()) {
-        if (e.kind !== 'mine' || e.amount <= 0) continue;
+      // expansion near a free mine; clear neutral creeps first (WC3 "creeping"). The endless centre is the prize: try it first, then the nearest mines.
+      const cands = [...sim.ents.values()].filter(e => e.kind === 'mine' && e.amount > 0 && !e.dead).sort((a, b) => (b.endless ? 1 : 0) - (a.endless ? 1 : 0) || Math.hypot(a.x - hall.x, a.y - hall.y) - Math.hypot(b.x - hall.x, b.y - hall.y));
+      for (const e of cands) {
         let taken = false; for (const b of sim.ents.values()) if (b.kind === 'building' && b.type === 'hall' && Math.hypot(b.x - e.x, b.y - e.y) < 10) taken = true;
         if (taken) continue;
         let creeps = 0; sim.unitsNear(e.x, e.y, 8, u => { if (u.owner !== undefined && sim.players[u.owner].neutral) creeps++; });
