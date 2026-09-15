@@ -203,7 +203,10 @@ wss.on('connection', (ws, req) => {
         lobbyChat(lobby, `${c.name} se připojil.`);
         break;
       }
-      case 'leave': leaveLobby(c, false, true); break;
+      case 'leave': { // leaving a running single-player game keeps a last autosave so nothing is lost by accident
+        if (l && l.game && !l.game.sim.gameOver && c.token && l.slots.filter(x => !x.isAI && x.token).length === 1) writeSave(l, c, 'autosave');
+        leaveLobby(c, false, true); break;
+      }
       case 'set': {
         if (!l || l.state !== 'lobby') return;
         const s = l.slots.find(s => s.id === c.id); if (!s) return;
