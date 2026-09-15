@@ -91,13 +91,13 @@ export const ERAS = {
     palette: { grass: [92, 140, 58], grass2: [78, 122, 50], dirt: [150, 120, 78], sand: [214, 196, 140], water: [36, 96, 150], deep: [22, 62, 112], rock: [120, 118, 110] },
     music: { scale: [0, 2, 3, 5, 7, 8, 10], root: 220, tempo: 70, style: 'lyre' },
     factions: [
-      { id: 'rome',     name: 'Řím',      leader: 'Caesar', desc: 'Disciplína: pěchota +15 % HP, věže +10 % dmg.',        mods: { infantry: { hp: 1.15 }, tower: { dmg: 1.1 } },
+      { id: 'rome',     name: 'Řím',      leader: 'Caesar', desc: 'Disciplína: pěchota +10 % HP, věže +10 % dmg.',        mods: { infantry: { hp: 1.1 }, tower: { dmg: 1.1 } },
         unitNames: { worker: 'Otrok', infantry: 'Legionář', ranged: 'Lučištník', cavalry: 'Equites', siege: 'Onager', ship: 'Triéra' } },
       { id: 'gaul',     name: 'Galové',   leader: 'Vercingetorix', desc: 'Divokost: pěchota +10 % dmg, jezdectvo +10 % rychlost.', mods: { infantry: { dmg: 1.1 }, cavalry: { speed: 1.1 } },
         unitNames: { worker: 'Sedlák', infantry: 'Válečník', ranged: 'Prakovník', cavalry: 'Jezdec', siege: 'Beranidlo', ship: 'Dlouhá loď' } },
-      { id: 'greece',   name: 'Řecko',    leader: 'Leonidas', desc: 'Falanga: střelci +15 % dmg, lodě +10 % HP.',            mods: { ranged: { dmg: 1.15 }, ship: { hp: 1.1 } },
+      { id: 'greece',   name: 'Řecko',    leader: 'Leonidas', desc: 'Falanga: střelci +20 % dmg, pěchota +1 pancíř, lodě +10 % HP.', mods: { ranged: { dmg: 1.2 }, infantry: { armor: 1.5 }, ship: { hp: 1.1 } },
         unitNames: { worker: 'Dělník', infantry: 'Hoplít', ranged: 'Toxotés', cavalry: 'Hippeus', siege: 'Balista', ship: 'Pentéra' } },
-      { id: 'carthage', name: 'Kartágo',  leader: 'Hannibal', desc: 'Obchod: doly +15 % výnos, lodě -15 % cena.',           mods: { economy: { mine: 1.15 }, ship: { cost: 0.85 } },
+      { id: 'carthage', name: 'Kartágo',  leader: 'Hannibal', desc: 'Obchod: doly +15 % výnos, lodě -15 % cena, jezdectvo +10 % HP.', mods: { economy: { mine: 1.15 }, ship: { cost: 0.85 }, cavalry: { hp: 1.1 } },
         unitNames: { worker: 'Dělník', infantry: 'Posvátná četa', ranged: 'Baleárský prakovník', cavalry: 'Numidský jezdec', siege: 'Katapult', ship: 'Kvinkveréma' } },
     ],
     units: {
@@ -156,7 +156,7 @@ export const ERAS = {
         unitNames: { worker: 'Dělník', infantry: 'Střelec', ranged: 'DP-27 kulometčík', cavalry: 'T-34', siege: 'Kaťuša', ship: 'Torpédoborec Gněvnyj' } },
       { id: 'usa',     name: 'USA',     leader: 'Patton', desc: 'Průmysl: dělostřelectvo +1 dosah, budovy -15 % cena.', mods: { siege: { range: 1.12 }, buildings: { cost: 0.85 } },
         unitNames: { worker: 'Ženista', infantry: 'GI', ranged: 'BAR střelec', cavalry: 'M4 Sherman', siege: 'Houfnice M101', ship: 'Torpédoborec Fletcher' } },
-      { id: 'uk',      name: 'Británie', leader: 'Montgomery', desc: 'Námořnictvo: lodě +20 % HP, bunkry +1 dosah.',    mods: { ship: { hp: 1.2 }, tower: { range: 1.15 } },
+      { id: 'uk',      name: 'Británie', leader: 'Montgomery', desc: 'Námořnictvo: lodě +20 % HP, bunkry +1 dosah, pěchota +10 % HP.', mods: { ship: { hp: 1.2 }, tower: { range: 1.15 }, infantry: { hp: 1.1 } },
         unitNames: { worker: 'Sapér', infantry: 'Tommy', ranged: 'Bren střelec', cavalry: 'Cromwell', siege: 'Houfnice 25pdr', ship: 'HMS Torpédoborec' } },
     ],
     units: {
@@ -207,13 +207,13 @@ export const ERAS = {
     palette: { grass: [70, 116, 104], grass2: [58, 98, 90], dirt: [112, 96, 124], sand: [178, 164, 196], water: [34, 118, 160], deep: [14, 58, 118], rock: [92, 86, 112] },
     music: { scale: [0, 2, 3, 7, 8, 10], root: 110, tempo: 80, style: 'synth' },
     factions: [
-      { id: 'terra', name: 'Terranská federace', leader: 'Admirál Vega', desc: 'Disciplína: pěchota +15 % HP, věže +10 % dmg.', mods: { infantry: { hp: 1.15 }, tower: { dmg: 1.1 } },
+      { id: 'terra', name: 'Terranská federace', leader: 'Admirál Vega', desc: 'Disciplína: pěchota +10 % HP, věže +10 % dmg.', mods: { infantry: { hp: 1.1 }, tower: { dmg: 1.1 } },
         unitNames: { worker: 'Servisní dron', infantry: 'Mariňák', ranged: 'Railgunner', cavalry: 'Hover tank Kestrel', siege: 'Mortarový walker', ship: 'Hover člun' } },
       { id: 'mars', name: 'Marťanská republika', leader: 'Guvernér Ares', desc: 'Průmysl: vozidla +10 % pancíř, +5 % rychlost.', mods: { cavalry: { armor: 1.1, speed: 1.05 } },
         unitNames: { worker: 'Dron', infantry: 'Rudý gardista', ranged: 'Ostřelovač Dusk', cavalry: 'Hover tank Ares', siege: 'Mortarový walker', ship: 'Hover člun Phobos' } },
       { id: 'synth', name: 'Syntetici', leader: 'Jednotka 7', desc: 'Efektivita: jednotky -10 % cena, krystaly +10 % výnos.', mods: { infantry: { cost: 0.9 }, ranged: { cost: 0.9 }, economy: { mine: 1.1 } },
         unitNames: { worker: 'Konstrukční jednotka', infantry: 'Bojový android', ranged: 'Přesný android', cavalry: 'Autonomní tank', siege: 'Artilerijní jednotka', ship: 'Hover platforma' } },
-      { id: 'void', name: 'Nomádi Prázdnoty', leader: 'Kápo Prázdnoty', desc: 'Lovci: střelci +15 % dmg, lodě +10 % HP.', mods: { ranged: { dmg: 1.15 }, ship: { hp: 1.1 } },
+      { id: 'void', name: 'Nomádi Prázdnoty', leader: 'Kápo Prázdnoty', desc: 'Lovci: střelci +20 % dmg, vozidla +10 % rychlost, lodě +10 % HP.', mods: { ranged: { dmg: 1.2 }, cavalry: { speed: 1.1 }, ship: { hp: 1.1 } },
         unitNames: { worker: 'Sběrač', infantry: 'Nájezdník', ranged: 'Lovec', cavalry: 'Hover jezdec', siege: 'Vrhač', ship: 'Hover korzár' } },
     ],
     units: {
