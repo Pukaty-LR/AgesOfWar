@@ -82,10 +82,12 @@ function humanoid(ctx, o) {
   const legA = anim === 'walk' ? Math.sin(ph) * 3.5 : 0;
   const swing = anim === 'attack' ? [0, -0.9, 0.7, 0.3][frame % 4] : (anim === 'work' ? [-0.6, 0.2, 0.8, 0.1][frame % 4] : (anim === 'idle' ? [0, 0.06, 0.1, 0.06][frame % 4] : 0));
   const tc = team, tcD = shade(team, 0.6), tcL = shade(team, 1.25);
-  const scale = o.scale || 1;
+  const scale = (o.scale || 1) * 1.12;
   ctx.save(); ctx.scale(scale, scale);
   // shadow
   ellipse(ctx, 0, 0, 7, 3.5, 'rgba(0,0,0,0.35)');
+  // cape (heroes / elite) drawn behind the body
+  if (o.cape) { const cx = -fx * 4, cy = -10 - (anim === 'walk' ? Math.abs(Math.sin(walkPhase(anim, frame))) * 1.2 : 0); const sway = anim === 'walk' ? Math.sin(walkPhase(anim, frame)) * 2 : 0; poly(ctx, [[cx - 4, cy - 12], [cx + 4, cy - 12], [cx + 6 + sway - fx * 4, cy + 2], [cx - 6 + sway - fx * 4, cy + 3]], rgb(shade(tc, 0.85)), OUT, 0.8); poly(ctx, [[cx - 3, cy - 11], [cx + 1, cy - 11], [cx + 1 + sway - fx * 3, cy], [cx - 4 + sway - fx * 3, cy + 1]], rgb(shade(tc, 1.15), 0.7)); }
   // legs
   const legC = rgb(o.legs || [70, 55, 40]);
   const lx = -fy * 2.2, ly = fx * 1.1; // perpendicular offset for two legs
@@ -316,7 +318,7 @@ const UNIT_DRAW = {
   ant_chariot: (ctx, o) => chariot(ctx, o),
   ant_ballista: (ctx, o) => ballista(ctx, o),
   ant_heavyship: (ctx, o) => { ctx.save(); ctx.scale(1.25, 1.25); shipAntiquity(ctx, o); ctx.restore(); },
-  ant_hero: (ctx, o) => horse(ctx, { ...o, horseColor: [245, 240, 230] }, c => { humanoid(c, { ...o, helmet: 'roman', weapon: 'sword', shield: 'round', torso: mix(o.team, [240, 200, 80], 0.4), sleeves: METAL, belt: [200, 170, 60], emblem: [255, 240, 160], anim: o.anim === 'walk' ? 'idle' : o.anim }); }),
+  ant_hero: (ctx, o) => horse(ctx, { ...o, horseColor: [245, 240, 230] }, c => { humanoid(c, { ...o, cape: true, helmet: 'roman', weapon: 'sword', shield: 'round', torso: mix(o.team, [240, 200, 80], 0.4), sleeves: METAL, belt: [200, 170, 60], emblem: [255, 240, 160], anim: o.anim === 'walk' ? 'idle' : o.anim }); }),
   // ---- tier 2/3 ww2 ----
   ww2_flamer: (ctx, o) => { humanoid(ctx, { ...o, torso: mix([96, 100, 80], o.team, 0.5), helmet: 'stahlhelm', weapon: 'flamer', legs: [75, 78, 62], sleeves: mix([96, 100, 80], o.team, 0.4) }); },
   ww2_sniper: (ctx, o) => humanoid(ctx, { ...o, torso: mix([70, 80, 55], o.team, 0.35), helmet: 'cap', weapon: 'rifle', legs: [60, 62, 50], sleeves: mix([70, 80, 55], o.team, 0.3) }),
@@ -353,7 +355,7 @@ const UNIT_DRAW = {
   sf_cruiser: (ctx, o) => hoverBoat(ctx, o, 1.35),
   sf_hero: (ctx, o) => mech(ctx, o, 1.3, true),
 };
-const UNIT_BOX = { default: [24, 44, 12, 40], ant_cavalry: [44, 56, 22, 50], ant_siege: [56, 70, 28, 62], ant_ship: [80, 80, 40, 70], ww2_tank: [64, 56, 32, 48], ww2_artillery: [56, 52, 28, 44], ww2_destroyer: [90, 80, 45, 70],
+const UNIT_BOX = { default: [32, 52, 16, 46], ant_cavalry: [44, 56, 22, 50], ant_siege: [56, 70, 28, 62], ant_ship: [80, 80, 40, 70], ww2_tank: [64, 56, 32, 48], ww2_artillery: [56, 52, 28, 44], ww2_destroyer: [90, 80, 45, 70],
   ant_veteran: [30, 52, 15, 46], ant_heavycav: [44, 56, 22, 50], ant_chariot: [64, 60, 32, 52], ant_ballista: [56, 60, 28, 52], ant_heavyship: [100, 100, 50, 88], ant_hero: [46, 58, 23, 52],
   ww2_atgun: [48, 44, 24, 38], ww2_heavytank: [80, 70, 40, 60], ww2_td: [64, 56, 32, 48], ww2_rockets: [66, 66, 33, 56], ww2_cruiser: [118, 104, 59, 90], ww2_hero: [56, 50, 28, 42],
   sf_creep: [48, 44, 24, 36], sf_worker: [30, 40, 15, 34], sf_snipedrone: [70, 44, 35, 36], sf_tank: [64, 62, 32, 54], sf_heavytank: [82, 78, 41, 68], sf_walker: [56, 66, 28, 58], sf_boat: [80, 70, 40, 60], sf_cruiser: [108, 92, 54, 80], sf_mech: [44, 66, 22, 60], sf_hero: [58, 90, 29, 82], sf_laser: [60, 60, 30, 52], sf_exo: [30, 54, 15, 48], sf_jet: [28, 56, 14, 50] };
