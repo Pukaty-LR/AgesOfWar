@@ -21,12 +21,12 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 ## Hra
 
 - Dvě suroviny: hlavní z dolů (Zlato / Ropa – dělník vejde dovnitř a vynese náklad) a vedlejší ze stromů (Dřevo).
-- Budovy: Radnice, Kasárna, Stáje / Tanková továrna, Obléhací dílna / Dělostřelecký park, Přístav / Loděnice, Věž / Bunkr, Hradba (+ Brána).
+- Budovy: Radnice, Kasárna, Stáje / Tanková továrna, Obléhací dílna / Dělostřelecký park (úroveň 1 protijednotková zbraň, úroveň 3 těžké obléhání), Přístav / Loděnice, Věž / Bunkr, Hradba (+ Brána).
 - **Tiery**: každou vojenskou budovu lze vylepšit (klávesa U) – každá úroveň odemkne nové jednotky. Radnici lze vylepšit až na úroveň 4 (Radnice → Město → Metropole → Císařské město), vyšší úroveň je podmínkou pro tiery ostatních budov a úroveň 4 odemkne **hrdinu** (jen jeden, spojenci v okolí +20 % útok).
 - **Hradby** se pokládají klikem na začátek a konec – cesta obejde stromy, budovy i vodu. Vybraný segment lze změnit na **bránu** (G), kterou projdou jen tvé jednotky a spojenci.
 - **Věže / bunkry** mají 3 úrovně (U): víc útoku, dosahu i pancíře, a jiný vzhled.
 - **Výzkumy** (styl kovárny z Age of Empires): v kasárnách, stájích a dílně lze zkoumat útok a pancíř pro pěchotu, jezdectvo/vozidla a obléhací stroje (klávesy I / O), každá éra má vlastní názvy.
-- **Domy** (+8 populace) ve všech érách, AI je staví, když se blíží limitu. AI také expanduje: když domácí důl dochází, postaví novou radnici u dalšího dolu (a nejdřív vyčistí jeho hlídače).
+- **Domy** (+10 populace, vylepšitelné na +15 a +20) ve všech érách, AI je staví, když se blíží limitu. AI také expanduje: když domácí důl dochází, postaví novou radnici u dalšího dolu (a nejdřív vyčistí jeho hlídače).
 - **Ovládání jako ve Warcraftu 3**: skupina se přesouvá ve formaci (melee vpředu, střelci a obléhání vzadu), hlídkování (P), Tab přepíná podskupinu ve smíšeném výběru, Ctrl+klik vybere všechny stejného typu, Alt+klik označí místo spoluhráčům na minimapě.
 - **Hrdina** má kromě aury i aktivní schopnost (C): Válečný pokřik / Rozkaz k útoku / Přetížení zbraní – 12 s +35 % útok a +2 pancíř pro spojence v okolí, přebití 60 s.
 - Hrdina sbírá **zkušenosti** za zabité jednotky a budovy (úrovně 1–5: víc HP, útoku, širší aura). Neutrální **hlídači** (bandité / partyzáni / xeno šelmy) střeží vzdálené doly jako ve Warcraftu 3 – cenný zdroj zkušeností.
@@ -46,6 +46,9 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - Kurzor mění tvar podle akce (útok, stavba, těžba, hlídka), po vyřazení lze hru sledovat dál, po konci hry se odkryje celá mapa.
 - Po skončení hry proti AI jde tlačítkem **Hrát znovu** rozehrát odvetu se stejnými boty a stejným typem mapy. Načítací obrazovka ukazuje tipy k ovládání.
 - Panel výběru ukazuje efektivní útok a pancíř jako „základ +bonus“ (výzkumy, úroveň hrdiny, úroveň věže).
+- **Střed mapy** skrývá nevyčerpatelnou zlatou žílu a čtyři prastaré stromy (nekonečné dřevo) – hlídané silnější tlupou; kdo drží střed, nikdy nevyhladoví.
+- Dělníci po dostavění pokračují na další rozestavěnou budovu (hradby segment po segmentu), nečinní dělníci sami opravují poškozené budovy (jeden na budovu), léčitelé si sami hledají zraněné, nečinné jednotky přiběhnou na pomoc napadeným spojencům v okolí a útočící jednotky po zničení cíle pokračují na další nepřátele (ozbrojené jednotky mají přednost před budovami). Smíšená skupina jde tempem nejpomalejšího.
+- Zamčené jednotky jsou na kartě budovy vidět šedě s požadovanou úrovní; kliknutí na portrét ve smíšeném výběru vybere všechny jednotky toho typu.
 - **Výška terénu** hraje roli jako v Age of Empires: útok z kopce dolů +25 % poškození, do kopce −25 %.
 - Cíl: zničit všechny nepřátelské budovy (kromě hradeb).
 

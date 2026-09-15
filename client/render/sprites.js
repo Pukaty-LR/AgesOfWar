@@ -387,10 +387,10 @@ const UNIT_DRAW = {
   sf_cruiser: (ctx, o) => hoverBoat(ctx, o, 1.35),
   sf_hero: (ctx, o) => mech(ctx, o, 1.3, true),
 };
-const UNIT_BOX = { default: [32, 52, 16, 46], ant_cavalry: [44, 56, 22, 50], ant_siege: [56, 70, 28, 62], ant_ship: [80, 80, 40, 70], ww2_tank: [64, 56, 32, 48], ww2_artillery: [56, 52, 28, 44], ww2_destroyer: [90, 80, 45, 70],
-  ant_veteran: [30, 52, 15, 46], ant_heavycav: [44, 56, 22, 50], ant_chariot: [64, 60, 32, 52], ant_ballista: [56, 60, 28, 52], ant_heavyship: [100, 100, 50, 88], ant_hero: [46, 58, 23, 52],
-  ww2_atgun: [48, 44, 24, 38], ww2_heavytank: [80, 70, 40, 60], ww2_td: [64, 56, 32, 48], ww2_rockets: [66, 66, 33, 56], ww2_cruiser: [118, 104, 59, 90], ww2_hero: [56, 50, 28, 42],
-  ant_transport: [90, 80, 45, 68], ww2_landing: [90, 70, 45, 58], sf_transport: [90, 76, 45, 64], sf_creep: [48, 44, 24, 36], sf_worker: [30, 40, 15, 34], sf_snipedrone: [70, 44, 35, 36], sf_tank: [64, 62, 32, 54], sf_heavytank: [82, 78, 41, 68], sf_walker: [56, 66, 28, 58], sf_boat: [80, 70, 40, 60], sf_cruiser: [108, 92, 54, 80], sf_mech: [44, 66, 22, 60], sf_hero: [58, 90, 29, 82], sf_laser: [60, 60, 30, 52], sf_exo: [30, 54, 15, 48], sf_jet: [28, 56, 14, 50] };
+const UNIT_BOX = { default: [32, 52, 16, 46], ant_cavalry: [44, 56, 22, 50], ant_siege: [72, 82, 36, 72], ant_ship: [80, 80, 40, 70], ww2_tank: [64, 56, 32, 48], ww2_artillery: [72, 62, 36, 52], ww2_destroyer: [90, 80, 45, 70],
+  ant_veteran: [30, 52, 15, 46], ant_heavycav: [44, 56, 22, 50], ant_chariot: [84, 74, 42, 64], ant_ballista: [70, 70, 35, 60], ant_heavyship: [100, 100, 50, 88], ant_hero: [46, 58, 23, 52],
+  ww2_atgun: [48, 44, 24, 38], ww2_heavytank: [94, 80, 47, 68], ww2_td: [64, 56, 32, 48], ww2_rockets: [66, 66, 33, 56], ww2_cruiser: [118, 104, 59, 90], ww2_hero: [56, 50, 28, 42],
+  ant_transport: [90, 80, 45, 68], ww2_landing: [90, 70, 45, 58], sf_transport: [90, 76, 45, 64], sf_creep: [48, 44, 24, 36], sf_worker: [30, 40, 15, 34], sf_snipedrone: [70, 44, 35, 36], sf_tank: [64, 62, 32, 54], sf_heavytank: [94, 88, 47, 76], sf_walker: [72, 80, 36, 70], sf_boat: [80, 70, 40, 60], sf_cruiser: [108, 92, 54, 80], sf_mech: [44, 66, 22, 60], sf_hero: [58, 90, 29, 82], sf_laser: [60, 60, 30, 52], sf_exo: [30, 54, 15, 48], sf_jet: [28, 56, 14, 50] };
 
 function chariot(ctx, o) {
   const { dir, team } = o; const a = worldAngleForDir(dir);
@@ -564,6 +564,10 @@ function commandCar(ctx, o) {
   // pennant
   const [fx, fy] = iso(0.3, -0.2, 15); line(ctx, fx, fy, fx, fy - 16, '#333', 1); poly(ctx, [[fx, fy - 16], [fx + 9, fy - 13], [fx, fy - 10]], rgb(team), OUT, 0.5);
 }
+/** gate helpers: pillars and opening follow the wall direction, including diagonal runs */
+function gateDiag(M) { return !(M & 15) && (M & 240) ? ((M & (16 | 64)) ? 'ne' : 'nw') : null; }
+function gatePillars(M, horiz) { const d = gateDiag(M); if (d === 'ne') return [[0.5 + 0.3, 0.5 - 0.3], [0.5 - 0.3, 0.5 + 0.3]]; if (d === 'nw') return [[0.5 - 0.3, 0.5 - 0.3], [0.5 + 0.3, 0.5 + 0.3]]; return horiz ? [[0.5 - 0.42, 0.5], [0.5 + 0.42, 0.5]] : [[0.5, 0.5 - 0.42], [0.5, 0.5 + 0.42]]; }
+function gateSegMask(M, horiz) { return gateDiag(M) ? (M & 240) : (M & (horiz ? 10 : 5)); }
 const ANIM_FRAMES = { idle: 4, walk: 6, attack: 4, work: 4 };
 
 export function unitSprite(sprite, colorIdx, dir, anim, frame, extra = {}) {
@@ -839,8 +843,8 @@ const BUILDING_DRAW = {
   sf_gate: (ctx, o) => {
     const M = o.mask; const h = 18; const cw = 0.3;
     const horiz = (M & 2) || (M & 8) || !((M & 1) || (M & 4));
-    const segs = wallSegs(M & (horiz ? 10 : 5), cw); for (const s of segs) prism(ctx, s, 0, 3, HULL_SF, HULL_SF_D);
-    const p = horiz ? [[0.5 - 0.42, 0.5], [0.5 + 0.42, 0.5]] : [[0.5, 0.5 - 0.42], [0.5, 0.5 + 0.42]];
+    const segs = wallSegs(gateSegMask(M, horiz), cw); for (const s of segs) prism(ctx, s, 0, 3, HULL_SF, HULL_SF_D);
+    const p = gatePillars(M, horiz);
     for (const [px, py] of p) { prism(ctx, isoRect(px - 0.12, py - 0.12, 0.24, 0.24), 0, h + 8, shade(HULL_SF, 1.05), HULL_SF_D); const [gx, gy] = iso(px, py, h + 8); ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(gx, gy - 1, 2.4, 0, 7); ctx.fill(); }
     // open passage: faint dotted field
     const [a0x, a0y] = iso(p[0][0], p[0][1], 6), [a1x, a1y] = iso(p[1][0], p[1][1], 6); ctx.setLineDash([2, 4]); line(ctx, a0x, a0y, a1x, a1y, 'rgba(120,230,255,0.6)', 1); ctx.setLineDash([]);
@@ -848,11 +852,12 @@ const BUILDING_DRAW = {
   ant_gate: (ctx, o) => {
     const M = o.mask; const h = 20; const cw = 0.5;
     const horiz = (M & 2) || (M & 8) || !((M & 1) || (M & 4)); // opening runs along the wall direction
-    const segs = wallSegs(M & (horiz ? 10 : 5), cw); for (const s of segs) prism(ctx, s, 0, h, STONE, STONE_D);
+    const segs = wallSegs(gateSegMask(M, horiz), cw); for (const s of segs) prism(ctx, s, 0, h, STONE, STONE_D);
     // two pillars with an arch/beam over the passage
-    const p = horiz ? [[0.5 - 0.42, 0.5], [0.5 + 0.42, 0.5]] : [[0.5, 0.5 - 0.42], [0.5, 0.5 + 0.42]];
+    const p = gatePillars(M, horiz); const diag = gateDiag(M);
     for (const [px, py] of p) prism(ctx, isoRect(px - 0.13, py - 0.13, 0.26, 0.26), 0, h + 10, shade(STONE, 1.05), STONE_D);
-    const beam = horiz ? isoRect(0.08, 0.5 - 0.12, 0.84, 0.24) : isoRect(0.5 - 0.12, 0.08, 0.24, 0.84); prism(ctx, beam, h + 4, 6, [120, 88, 46], WOOD_D);
+    if (diag) { const [b0x, b0y] = iso(p[0][0], p[0][1], h + 8), [b1x, b1y] = iso(p[1][0], p[1][1], h + 8); line(ctx, b0x, b0y, b1x, b1y, rgb([120, 88, 46]), 5); line(ctx, b0x, b0y, b1x, b1y, rgb(WOOD_D), 1); }
+    else { const beam = horiz ? isoRect(0.08, 0.5 - 0.12, 0.84, 0.24) : isoRect(0.5 - 0.12, 0.08, 0.24, 0.84); prism(ctx, beam, h + 4, 6, [120, 88, 46], WOOD_D); }
     // open wooden doors leaning inward
     const [dx, dy] = iso(0.5, 0.5, 0); ctx.fillStyle = rgb(WOOD); ctx.fillRect(dx - 12, dy - 14, 4, 14); ctx.fillRect(dx + 8, dy - 14, 4, 14);
     const [fx, fy] = iso(0.5, 0.5, h + 10); line(ctx, fx, fy, fx, fy - 12, '#3a2a1a', 1.2); poly(ctx, [[fx, fy - 12], [fx + 8, fy - 9.5], [fx, fy - 7]], rgb(o.team), OUT, 0.5);
@@ -860,8 +865,8 @@ const BUILDING_DRAW = {
   ww2_gate: (ctx, o) => {
     const M = o.mask; const h = 16; const cw = 0.4;
     const horiz = (M & 2) || (M & 8) || !((M & 1) || (M & 4));
-    const segs = wallSegs(M & (horiz ? 10 : 5), cw); for (const s of segs) prism(ctx, s, 0, h, CONCRETE, CONCRETE_D);
-    const p = horiz ? [[0.5 - 0.42, 0.5], [0.5 + 0.42, 0.5]] : [[0.5, 0.5 - 0.42], [0.5, 0.5 + 0.42]];
+    const segs = wallSegs(gateSegMask(M, horiz), cw); for (const s of segs) prism(ctx, s, 0, h, CONCRETE, CONCRETE_D);
+    const p = gatePillars(M, horiz);
     for (const [px, py] of p) prism(ctx, isoRect(px - 0.12, py - 0.12, 0.24, 0.24), 0, h + 4, shade(CONCRETE, 1.05), CONCRETE_D);
     // striped barrier pole, raised
     const [a0x, a0y] = iso(p[0][0], p[0][1], h + 4), [a1x, a1y] = iso(p[1][0], p[1][1], h + 4);
@@ -1015,7 +1020,15 @@ export function buildingSprite(sprite, w, h, colorIdx, built, progress, mask = 0
 }
 
 // ---------- resources & decoration ----------
-export function treeSprite(variant, era, sway = 0) {
+/** endless centre resources: the normal sprite scaled up with a golden aura */
+function bigVariant(base, key, k, glowColor) {
+  return cached(key, base.w * k + 20, base.h * k + 10, base.ax * k + 10, base.ay * k + 6, ctx => {
+    const g = ctx.createRadialGradient(0, 0, 4, 0, 0, base.w * k * 0.55); g.addColorStop(0, glowColor); g.addColorStop(1, 'rgba(255,220,120,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, base.w * k * 0.55, base.w * k * 0.28, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.drawImage(base.canvas, -base.ax * k, -base.ay * k, base.w * k, base.h * k);
+  });
+}
+export function treeSprite(variant, era, sway = 0, big = false) {
+  if (big) return bigVariant(treeSprite(variant, era, sway, false), `tree-big|${era}|${variant}|${sway}`, 2.2, 'rgba(255,220,120,0.55)');
   const key = `tree|${era}|${variant}|${sway}`;
   return cached(key, 56, 72, 28, 66, ctx => {
     ellipse(ctx, 0, 0, 12, 6, 'rgba(0,0,0,0.3)');
@@ -1058,7 +1071,8 @@ export function treeSprite(variant, era, sway = 0) {
     }
   });
 }
-export function mineSprite(era, depleted = 0) {
+export function mineSprite(era, depleted = 0, big = false) {
+  if (big) return bigVariant(mineSprite(era, depleted, false), `mine-big|${era}|${depleted}`, 1.35, 'rgba(255,215,90,0.6)');
   const key = `mine|${era}|${depleted}`;
   return cached(key, 160, 160, 80, 115, ctx => {
     // 2x2 footprint, anchored at center (x=1,y=1 in tile units -> iso(0,0))

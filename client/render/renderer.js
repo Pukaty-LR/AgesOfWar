@@ -32,6 +32,8 @@ export class Renderer {
     this.vh = new Float32Array((w + 1) * (h + 1));
     const H = (x, y) => map.height[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))];
     for (let y = 0; y <= h; y++) for (let x = 0; x <= w; x++) this.vh[y * (w + 1) + x] = (H(x - 1, y - 1) + H(x, y - 1) + H(x - 1, y) + H(x, y)) / 4;
+    // rock: raise every vertex touching a rock tile so cliffs stand clearly above the terrain around them
+    { const R = (x, y) => x >= 0 && y >= 0 && x < w && y < h && map.tiles[y * w + x] === T.ROCK; for (let y = 0; y <= h; y++) for (let x = 0; x <= w; x++) { const n = R(x - 1, y - 1) + R(x, y - 1) + R(x - 1, y) + R(x, y); if (n) this.vh[y * (w + 1) + x] += 0.035 * n; } }
     this.visible = new Uint8Array(w * h); this.explored = new Uint8Array(w * h);
     this.fw = w * FR; this.fh = h * FR; this.visF = new Uint8Array(this.fw * this.fh); this.expF = new Uint8Array(this.fw * this.fh);
     this.fogRaw = document.createElement('canvas'); this.fogRaw.width = this.fw; this.fogRaw.height = this.fh; this.fogRawCtx = this.fogRaw.getContext('2d'); this.fogImg = this.fogRawCtx.createImageData(this.fw, this.fh);
@@ -106,7 +108,11 @@ export class Renderer {
       let c = shade(this.tileColor(t, i), k);
       if (t === T.WATER) { const d = Math.max(0, SEA - map.height[i]); c = mix(pal.water, pal.deep, Math.min(1, d * 6)); }
       if (t === T.ROCK) c = shade(c, 0.78);
-      const margin = x < x0 || x >= x1 || y < y0 || y >= y1; // margin tiles only feed the splat blending; the neighbour chunk owns their fill and details
+      const margin = x < x0 || x >= x1 || y < y0 || y >= y1;
+      if (t === T.ROCK && !margin) { // cliff face below the raised rock top
+        const drop = 9; ctx.fillStyle = rgb(shade(c, 0.42)); ctx.beginPath(); ctx.moveTo(q[3][0], q[3][1]); ctx.lineTo(q[2][0], q[2][1]); ctx.lineTo(q[1][0], q[1][1]); ctx.lineTo(q[1][0], q[1][1] + drop); ctx.lineTo(q[2][0], q[2][1] + drop); ctx.lineTo(q[3][0], q[3][1] + drop); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(q[3][0], q[3][1]); ctx.lineTo(q[2][0], q[2][1]); ctx.lineTo(q[1][0], q[1][1]); ctx.stroke();
+      } // margin tiles only feed the splat blending; the neighbour chunk owns their fill and details
       tiles.push({ x, y, t, q, c, k, margin });
       if (margin) continue;
       ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]); ctx.lineTo(q[1][0], q[1][1]); ctx.lineTo(q[2][0], q[2][1]); ctx.lineTo(q[3][0], q[3][1]); ctx.closePath();
@@ -247,13 +253,14 @@ export class Renderer {
     }
     if (g.memB) for (const e of g.memB.values()) { if (e.x < minX - 2 || e.x > maxX + 2 || e.y < minY - 2 || e.y > maxY + 2 || this.isVisibleTile(e.x, e.y)) continue; list.push({ depth: e.tx + e.w + e.ty + e.h - 1.0 - (e.w > 1 ? 0.5 : 0), kind: 'b', e }); }
     for (const ef of this.effects) if (ef.kind === 'corpse' || ef.kind === 'rubble' || ef.kind === 'stump') list.push({ depth: ef.x + ef.y - 0.01, kind: 'fx', ef });
-    list.sort((a, b) => a.depth - b.depth);
+    for (const it of list) { const e = it.e || it.d || it.ef; if (it.kind === 'b') { it.x0 = e.tx; it.y0 = e.ty; it.x1 = e.tx + e.w; it.y1 = e.ty + e.h; } else if (it.kind === 'm') { it.x0 = e.tx; it.y0 = e.ty; it.x1 = e.tx + 2; it.y1 = e.ty + 2; } else if (it.kind === 't') { it.x0 = e.tx; it.y0 = e.ty; it.x1 = e.tx + 1; it.y1 = e.ty + 1; } else { const ex = e.rx ?? e.x, ey = e.ry ?? e.y; it.x0 = ex - 0.3; it.y0 = ey - 0.3; it.x1 = ex + 0.3; it.y1 = ey + 0.3; } }
+    list.sort((a, b) => { if (a.x1 <= b.x0 + 0.001 || a.y1 <= b.y0 + 0.001) return -1; if (b.x1 <= a.x0 + 0.001 || b.y1 <= a.y0 + 0.001) return 1; return a.depth - b.depth; });
     for (const it of list) {
       switch (it.kind) {
         case 'u': this.drawUnit(ctx, it.e, ox, oy, z); break;
         case 'b': this.drawBuilding(ctx, it.e, ox, oy, z); break;
-        case 't': { const e = it.e; const [sx, sy] = this.worldToScreen(e.x, e.y + 0.35); const sway = Math.round(Math.sin(this.time * 1.3 + e.x * 0.7 + e.y * 0.3) * 2) / 2; blit(ctx, treeSprite(e.v, this.era, sway), sx, sy, z); break; }
-        case 'm': { const e = it.e; const [sx, sy] = this.worldToScreen(e.x, e.y); blit(ctx, mineSprite(this.era), sx, sy, z); break; }
+        case 't': { const e = it.e; const [sx, sy] = this.worldToScreen(e.x, e.y + 0.35); const sway = Math.round(Math.sin(this.time * 1.3 + e.x * 0.7 + e.y * 0.3) * 2) / 2; blit(ctx, treeSprite(e.v, this.era, sway, !!e.big), sx, sy, z); break; }
+        case 'm': { const e = it.e; const [sx, sy] = this.worldToScreen(e.x, e.y); blit(ctx, mineSprite(this.era, 0, !!e.big), sx, sy, z); break; }
         case 'deco': { const d = it.d; const [sx, sy] = this.worldToScreen(d.x, d.y); blit(ctx, decoSprite(d.k, d.v, this.era), sx, sy, z); break; }
         case 'fx': this.drawGroundEffect(ctx, it.ef, z); break;
       }
@@ -534,7 +541,7 @@ export class Renderer {
       const damaged = e.hp < e.m;
       if (!(showAll || selected || e.hover || (damaged && it.kind === 'b' && e.o === g.me) || (damaged && selected))) continue;
       if (it.kind === 'b' && !e.bl) { // construction progress
-        const w2 = Math.max(30, e.w * 16) * z; const x = e.sx - w2 / 2 + (e.w * TW / 4) * z, y = e.sy - e.say + 6 * z + (e.h * TH / 4) * z * 0;
+        const w2 = Math.max(30, e.w * 16) * z; const [bx, by] = this.worldToScreen(e.tx + e.w / 2, e.ty + e.h / 2); const x = bx - w2 / 2, y = by - (e.w + e.h) * TH / 4 * z - 14 * z;
         ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x, y, w2, 5 * z); ctx.fillStyle = '#e0c060'; ctx.fillRect(x, y, w2 * e.pr, 5 * z);
         continue;
       }

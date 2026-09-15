@@ -3,7 +3,7 @@ import { ERAS, T, makeTechTable, TEAM_COLORS, TICK_RATE, RESEARCH } from '../sha
 import { Renderer } from './render/renderer.js';
 import { TW, TH } from './render/sprites.js';
 
-const SNAP_MS = 100;
+const SNAP_MS = 50;
 const cur = (svg, hx, hy, fb) => `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">' + svg + '</svg>')}") ${hx} ${hy}, ${fb}`;
 const CURSORS = {
   attack: cur('<circle cx="16" cy="16" r="9" fill="none" stroke="#000" stroke-width="4"/><circle cx="16" cy="16" r="9" fill="none" stroke="#ff4a4a" stroke-width="2"/><path d="M16 3v6M16 23v6M3 16h6M23 16h6" stroke="#000" stroke-width="4"/><path d="M16 3v6M16 23v6M3 16h6M23 16h6" stroke="#ff4a4a" stroke-width="2"/>', 16, 16, 'crosshair'),
@@ -60,7 +60,7 @@ export class Game {
   gameTime() { return this.tick / TICK_RATE; }
   unitDef(e) { return this.techs[e.o]?.units[e.t] || this.eraDef.units[e.t]; }
   buildingDef(e) { return this.techs[e.o]?.buildings[e.t] || this.eraDef.buildings[e.t]; }
-  entName(e) { if (e.k === 'u') return this.unitDef(e)?.name; if (e.k === 'b') return this.buildingName(e); if (e.k === 't') return this.eraDef.nodes.secondary.name; if (e.k === 'm') return this.eraDef.nodes.mine.name; return '?'; }
+  entName(e) { if (e.k === 'u') return this.unitDef(e)?.name; if (e.k === 'b') return this.buildingName(e); if (e.k === 't') return this.eraDef.nodes.secondary.name + (e.big ? ' – prastarý strom (nevyčerpatelný)' : ''); if (e.k === 'm') return this.eraDef.nodes.mine.name + (e.big ? ' – nevyčerpatelná žíla' : ''); return '?'; }
 
   // ---------- snapshots ----------
   applyEntity(d, full) {
@@ -74,7 +74,7 @@ export class Game {
       return e;
     }
     const k = d.k || e.k; // deltas carry only changed fields
-    if ((k === 'u' || k === 'p') && d.x !== undefined) { e.px = e.rx; e.py = e.ry; e.snapT = now; }
+    if ((k === 'u' || k === 'p') && d.x !== undefined) { e.px = e.rx; e.py = e.ry; e.snapDt = Math.min(250, Math.max(SNAP_MS, now - e.snapT)); e.snapT = now; }
     if (d.hp !== undefined && d.hp < e.hp && (k !== 'b' || e.bl)) e.hitAt = this.renderer.time;
     Object.assign(e, d);
     if (k === 'u' && e.hd) { e.px = e.x; e.py = e.y; e.rx = e.x; e.ry = e.y; }
@@ -419,7 +419,7 @@ export class Game {
     const now = performance.now();
     for (const e of this.ents.values()) {
       if (e.k !== 'u' && e.k !== 'p') continue;
-      const k = Math.min(1, (now - e.snapT) / SNAP_MS);
+      const k = Math.min(1, (now - e.snapT) / (e.snapDt || SNAP_MS));
       const nx = e.px + (e.x - e.px) * k, ny = e.py + (e.y - e.py) * k;
       e.moving = Math.hypot(e.x - e.px, e.y - e.py) > 0.02;
       e.rx = nx; e.ry = ny;

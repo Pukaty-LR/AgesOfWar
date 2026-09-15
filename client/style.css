@@ -240,3 +240,5 @@ button.secondary { filter: saturate(0.6) brightness(0.9); }
 #sel-stats em { color: #8fe38f; font-style: normal; font-weight: 700; }
 
 input[type=checkbox] { accent-color: var(--gold); }
+
+.cmd.locked { filter: grayscale(0.9) brightness(0.55); } .cmd.locked .lbl { color: #b9a98c; }
