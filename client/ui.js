@@ -109,7 +109,9 @@ export class UI {
     for (const [id, n] of [['res-p', gp], ['res-s', gs]]) { const el = $(id); let wk = el.querySelector('.wk'); if (!wk) { wk = document.createElement('span'); wk.className = 'wk'; el.appendChild(wk); } wk.textContent = n ? `${n}` : ''; }
     $('res-p').title = tf(t('%1 · těží %2 dělníků'), game.eraDef.resources.p.name, gp); $('res-s').title = tf(t('%1 · těží %2 dělníků'), game.eraDef.resources.s.name, gs);
     const pop = $('res-pop'); pop.querySelector('.val').textContent = `${p.pop}/${p.popCap}`; pop.classList.toggle('low', p.pop >= p.popCap);
-    const s = Math.floor(game.gameTime()); $('game-clock').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    const s = Math.floor(game.gameTime()); const sp = $('game-speed') ? +$('game-speed').value : 1; const ping = Math.round(this.app.net.ping || 0);
+    $('game-clock').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}${sp !== 1 ? ` ·${sp}×` : ''}`;
+    $('game-clock').title = `${ping} ms`; // latency to the server (WC3 style, hover the clock)
   }
 
   // ---------- minimap ----------
