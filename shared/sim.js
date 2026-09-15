@@ -348,7 +348,7 @@ export class Sim {
         if (b.queue.length >= 7) break;
         if (udef.unique) { let exists = false; for (const e of this.ents.values()) { if (e.owner === pid && ((e.kind === 'unit' && e.type === c.type) || (e.kind === 'building' && e.queue && e.queue.some(q => q.type === c.type)))) { exists = true; break; } } if (exists) { this.events.push({ t: 'msg', owner: pid, text: `${udef.name} může být jen jeden.` }); break; } }
         if (p.res.p < udef.cost.p || p.res.s < udef.cost.s) { this.events.push({ t: 'msg', owner: pid, text: 'Nedostatek surovin.' }); break; }
-        if (p.pop + udef.pop > p.popCap) { this.events.push({ t: 'msg', owner: pid, text: 'Nedostatek populace – postav další radnici.' }); break; }
+        if (p.pop + udef.pop > p.popCap) { this.events.push({ t: 'msg', owner: pid, text: 'Nedostatek populace – postav domy.' }); break; }
         p.res.p -= udef.cost.p; p.res.s -= udef.cost.s; p.dirty = true;
         b.queue.push({ type: c.type, progress: 0 }); b.dirty = true;
         break;
