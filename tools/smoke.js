@@ -52,6 +52,10 @@ for (const era of Object.keys(ERAS)) {
   // malformed coordinates must be rejected, never create entities with NaN positions
   const before = sim.ents.size; sim.command(0, { t: 'build', ids: ws(), type: 'barracks' }); sim.command(0, { t: 'build', ids: ws(), type: 'barracks', tx: 'abc', ty: 5 }); sim.command(0, { t: 'move', ids: ws(), x: NaN, y: 3 }); sim.command(0, { t: 'build', ids: ws(), type: 'barracks', tx: 5000, ty: 5000 });
   check(sim.ents.size === before && ![...sim.ents.values()].some(e => !Number.isFinite(e.x)), 'malformed coordinates rejected');
+  // audit regressions: no friendly fire / attacking trees, hidden miners reappear when reordered, a lone gate does not keep a player alive
+  { const w = ws(); const tree = [...sim.ents.values()].find(e => e.kind === 'tree'); sim.command(0, { t: 'attack', ids: [w[0]], targetId: tree.id }); sim.command(0, { t: 'attack', ids: [w[0]], targetId: w[1] }); run(40); check(sim.ents.get(w[0]).order.type !== 'attack', 'attack on tree/own unit ignored');
+    const mine = [...sim.ents.values()].find(e => e.kind === 'mine'); sim.command(0, { t: 'gather', ids: [w[1]], targetId: mine.id }); let hid = false; for (let i = 0; i < 800 && !hid; i++) { sim.step(); if (sim.ents.get(w[1]).hidden) hid = true; } sim.command(0, { t: 'stop', ids: [w[1]] }); sim.step(); check(hid && !sim.ents.get(w[1]).hidden, 'hidden miner reappears after stop');
+    const s2 = new Sim({ seed: 3, size: 72, eraId: 'antiquity', players: [{ name: 'a', team: 0 }, { name: 'b', team: 1 }] }); for (const e of [...s2.ents.values()]) if (e.kind === 'building' && e.owner === 0) s2.remove(e); const p0 = s2.players[0]; const sp = s2.map.spawns[0]; s2.placeBuilding(p0, 'wall', sp.x + 6, sp.y + 6, true); const g = [...s2.ents.values()].find(e => e.kind === 'building' && e.owner === 0); if (g) { g.type = 'gate'; } for (let i = 0; i < 40; i++) s2.step(); check(!p0.alive, 'lone gate does not keep a player alive'); }
   console.log('command coverage done');
 }
 // map fairness: every start has a mine and trees close by, for all styles, sizes and player counts
