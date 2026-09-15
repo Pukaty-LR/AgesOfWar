@@ -135,7 +135,7 @@ export class Game {
         if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(ev.k === 'melee' ? 5 : 4, ev.x, ev.y, 10, { colors: ev.k === 'melee' ? [[255, 240, 200], [255, 200, 80]] : [[140, 30, 30], [180, 40, 40]], speed: 1.5, vz: 30, life: 0.4, size: 1.6, gravity: 120 });
         this.heat(ev.x, ev.y); break;
       }
-      case 'explode': this.soundAt('explosion', ev.x, ev.y, 1); R.addEffect({ kind: 'explosion', x: ev.x, y: ev.y, r: ev.r }); R.spawnParticles(18, ev.x, ev.y, 4, { colors: [[80, 70, 60], [120, 110, 90], [60, 50, 40]], speed: 3, vz: 60, life: 1.1, size: 3, gravity: 60, grow: 3, drag: 0.93 }); R.spawnParticles(10, ev.x, ev.y, 4, { colors: [[255, 200, 80], [255, 120, 30]], speed: 3, vz: 70, life: 0.5, size: 2.5, gravity: 100 }); this.heat(ev.x, ev.y); break;
+      case 'explode': this.soundAt('explosion', ev.x, ev.y, 1); R.addEffect({ kind: 'explosion', x: ev.x, y: ev.y, r: ev.r }); { const dc = Math.hypot(ev.x - R.cam.x, ev.y - R.cam.y); if (dc < 14) R.shake = Math.min(1, (R.shake || 0) + 0.35 * (1 - dc / 14) * Math.min(1.5, ev.r)); } R.spawnParticles(18, ev.x, ev.y, 4, { colors: [[80, 70, 60], [120, 110, 90], [60, 50, 40]], speed: 3, vz: 60, life: 1.1, size: 3, gravity: 60, grow: 3, drag: 0.93 }); R.spawnParticles(10, ev.x, ev.y, 4, { colors: [[255, 200, 80], [255, 120, 30]], speed: 3, vz: 70, life: 0.5, size: 2.5, gravity: 100 }); this.heat(ev.x, ev.y); break;
       case 'miss': if (ev.k === 'bullet') break; this.soundAt('hit', ev.x, ev.y, 0.3); if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(3, ev.x, ev.y, 2, { colors: [[120, 100, 70]], speed: 1, vz: 20, life: 0.4, size: 1.5 }); break;
       case 'death': {
         if (ev.k === 'unit') {

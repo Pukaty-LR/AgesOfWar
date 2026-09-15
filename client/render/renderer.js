@@ -198,9 +198,12 @@ export class Renderer {
     const corners = [this.screenToWorld(0, 0), this.screenToWorld(this.W, 0), this.screenToWorld(0, this.H), this.screenToWorld(this.W, this.H)];
     const minX = Math.floor(Math.min(...corners.map(c => c[0])) - 2), maxX = Math.ceil(Math.max(...corners.map(c => c[0])) + 2);
     const minY = Math.floor(Math.min(...corners.map(c => c[1])) - 2), maxY = Math.ceil(Math.max(...corners.map(c => c[1])) + 4);
-    // camera iso origin
+    // camera iso origin (+ subtle shake from nearby explosions)
+    this.shake = Math.max(0, (this.shake || 0) - dt * 3);
+    const shx = this.shake ? (Math.random() - 0.5) * this.shake * 10 : 0, shy = this.shake ? (Math.random() - 0.5) * this.shake * 6 : 0;
     const [cix, ciy] = iso(this.cam.x, this.cam.y, this.elev(this.cam.x, this.cam.y));
     const ox = this.W / 2 - cix * z, oy = this.H / 2 - ciy * z;
+    if (this.shake) ctx.translate(shx, shy);
     // terrain chunks
     const c0x = Math.max(0, Math.floor(minX / CHUNK)), c1x = Math.min(Math.ceil(w / CHUNK) - 1, Math.floor(maxX / CHUNK));
     const c0y = Math.max(0, Math.floor(minY / CHUNK)), c1y = Math.min(Math.ceil(h / CHUNK) - 1, Math.floor(maxY / CHUNK));
