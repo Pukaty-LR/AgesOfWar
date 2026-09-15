@@ -229,3 +229,4 @@ table.stats .winner { color: var(--gold2); font-weight: 700; font-size: 11px; ma
 ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; } ::-webkit-scrollbar-track { background: #120d08; }
 
 @media (max-width: 900px) { .lobby-grid { grid-template-columns: 1fr; } #bottombar { grid-template-columns: 180px 1fr 260px; height: 200px; } .title { font-size: 44px; } }
+@media (max-height: 720px) { #bottombar { height: 186px; padding: 6px 10px; gap: 8px; grid-template-columns: 200px 1fr 290px; } #cmdcard { gap: 5px; padding: 6px; } .cmd { font-size: 10px; } .portrait-frame { width: 84px; height: 84px; } #portrait { width: 76px; height: 76px; } #sel-name { font-size: 17px; } #chatlog { bottom: 214px; } #chat-input { bottom: 190px; } #sel-empty { padding-top: 60px; } }
