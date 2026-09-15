@@ -733,25 +733,32 @@ const BUILDING_DRAW = {
   },
   // ---- houses (2x2) ----
   ant_house: (ctx, o) => {
+    const lv = o.level || 1; const wall = lv >= 2 ? 26 : 16; // upgraded houses grow a storey
     prism(ctx, isoRect(0.08, 0.08, 1.84, 1.84), 0, 3, shade(STONE, 0.85), STONE_D);
-    prism(ctx, isoRect(0.2, 0.2, 1.6, 1.6), 3, 16, shade(STONE, 0.97), STONE_D);
-    gableRoof(ctx, 0.1, 0.1, 1.8, 1.8, 19, 12, ROOF, ROOF_D, 'x');
-    doorAt(ctx, 1.0, 1.82, 3); windows(ctx, [[1.82, 0.5], [1.82, 1.5]], 12, 2);
+    if (lv >= 3) { prism(ctx, isoRect(0.05, 1.05, 0.8, 0.85), 3, 12, shade(STONE, 0.92), STONE_D); gableRoof(ctx, 0.0, 1.0, 0.9, 0.95, 15, 7, ROOF, ROOF_D, 'y'); }
+    prism(ctx, isoRect(0.2, 0.2, 1.6, 1.6), 3, wall, shade(STONE, 0.97), STONE_D);
+    gableRoof(ctx, 0.1, 0.1, 1.8, 1.8, wall + 3, 12, ROOF, ROOF_D, 'x');
+    doorAt(ctx, 1.0, 1.82, 3); windows(ctx, [[1.82, 0.5], [1.82, 1.5]], 12, 2); if (lv >= 2) windows(ctx, [[1.82, 0.5], [1.82, 1.5]], 22, 2);
     const [px, py] = iso(0.3, 1.7, 3); ellipse(ctx, px, py - 3, 5, 3, rgb([110, 130, 60]), OUT, 0.6); // garden bush
     const [ax, ay] = iso(1.7, 0.3, 3); rrect(ctx, ax - 3, ay - 8, 6, 8, 1.5, rgb([150, 110, 60]), OUT, 0.6); // amphora
   },
   ww2_house: (ctx, o) => {
+    const lv = o.level || 1;
     prism(ctx, isoRect(0.08, 0.08, 1.84, 1.84), 0, 2, [110, 100, 80], [80, 72, 58]);
-    prism(ctx, isoRect(0.15, 0.4, 1.7, 1.2), 2, 12, OLIVE, OLIVE_D);
+    if (lv >= 3) prism(ctx, isoRect(0.15, 1.62, 1.0, 0.3), 2, 8, shade(OLIVE, 0.9), OLIVE_D);
+    prism(ctx, isoRect(0.15, 0.4, 1.7, 1.2), 2, lv >= 2 ? 18 : 12, OLIVE, OLIVE_D);
+    if (lv >= 2) { const [px, py] = iso(1.6, 0.4, 30); rrect(ctx, px - 2, py - 10, 4, 10, 1, rgb([70, 70, 70]), OUT, 0.6); }
     for (let i = 0; i < 5; i++) { const t0 = i / 5, t1 = (i + 1) / 5; const y0 = 0.4 + 1.2 * t0, y1 = 0.4 + 1.2 * t1; const z0 = 14 + Math.sin(t0 * Math.PI) * 8, z1 = 14 + Math.sin(t1 * Math.PI) * 8; poly(ctx, [iso(0.1, y0, z0), iso(1.9, y0, z0), iso(1.9, y1, z1), iso(0.1, y1, z1)], rgb(shade([120, 125, 110], 0.8 + 0.4 * Math.sin((t0 + t1) / 2 * Math.PI))), OUT, 0.7); }
     doorAt(ctx, 1.85, 1.0, 2, [40, 40, 40]); windows(ctx, [[0.4, 1.62], [1.6, 1.62]], 9, 3, [50, 60, 60]);
     const [cx, cy] = iso(0.4, 0.4, 24); rrect(ctx, cx - 2, cy - 10, 4, 10, 1, rgb([70, 70, 70]), OUT, 0.6); // stove pipe
     const [bx, by] = iso(1.7, 0.2, 2); for (let i = 0; i < 3; i++) rrect(ctx, bx - 6 + i * 4, by - 3 - (i % 2) * 3, 5, 3, 1, rgb([120, 100, 60]), OUT, 0.5);
   },
   sf_house: (ctx, o) => {
+    const lv = o.level || 1; const body = lv >= 2 ? 22 : 14;
     prism(ctx, isoRect(0.08, 0.08, 1.84, 1.84), 0, 2, shade(HULL_SF, 0.8), HULL_SF_D);
-    prism(ctx, [[0.5, 0.2], [1.5, 0.2], [1.8, 1.0], [1.5, 1.8], [0.5, 1.8], [0.2, 1.0]], 2, 14, HULL_SF, HULL_SF_D);
-    const [cx, cy] = iso(1.0, 1.0, 16); for (let i = 5; i >= 0; i--) { const k = i / 5; ellipse(ctx, cx, cy - (1 - k) * 12, 22 * k + 2, 11 * k + 1, rgb(shade(HULL_SF, 1 + (1 - k) * 0.22)), i === 5 ? OUT : null, 0.8); }
+    prism(ctx, [[0.5, 0.2], [1.5, 0.2], [1.8, 1.0], [1.5, 1.8], [0.5, 1.8], [0.2, 1.0]], 2, body, HULL_SF, HULL_SF_D);
+    if (lv >= 3) { const [mx, my] = iso(0.35, 0.35, body + 2); line(ctx, mx, my, mx, my - 18, '#8fa', 1.5); ctx.fillStyle = GLOW; ctx.beginPath(); ctx.arc(mx, my - 19, 2.2, 0, 7); ctx.fill(); }
+    const [cx, cy] = iso(1.0, 1.0, body + 2); for (let i = 5; i >= 0; i--) { const k = i / 5; ellipse(ctx, cx, cy - (1 - k) * 12, 22 * k + 2, 11 * k + 1, rgb(shade(HULL_SF, 1 + (1 - k) * 0.22)), i === 5 ? OUT : null, 0.8); }
     ctx.fillStyle = GLOW; for (const z of [6, 11]) { const [sx, sy] = iso(1.8, 1.0, z); ctx.fillRect(sx - 4, sy - 1, 8, 1.5); const [sx2, sy2] = iso(1.0, 1.8, z); ctx.fillRect(sx2 - 4, sy2 - 1, 8, 1.5); }
     ctx.fillStyle = 'rgba(197,106,255,0.9)'; ctx.beginPath(); ctx.arc(cx, cy - 13, 2, 0, 7); ctx.fill();
   },
