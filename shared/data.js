@@ -204,7 +204,7 @@ export const ERAS = {
       s: { id: 'spore', name: 'Houba', acc: 'houbu', short: 'Ho', color: '#c56aff' },
     },
     nodes: { mine: { name: 'Plazmový krystal', amount: 12000, perTrip: 10, tripTicks: 20 }, secondary: { name: 'Houbový háj', kind: 'fungus', amount: 150, perTrip: 10, chopTicks: 7, chopHits: 5 } },
-    palette: { grass: [70, 116, 104], grass2: [58, 98, 90], dirt: [112, 96, 124], sand: [178, 164, 196], water: [34, 118, 160], deep: [14, 58, 118], rock: [92, 86, 112] },
+    palette: { grass: [70, 116, 104], grass2: [58, 98, 90], dirt: [112, 96, 124], sand: [158, 144, 182], water: [34, 118, 160], deep: [14, 58, 118], rock: [92, 86, 112] },
     music: { scale: [0, 2, 3, 7, 8, 10], root: 110, tempo: 80, style: 'synth' },
     factions: [
       { id: 'terra', name: 'Terranská federace', leader: 'Admirál Vega', desc: 'Disciplína: pěchota +10 % HP, věže +10 % dmg.', mods: { infantry: { hp: 1.1 }, tower: { dmg: 1.1 } },
