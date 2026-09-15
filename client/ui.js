@@ -119,7 +119,7 @@ export class UI {
   // ---------- minimap ----------
   buildMiniTerrain(game) {
     const m = game.map; const c = document.createElement('canvas'); c.width = m.w; c.height = m.h; const ctx = c.getContext('2d'); const img = ctx.createImageData(m.w, m.h); const pal = game.eraDef.palette;
-    for (let i = 0; i < m.w * m.h; i++) { const t = m.tiles[i]; let col; switch (t) { case T.GRASS: col = pal.grass; break; case T.DIRT: col = pal.dirt; break; case T.SAND: col = pal.sand; break; case T.SHALLOW: col = pal.water.map((v, k) => v * 0.7 + pal.sand[k] * 0.3); break; case T.WATER: col = pal.deep; break; default: col = pal.rock; } const k = 0.8 + (m.height[i] - 0.5) * 0.5; img.data[i * 4] = col[0] * k; img.data[i * 4 + 1] = col[1] * k; img.data[i * 4 + 2] = col[2] * k; img.data[i * 4 + 3] = 255; }
+    for (let i = 0; i < m.w * m.h; i++) { const t = m.tiles[i]; let col; switch (t) { case T.GRASS: col = pal.grass; break; case T.ROCK: col = pal.rock; break; case T.DIRT: col = pal.dirt; break; case T.SAND: col = pal.sand; break; case T.SHALLOW: col = pal.water.map((v, k) => v * 0.7 + pal.sand[k] * 0.3); break; case T.WATER: col = pal.deep; break; default: col = pal.rock; } const k = 0.8 + (m.height[i] - 0.5) * 0.5; img.data[i * 4] = col[0] * k; img.data[i * 4 + 1] = col[1] * k; img.data[i * 4 + 2] = col[2] * k; img.data[i * 4 + 3] = 255; }
     ctx.putImageData(img, 0, 0); this.miniTerrain = c;
   }
   miniTransform(ctx, game) { const W = this.mini.width; const s = W / (2 * game.map.w); ctx.setTransform(s, s, -s, s, W / 2, 0); return s; }
