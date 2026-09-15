@@ -30,7 +30,7 @@ const server = http.createServer((req, res) => {
   });
 });
 
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, maxPayload: 64 * 1024 });
 
 let nextClientId = 1, nextLobbyId = 1;
 const clients = new Map();   // id -> client
@@ -161,7 +161,7 @@ wss.on('connection', (ws, req) => {
     switch (m.t) {
       case 'hello': {
         c.name = String(m.name || 'Hráč').slice(0, 18).trim() || 'Hráč';
-        c.token = typeof m.token === 'string' ? m.token.slice(0, 40) : null;
+        c.token = typeof m.token === 'string' && /^[A-Za-z0-9_-]{4,40}$/.test(m.token) ? m.token : null; // tokens end up in save file names
         // rejoin a running game after a page refresh / connection drop
         if (c.token && !c.lobby) {
           const candidates = [...lobbies.values()].filter(lb => lb.game && lb.slots.some(s => !s.isAI && s.token === c.token && clients.get(s.id)?.lobby !== lb)).sort((a, b) => b.id - a.id);
