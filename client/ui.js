@@ -241,7 +241,7 @@ export class UI {
         const up = game.nextUpgrade(b);
         if (up) { const need = up.hall && game.hallLevel() < up.hall; const unlockNames = up.unlocks.map(u => game.tech.units[u]?.name).filter(Boolean); btn(8, { label: `Vylepšit (${up.level})`, key: 'U', icon: () => actionIcon('upgrade'), cost: up.cost, desc: `Vylepší budovu na úroveň ${up.level} (${Math.round(up.time)} s).${up.desc ? ' ' + up.desc : ''}${unlockNames.length ? ' Odemkne: ' + unlockNames.join(', ') + '.' : ''}${up.popCap ? ` +${up.popCap} populace.` : ''}${need ? ` Vyžaduje radnici úrovně ${up.hall}.` : ''}`, act: () => game.upgrade(b.i), canAfford: () => !need && p.res.p >= up.cost.p && p.res.s >= up.cost.s && !(b.q || []).some(q => q.t === '__up') }); }
         if (def.isWall) btn(9, { label: b.t === 'gate' ? 'Zazdít' : 'Udělat bránu', key: 'G', icon: () => actionIcon('gate'), cost: b.t === 'gate' ? null : game.tech.buildings.gate.cost, desc: b.t === 'gate' ? 'Změní bránu zpět na hradbu.' : 'Změní segment na bránu, kterou projdou jen tvoje jednotky a spojenci.', act: () => game.toggleGate() });
-        if (trains.length) btn(6, { label: 'Shromaždiště', key: 'Y', icon: () => actionIcon('rally'), desc: 'Klikni na místo (nebo pravým tlačítkem). Na důl/les = dělníci jdou rovnou těžit.', act: () => { game.state.mode = 'rally'; }, active: () => game.state.mode === 'rally' });
+        if (trains.length) btn(6, { label: 'Místo srazu', key: 'Y', icon: () => actionIcon('rally'), desc: 'Klikni na místo (nebo pravým tlačítkem). Na důl/les = dělníci jdou rovnou těžit.', act: () => { game.state.mode = 'rally'; }, active: () => game.state.mode === 'rally' });
         // research (AoE blacksmith style)
         const resList = Object.entries(RESEARCH).filter(([, rd]) => rd.building === b.t); const resSlots = [7, 9];
         resList.forEach(([rid, rd], i) => { const lvl = (p.research && p.research[rid]) || 0; if (lvl >= rd.maxLevel) return; const cost = { p: rd.cost.p * (lvl + 1), s: rd.cost.s * (lvl + 1) }; const busy = (b.q || []).some(q => q.t === '__res' && q.rid === rid); btn(resSlots[i], { label: `${rd.names[game.era]} ${['I', 'II', 'III'][lvl]}`, key: rd.hotkey, icon: () => actionIcon(rd.dmgAdd || rd.dmgMul ? 'research_atk' : 'research_arm'), cost, desc: `${rd.desc} (${Math.round(rd.time)} s). Úroveň ${lvl}/${rd.maxLevel}.`, act: () => game.research(b.i, rid), canAfford: () => !busy && p.res.p >= cost.p && p.res.s >= cost.s }); });
@@ -253,7 +253,7 @@ export class UI {
       const el = document.createElement('div'); el.className = 'cmd' + (d && d.cls ? ' ' + d.cls : '');
       if (!d) { el.style.visibility = 'hidden'; card.appendChild(el); return; }
       const ic = d.icon(); ic.style.opacity = '0.9'; el.appendChild(ic);
-      const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = hyph(d.label); el.appendChild(lbl);
+      const lbl = document.createElement('div'); lbl.className = 'lbl' + (/[A-Za-zÀ-ž]{9,}/.test(d.label) ? ' long' : ''); lbl.textContent = hyph(d.label); el.appendChild(lbl);
       const key = document.createElement('div'); key.className = 'key'; key.textContent = d.key; el.appendChild(key);
       el.onmousedown = e => e.stopPropagation();
       el.onclick = ev => this.fire(game, d, ev.shiftKey);
