@@ -1054,8 +1054,8 @@ export class Sim {
               else if (rt && rt.owner === b.owner && rt.kind === 'building' && !rt.built && u.role === 'worker') u.order = { type: 'build', targetId: rt.id };
               else u.order = { type: 'move', x: b.rally.x, y: b.rally.y, thenIdle: true };
             }
-          } else q.progress = 1;
-        } else { q.progress = 1; }
+          } else { q.progress = 1; if (!b.stallMsgAt || this.tick - b.stallMsgAt > 20 * 15) { b.stallMsgAt = this.tick; this.events.push({ t: 'msg', owner: b.owner, text: `${p.tech.buildings[b.type].name}: kolem není místo pro novou jednotku.` }); } }
+        } else { q.progress = 1; if (!b.stallMsgAt || this.tick - b.stallMsgAt > 20 * 15) { b.stallMsgAt = this.tick; this.events.push({ t: 'msg', owner: b.owner, text: 'Populace je na maximu – postav domy.' }); } }
       }
     }
     // tower attack (scaled by upgrade level)
