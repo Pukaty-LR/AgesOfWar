@@ -156,7 +156,7 @@ export const ERAS = {
         unitNames: { worker: 'Dělník', infantry: 'Střelec', ranged: 'DP-27 kulometčík', cavalry: 'T-34', siege: 'Kaťuša', ship: 'Torpédoborec Gněvnyj' } },
       { id: 'usa',     name: 'USA',     leader: 'Patton', desc: 'Průmysl: dělostřelectvo +1 dosah, budovy -15 % cena.', mods: { siege: { range: 1.12 }, buildings: { cost: 0.85 } },
         unitNames: { worker: 'Ženista', infantry: 'GI', ranged: 'BAR střelec', cavalry: 'M4 Sherman', siege: 'Houfnice M101', ship: 'Torpédoborec Fletcher' } },
-      { id: 'uk',      name: 'Británie', leader: 'Montgomery', desc: 'Námořnictvo: lodě +20 % HP, bunkry +1 dosah, pěchota +10 % HP.', mods: { ship: { hp: 1.2 }, tower: { range: 1.15 }, infantry: { hp: 1.1 } },
+      { id: 'uk',      name: 'Británie', leader: 'Montgomery', desc: 'Impérium: lodě +20 % HP, bunkry +1 dosah, pěchota +10 % HP, ropa +10 % výnos.', mods: { ship: { hp: 1.2 }, tower: { range: 1.15 }, infantry: { hp: 1.1 }, economy: { mine: 1.1 } },
         unitNames: { worker: 'Sapér', infantry: 'Tommy', ranged: 'Bren střelec', cavalry: 'Cromwell', siege: 'Houfnice 25pdr', ship: 'HMS Torpédoborec' } },
     ],
     units: {
@@ -213,7 +213,7 @@ export const ERAS = {
         unitNames: { worker: 'Dron', infantry: 'Rudý gardista', ranged: 'Ostřelovač Dusk', cavalry: 'Hover tank Ares', siege: 'Mortarový walker', ship: 'Hover člun Phobos' } },
       { id: 'synth', name: 'Syntetici', leader: 'Jednotka 7', desc: 'Efektivita: jednotky -10 % cena, krystaly +10 % výnos.', mods: { infantry: { cost: 0.9 }, ranged: { cost: 0.9 }, economy: { mine: 1.1 } },
         unitNames: { worker: 'Konstrukční jednotka', infantry: 'Bojový android', ranged: 'Přesný android', cavalry: 'Autonomní tank', siege: 'Artilerijní jednotka', ship: 'Hover platforma' } },
-      { id: 'void', name: 'Nomádi Prázdnoty', leader: 'Kápo Prázdnoty', desc: 'Lovci: střelci +20 % dmg, vozidla +10 % rychlost, lodě +10 % HP.', mods: { ranged: { dmg: 1.2 }, cavalry: { speed: 1.1 }, ship: { hp: 1.1 } },
+      { id: 'void', name: 'Nomádi Prázdnoty', leader: 'Kápo Prázdnoty', desc: 'Lovci: střelci +20 % dmg, pěchota +10 % HP, vozidla +10 % rychlost, lodě +10 % HP.', mods: { ranged: { dmg: 1.2 }, infantry: { hp: 1.1 }, cavalry: { speed: 1.1 }, ship: { hp: 1.1 } },
         unitNames: { worker: 'Sběrač', infantry: 'Nájezdník', ranged: 'Lovec', cavalry: 'Hover jezdec', siege: 'Vrhač', ship: 'Hover korzár' } },
     ],
     units: {
