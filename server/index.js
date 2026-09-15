@@ -258,9 +258,11 @@ wss.on('connection', (ws, req) => {
         break;
       }
       case 'chat': {
-        const text = String(m.text || '').slice(0, 200); if (!text.trim()) return;
+        let text = String(m.text || '').slice(0, 200); if (!text.trim()) return;
         if (!l) return;
-        for (const s of l.slots) if (!s.isAI) { const o = clients.get(s.id); if (o) send(o.ws, { t: 'chat', from: c.name, text, color: l.slots.find(x => x.id === c.id)?.color }); }
+        const meSlot = l.slots.find(x => x.id === c.id);
+        const teamOnly = /^\/t\s+/i.test(text); if (teamOnly) text = text.replace(/^\/t\s+/i, '');
+        for (const s of l.slots) if (!s.isAI && (!teamOnly || (meSlot && s.team === meSlot.team))) { const o = clients.get(s.id); if (o) send(o.ws, { t: 'chat', from: (teamOnly ? '[tým] ' : '') + c.name, text, color: meSlot?.color }); }
         break;
       }
       case 'speed': { // single-player only: 1x / 1.5x / 2x simulation speed

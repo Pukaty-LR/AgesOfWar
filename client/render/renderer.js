@@ -356,6 +356,8 @@ export class Renderer {
     if (def.role === 'ship') { anim = anim === 'attack' ? 'attack' : 'walk'; if (anim === 'walk') frame = Math.floor(this.time * 3 + e.i) % 6; }
     const extra = { carry: e.c || '', faction: g.players[e.o].faction, workKind: e.o2 === 'gather' ? (g.ents.get(e.tg)?.k === 'm' ? 'mine' : 'tree') : '' };
     const spr = unitSprite(def.sprite, g.players[e.o].color, dir, anim, frame, extra);
+    // hover vehicles over water: ripple ring
+    if (def.domain === 'hover') { const tt = this.map.tiles[(y | 0) * this.map.w + (x | 0)]; if (tt === T.SHALLOW || tt === T.WATER) { const k = (this.time * 1.5 + e.i) % 1; ctx.strokeStyle = `rgba(200,240,255,${0.5 * (1 - k)})`; ctx.lineWidth = 1.5 * z; ctx.beginPath(); ctx.ellipse(sx, sy, (10 + k * 16) * z, (5 + k * 8) * z, 0, 0, Math.PI * 2); ctx.stroke(); } }
     // hover highlight / hit flash
     if (e.hover && !g.selection.has(e.i)) ctx.filter = 'brightness(1.25)';
     if (e.hitAt && this.time - e.hitAt < 0.12) { ctx.filter = 'brightness(1.8)'; }
