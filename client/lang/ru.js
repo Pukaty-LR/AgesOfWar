@@ -59,4 +59,5 @@ export default {
   'Ostřejší čepele': 'Острые клинки', 'Lepší zbroj': 'Лучшая броня', 'Chov válečných koní': 'Разведение боевых коней', 'Koňská zbroj': 'Конская броня', 'Obléhací inženýrství': 'Осадная инженерия',
   'Lepší munice': 'Лучшие боеприпасы', 'Neprůstřelné vesty': 'Бронежилеты', 'Průbojné granáty': 'Бронебойные снаряды', 'Přídavné pancéřování': 'Дополнительная броня', 'Balistika': 'Баллистика',
   'Plazmové články': 'Плазменные ячейки', 'Energetické štíty': 'Энергощиты', 'Zesílené kanóny': 'Усиленные пушки', 'Nanopancíř': 'Наноброня', 'Přesné zaměřovače': 'Точные прицелы',
+  ' (ty)': ' (вы)',
 };

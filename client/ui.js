@@ -124,7 +124,7 @@ export class UI {
     const R = game.renderer;
     for (const e of game.ents.values()) {
       if (e.k === 't') { if (!R.explored[(e.ty) * game.map.w + e.tx]) continue; ctx.fillStyle = '#1e4d22'; ctx.fillRect(e.tx, e.ty, 1, 1); }
-      else if (e.k === 'm') { if (!R.explored[e.ty * game.map.w + e.tx]) continue; ctx.fillStyle = game.era === 'ww2' ? '#222' : '#f2c94c'; ctx.fillRect(e.tx, e.ty, 2, 2); }
+      else if (e.k === 'm') { if (!R.explored[e.ty * game.map.w + e.tx]) continue; ctx.fillStyle = e.big ? '#fff1a0' : (game.era === 'ww2' ? '#222' : '#f2c94c'); ctx.fillRect(e.tx, e.ty, 2, 2); if (e.big) { ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 0.6; ctx.strokeRect(e.tx - 1, e.ty - 1, 4, 4); } }
     }
     for (const e of game.ents.values()) {
       if (e.k === 'b') { if (!R.isExploredTile(e.x, e.y)) continue; if (game.players[e.o].team !== game.myTeam && !R.isVisibleTile(e.x, e.y)) continue; ctx.fillStyle = TEAM_COLORS[game.players[e.o].color].hex; ctx.fillRect(e.tx, e.ty, e.w, e.h); }
@@ -172,7 +172,7 @@ export class UI {
       if (e.k === 'u' || e.k === 'b') pc.drawImage(this.portrait(game, e), 0, 0, 96, 96);
       else { pc.fillStyle = e.k === 'm' ? '#f2c94c' : '#3a7a3a'; pc.font = '48px serif'; pc.textAlign = 'center'; pc.fillText(e.k === 'm' ? '⛏' : (game.era === 'ww2' ? '⚙' : '🌲'), 48, 64); }
       $('sel-name').textContent = game.entName(e);
-      const owner = $('sel-owner'); if (e.o !== undefined) { owner.textContent = game.players[e.o].name + (e.o === game.me ? ' (ty)' : ''); owner.style.color = TEAM_COLORS[game.players[e.o].color].hex; } else { owner.textContent = ''; }
+      const owner = $('sel-owner'); if (e.o !== undefined) { owner.textContent = game.players[e.o].name + (e.o === game.me ? t(' (ty)') : ''); owner.style.color = TEAM_COLORS[game.players[e.o].color].hex; } else { owner.textContent = ''; }
       const hpEl = $('sel-hp'), hpT = $('sel-hp-text'); const hpWrap = hpEl.parentElement;
       if (e.k === 'u' || e.k === 'b') { hpWrap.style.display = ''; const f = e.hp / e.m; hpEl.style.width = (f * 100) + '%'; hpEl.style.background = f > 0.6 ? 'linear-gradient(#7fe07a,#2f9c2c)' : f > 0.3 ? 'linear-gradient(#f0d060,#c09a20)' : 'linear-gradient(#f07060,#b03020)'; hpT.textContent = `${e.hp} / ${e.m}`; }
       else { hpWrap.style.display = 'none'; }
@@ -182,8 +182,8 @@ export class UI {
       if (e.k === 'u' && game.unitDef(e).capacity) stat('carry', t('Náklad'), `${e.cg || 0}/${game.unitDef(e).capacity}`);
       // effective values incl. research and hero level, shown WC3-style as base +bonus
       const withBonus = (base, eff) => { const b = Math.round(eff * 10) / 10 - base; return b > 0.05 ? `${base} <em>+${Math.round(b * 10) / 10}</em>` : `${base}`; };
-      if (e.k === 'u') { const d = game.unitDef(e); const pr = game.players[e.o].research || {}; let dmg = d.dmg, arm = d.armor; for (const [rid, rd] of Object.entries(RESEARCH)) { const l = pr[rid] || 0; if (!l || !rd.roles.includes(d.role)) continue; if (rd.dmgAdd) dmg += rd.dmgAdd * l; if (rd.dmgMul) dmg *= Math.pow(rd.dmgMul, l); if (rd.armorAdd) arm += rd.armorAdd * l; } if (d.aura) dmg *= 1 + 0.1 * ((e.lv || 1) - 1); stat('attack', t('Útok'), withBonus(d.dmg, dmg)); stat('armor', t('Pancíř'), withBonus(d.armor, arm)); stat('range', 'Dosah', d.range >= 1 ? d.range.toFixed(1) : t('blízko')); stat('speed', 'Rychlost', d.speed.toFixed(1)); if (e.c) stat('carry', 'Nese', e.c === 'p' ? game.eraDef.resources.p.name : game.eraDef.resources.s.name); }
-      else if (e.k === 'b') { const d = game.buildingDef(e); let bArm = d.armor, bDmg = d.attack ? d.attack.dmg : 0, bRange = d.attack ? d.attack.range : 0; for (const up of d.upgrades || []) if (up.level <= (e.lv || 1)) { if (up.armorAdd) bArm += up.armorAdd; if (up.dmgMul) bDmg *= up.dmgMul; if (up.rangeAdd) bRange += up.rangeAdd; } stat('armor', t('Pancíř'), withBonus(d.armor, bArm)); if (d.attack) { stat('attack', t('Útok'), withBonus(d.attack.dmg, bDmg)); stat('range', 'Dosah', withBonus(d.attack.range, bRange)); } if (d.popCap) stat('pop', 'Populace', '+' + d.popCap); if (!e.bl) stat('build', 'Stavba', Math.round(e.pr * 100) + ' %'); }
+      if (e.k === 'u') { const d = game.unitDef(e); const pr = game.players[e.o].research || {}; let dmg = d.dmg, arm = d.armor; for (const [rid, rd] of Object.entries(RESEARCH)) { const l = pr[rid] || 0; if (!l || !rd.roles.includes(d.role)) continue; if (rd.dmgAdd) dmg += rd.dmgAdd * l; if (rd.dmgMul) dmg *= Math.pow(rd.dmgMul, l); if (rd.armorAdd) arm += rd.armorAdd * l; } if (d.aura) dmg *= 1 + 0.1 * ((e.lv || 1) - 1); stat('attack', t('Útok'), withBonus(d.dmg, dmg)); stat('armor', t('Pancíř'), withBonus(d.armor, arm)); stat('range', t('Dosah'), d.range >= 1 ? d.range.toFixed(1) : t('blízko')); stat('speed', t('Rychlost'), d.speed.toFixed(1)); if (e.c) stat('carry', t('Nese'), e.c === 'p' ? game.eraDef.resources.p.name : game.eraDef.resources.s.name); }
+      else if (e.k === 'b') { const d = game.buildingDef(e); let bArm = d.armor, bDmg = d.attack ? d.attack.dmg : 0, bRange = d.attack ? d.attack.range : 0; for (const up of d.upgrades || []) if (up.level <= (e.lv || 1)) { if (up.armorAdd) bArm += up.armorAdd; if (up.dmgMul) bDmg *= up.dmgMul; if (up.rangeAdd) bRange += up.rangeAdd; } stat('armor', t('Pancíř'), withBonus(d.armor, bArm)); if (d.attack) { stat('attack', t('Útok'), withBonus(d.attack.dmg, bDmg)); stat('range', t('Dosah'), withBonus(d.attack.range, bRange)); } if (d.popCap) stat('pop', t('Populace'), '+' + d.popCap); if (!e.bl) stat('build', t('Stavba'), Math.round(e.pr * 100) + ' %'); }
       else if (e.k === 't' || e.k === 'm') stat('left', t('Zbývá'), e.a);
       const q = $('sel-queue'); q.innerHTML = '';
       if (e.k === 'b' && e.o === game.me && e.q && e.q.length) {

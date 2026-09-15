@@ -179,6 +179,7 @@ export default {
   // era descriptions
   'Tanky, dělostřelectvo a torpédoborce. Ropa z polí, dřevo z lesů.': 'Tanks, artillery and destroyers. Oil from the fields, wood from the forests.',
   'Hover tanky, mechy a plazma. Krystaly a houbové háje.': 'Hover tanks, mechs and plasma. Crystals and fungal groves.',
+  'Nese': 'Carrying', ' (TY)': ' (YOU)', '(TY)': '(YOU)', 'Vůdce': 'Leader', 'HP': 'HP',
   // faction-specific unit names
   'Otrok': 'Slave',
   'Legionář': 'Legionary',
@@ -240,4 +241,5 @@ export default {
   'Hover jezdec': 'Hover rider',
   'Vrhač': 'Hurler',
   'Hover korzár': 'Hover corsair',
+  ' (ty)': ' (you)',
 };

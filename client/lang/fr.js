@@ -59,4 +59,5 @@ export default {
   'Ostřejší čepele': 'Lames affûtées', 'Lepší zbroj': 'Meilleure armure', 'Chov válečných koní': 'Élevage de chevaux de guerre', 'Koňská zbroj': 'Barde', 'Obléhací inženýrství': 'Génie de siège',
   'Lepší munice': 'Meilleures munitions', 'Neprůstřelné vesty': 'Gilets pare-balles', 'Průbojné granáty': 'Obus perforants', 'Přídavné pancéřování': 'Blindage additionnel', 'Balistika': 'Balistique',
   'Plazmové články': 'Cellules à plasma', 'Energetické štíty': 'Boucliers énergétiques', 'Zesílené kanóny': 'Canons renforcés', 'Nanopancíř': 'Nano-blindage', 'Přesné zaměřovače': 'Viseurs de précision',
+  ' (ty)': ' (toi)',
 };
