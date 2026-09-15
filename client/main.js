@@ -245,4 +245,4 @@ function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<':
 window.addEventListener('error', e => { console.error(e.error || e.message); if (window.app) window.app.toast('Chyba: ' + (e.message || t('neznámá')).slice(0, 120)); });
 setLang(detectLang()); localizeData(); translateDom(); document.documentElement.lang = langDef().code;
 window.app = new App();
-buildLangSwitch(document.getElementById('lang-switch'));
+buildLangSwitch(document.getElementById('lang-switch')); buildLangSwitch(document.getElementById('lang-switch2'));

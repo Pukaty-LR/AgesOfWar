@@ -113,4 +113,5 @@ export default {
   'Nemáš hrdinu.': 'No tienes héroe.', 'F1 = celá armáda · F2 = hrdina · . = nečinný dělník': 'F1 = whole army · F2 = hero · . = idle worker',
   'DRŽÍ STŘED': 'DOMINA EL CENTRO',
   'Uprostřed mapy je nevyčerpatelná zlatá žíla a prastaré stromy – kdo drží střed, nikdy nevyhladoví (F3 ukáže, kdo ho drží).': 'En el centro del mapa hay una veta de oro inagotable y árboles ancestrales: quien domina el centro nunca se queda sin recursos (F3 muestra quién lo domina).',
+  'Jazyk': 'Idioma',
 };
