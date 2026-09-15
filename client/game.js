@@ -119,6 +119,8 @@ export class Game {
     for (const d of snap.ents) this.applyEntity(d, true);
     this.players = snap.players; this.ui.onPlayers(this);
     this.renderer.updateFog(this.ents, this.myTeam, this.players); this.updateMemory();
+    if (snap.gameOver && !this.gameOver) { this.gameOver = snap.gameOver; this.onGameOver(); }
+    else if (!this.players[this.me].alive && !this.eliminated) { this.eliminated = true; setTimeout(() => { if (!this.gameOver) this.ui.showEnd(this, false, true); }, 800); }
     setTimeout(() => document.getElementById('loading').classList.add('hidden'), 250);
   }
   onSnap(snap) {
