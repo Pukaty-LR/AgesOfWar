@@ -237,7 +237,7 @@ export class UI {
         const keys = ['Q', 'W', 'E', 'R', 'T', 'Z'];
         const trains = game.availableTrains(b);
         const ROLE = { infantry: 'pěchota', ranged: 'střelci', cavalry: 'jezdectvo/vozidla', siege: 'obléhací', ship: 'lodě', building: 'budovy', wall: 'hradby', worker: 'dělníci', support: 'podpora' };
-        trains.forEach((u, i) => { const ud = game.tech.units[u]; const bon = Object.entries(ud.bonus || {}).filter(([, v]) => v > 1).map(([k, v]) => `${ROLE[k] || k} ×${v}`).join(', '); btn(i, { label: ud.name, key: keys[i], icon: () => unitPortrait(ud.sprite, p.color, 64, { faction: p.faction }), cost: ud.cost, desc: `${ud.desc ? ud.desc + ' ' : ''}${ud.heal ? `Léčí ${ud.heal.amount} HP/s v okruhu ${ud.heal.range}. ` : `Útok ${ud.dmg}, `}pancíř ${ud.armor}, HP ${ud.hp}, ${ud.heal ? '' : `dosah ${ud.range >= 1 ? ud.range.toFixed(1) : 'na blízko'}, `}rychlost ${ud.speed.toFixed(1)}.${bon ? ' Bonus proti: ' + bon + '.' : ''} Populace ${ud.pop}. Výcvik ${Math.round(ud.trainTime)} s.${ud.unique ? ' Jen jeden.' : ''}`, act: () => game.train(u), canAfford: () => p.res.p >= ud.cost.p && p.res.s >= ud.cost.s }); });
+        trains.forEach((u, i) => { const ud = game.tech.units[u]; const bon = Object.entries(ud.bonus || {}).filter(([, v]) => v > 1).map(([k, v]) => `${ROLE[k] || k} ×${v}`).join(', '); btn(i, { label: ud.name, key: keys[i], icon: () => unitPortrait(ud.sprite, p.color, 64, { faction: p.faction }), cost: ud.cost, desc: `${ud.desc ? ud.desc + ' ' : ''}${ud.heal ? `Léčí ${ud.heal.amount} HP/s v okruhu ${ud.heal.range}. ` : `Útok ${ud.dmg}, `}pancíř ${ud.armor}, HP ${ud.hp}, ${ud.heal ? '' : `dosah ${ud.range >= 1 ? ud.range.toFixed(1) : 'na blízko'}, `}rychlost ${ud.speed.toFixed(1)}.${bon ? ' Bonus proti: ' + bon + '.' : ''} Populace ${ud.pop}. Výcvik ${Math.round(ud.trainTime)} s.${ud.unique ? ' Jen jeden.' : ' Shift = 5×.'}`, repeat: !ud.unique, act: () => game.train(u), canAfford: () => p.res.p >= ud.cost.p && p.res.s >= ud.cost.s }); });
         const up = game.nextUpgrade(b);
         if (up) { const need = up.hall && game.hallLevel() < up.hall; const unlockNames = up.unlocks.map(u => game.tech.units[u]?.name).filter(Boolean); btn(8, { label: `Vylepšit (${up.level})`, key: 'U', icon: () => actionIcon('upgrade'), cost: up.cost, desc: `Vylepší budovu na úroveň ${up.level} (${Math.round(up.time)} s).${up.desc ? ' ' + up.desc : ''}${unlockNames.length ? ' Odemkne: ' + unlockNames.join(', ') + '.' : ''}${up.popCap ? ` +${up.popCap} populace.` : ''}${need ? ` Vyžaduje radnici úrovně ${up.hall}.` : ''}`, act: () => game.upgrade(b.i), canAfford: () => !need && p.res.p >= up.cost.p && p.res.s >= up.cost.s && !(b.q || []).some(q => q.t === '__up') }); }
         if (def.isWall) btn(9, { label: b.t === 'gate' ? 'Zazdít' : 'Udělat bránu', key: 'G', icon: () => actionIcon('gate'), cost: b.t === 'gate' ? null : game.tech.buildings.gate.cost, desc: b.t === 'gate' ? 'Změní bránu zpět na hradbu.' : 'Změní segment na bránu, kterou projdou jen tvoje jednotky a spojenci.', act: () => game.toggleGate() });
@@ -256,7 +256,7 @@ export class UI {
       const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = hyph(d.label); el.appendChild(lbl);
       const key = document.createElement('div'); key.className = 'key'; key.textContent = d.key; el.appendChild(key);
       el.onmousedown = e => e.stopPropagation();
-      el.onclick = () => { if (d.canAfford && !d.canAfford()) { game.audio.sfx('error'); this.alert('Nedostatek surovin.', true); return; } d.act(); this.refreshCommandCardState(game); };
+      el.onclick = ev => this.fire(game, d, ev.shiftKey);
       el.onmouseenter = () => { let html = `<b>${d.label}</b>${d.key ? ` <span style="color:#f1d36a">[${d.key}]</span>` : ''}`; if (d.cost) html += `<div class="cost"><i style="color:${game.eraDef.resources.p.color}">${d.cost.p}</i> ${game.eraDef.resources.p.name} · <i style="color:${game.eraDef.resources.s.color}">${d.cost.s}</i> ${game.eraDef.resources.s.name}</div>`; if (d.desc) html += `<div class="desc">${d.desc}</div>`; const r = el.getBoundingClientRect(); this.showTooltip(html, r.left - 40, r.top - 110); };
       el.onmouseleave = () => this.hideTooltip();
       card.appendChild(el); this.cmdButtons.push({ el, d });
@@ -264,9 +264,15 @@ export class UI {
     this.refreshCommandCardState(game);
   }
   refreshCommandCardState(game) { for (const { el, d } of this.cmdButtons) { el.classList.toggle('disabled', !!(d.canAfford && !d.canAfford())); el.classList.toggle('active', !!(d.active && d.active())); if (d.labelFn) { const l = el.querySelector('.lbl'); const t = d.labelFn(); if (l && l.textContent !== hyph(t)) l.textContent = hyph(t); } } }
-  handleHotkey(game, k) {
+  /** Run a command-card action; Shift on a training button queues five (Age of Empires style). */
+  fire(game, d, shift) {
+    const n = shift && d.repeat ? 5 : 1;
+    for (let i = 0; i < n; i++) { if (d.canAfford && !d.canAfford()) { if (i === 0) { game.audio.sfx('error'); this.alert('Nedostatek surovin.', true); } break; } d.act(); }
+    this.refreshCommandCardState(game);
+  }
+  handleHotkey(game, k, shift = false) {
     const K = k.toUpperCase();
-    for (const { d } of this.cmdButtons) if (d.key && d.key.toUpperCase() === K) { if (d.canAfford && !d.canAfford()) { game.audio.sfx('error'); this.alert('Nedostatek surovin.', true); return true; } d.act(); this.refreshCommandCardState(game); return true; }
+    for (const { d } of this.cmdButtons) if (d.key && d.key.toUpperCase() === K) { this.fire(game, d, shift); return true; }
     if (k === 'm' && game.myUnitsSelected().length) { game.state.mode = 'move'; return true; }
     return false;
   }

@@ -56,7 +56,7 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 | Útočný pochod | A + klik |
 | Stop / držet pozici | S / H |
 | Dělník | G = těžit hlavní surovinu, F = těžit dřevo, B = stavět, R = opravit |
-| Budova | Q W E R T Z = výcvik, U = vylepšit, Y = shromaždiště, X = zrušit frontu, Delete = zbourat, G = brána (u hradby) |
+| Budova | Q W E R T Z = výcvik (Shift = 5×), U = vylepšit, Y = shromaždiště, X = zrušit frontu, Delete = zbourat, G = brána (u hradby) |
 | Skupiny | Ctrl+1–9 uložit, 1–9 vybrat, 2× = kamera |
 | Kamera | šipky, okraj obrazovky, střední tlačítko, kolečko = zoom, minimapa |
 | Ostatní | Space = poslední útok, F1 = vybrat armádu, F3 = přehled hráčů, F5–F8 = záložky kamery, Backspace = radnice, . = nečinný dělník, Enter = chat, Esc = zrušit / menu |

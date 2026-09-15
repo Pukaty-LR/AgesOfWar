@@ -362,7 +362,7 @@ export class Game {
       }
       if (e.ctrlKey && k === 'a') { e.preventDefault(); this.selectArmy(); return; }
       // command card hotkeys
-      if (this.ui.handleHotkey(this, k)) { e.preventDefault(); return; }
+      if (this.ui.handleHotkey(this, k, e.shiftKey)) { e.preventDefault(); return; }
     });
     window.addEventListener('keyup', e => { this.keys[e.key.toLowerCase()] = false; st.shift = e.shiftKey; st.ctrl = e.ctrlKey; st.altHeld = e.altKey; });
     window.addEventListener('blur', () => { this.keys = {}; });
