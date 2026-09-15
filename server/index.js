@@ -282,6 +282,7 @@ wss.on('connection', (ws, req) => {
       case 'chat': {
         let text = String(m.text || '').slice(0, 200); if (!text.trim()) return;
         if (!l) return;
+        const nowMs = Date.now(); if (!c.chatWin || nowMs - c.chatWin > 3000) { c.chatWin = nowMs; c.chatCount = 0; } if (++c.chatCount > 6) return send(ws, { t: 'error', msg: 'Zpomal s chatem.' }); // anti-spam
         const meSlot = l.slots.find(x => x.id === c.id);
         const teamOnly = /^\/t\s+/i.test(text); if (teamOnly) text = text.replace(/^\/t\s+/i, '');
         for (const s of l.slots) if (!s.isAI && (!teamOnly || (meSlot && s.team === meSlot.team))) { const o = clients.get(s.id); if (o) send(o.ws, { t: 'chat', from: (teamOnly ? '[tým] ' : '') + c.name, text, color: meSlot?.color }); }
