@@ -191,7 +191,7 @@ class App {
     for (const l of list) {
       const tr = document.createElement('tr');
       const state = l.state === 'lobby' ? t('Čeká na hráče') : (l.state === 'game' ? tf(t('Probíhá (%1 min)'), Math.floor(l.tick / 20 / 60)) : t('Dohráno'));
-      tr.innerHTML = `<td>${esc(l.name)}</td><td>${esc(l.host)}</td><td>${ERAS[l.era].name}</td><td>${l.players}/${l.max}</td><td>${state}</td><td></td>`;
+      tr.innerHTML = `<td>${esc(l.name)}</td><td>${esc(l.host)}</td><td>${ERAS[l.era].name}<div class="sub">${MAP_STYLES[l.mapStyle]?.name || ''}${MAP_SIZES[l.mapSize] ? ' · ' + MAP_SIZES[l.mapSize].size : ''}</div></td><td>${l.players}/${l.max}</td><td>${state}</td><td></td>`;
       const b = document.createElement('button'); b.textContent = t('Připojit'); b.disabled = l.state !== 'lobby' || l.players >= l.max; b.onclick = () => this.net.send({ t: 'join', id: l.id }); tr.lastElementChild.appendChild(b); tb.appendChild(tr);
     }
   }

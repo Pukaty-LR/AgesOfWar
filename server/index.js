@@ -38,7 +38,7 @@ const lobbies = new Map();   // id -> lobby
 
 function send(ws, msg) { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); }
 function lobbySummary(l) {
-  return { id: l.id, name: l.name, host: l.slots.find(s => s.id === l.hostId)?.name || '?', era: l.era, players: l.slots.length, max: l.max, state: l.state, tick: l.game ? l.game.sim.tick : 0 };
+  return { id: l.id, name: l.name, host: l.slots.find(s => s.id === l.hostId)?.name || '?', era: l.era, players: l.slots.length, max: l.max, state: l.state, tick: l.game ? l.game.sim.tick : 0, mapStyle: l.mapStyle || 'continent', mapSize: l.mapSize || 'medium' };
 }
 function broadcastLobbyList() {
   const list = [...lobbies.values()].map(lobbySummary);
