@@ -177,8 +177,9 @@ class App {
     const tb = $('saves-list'); tb.innerHTML = ''; $('saves-empty').classList.toggle('hidden', list.length > 0);
     for (const s of list) {
       const tr = document.createElement('tr'); const t = Math.floor((s.tick || 0) / 20); const when = new Date(s.time);
-      tr.innerHTML = `<td>${esc(s.name)}</td><td>${ERAS[s.era]?.name || '?'}</td><td>${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}</td><td>${when.toLocaleDateString('cs-CZ')} ${when.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}</td><td></td>`;
-      const b = document.createElement('button'); b.textContent = 'Načíst'; b.onclick = () => this.net.send({ t: 'load', name: s.name }); tr.lastElementChild.appendChild(b); tb.appendChild(tr);
+      tr.innerHTML = `<td>${s.name === 'autosave' ? '<i>Automatické uložení</i>' : esc(s.name)}</td><td>${ERAS[s.era]?.name || '?'}</td><td>${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}</td><td>${when.toLocaleDateString('cs-CZ')} ${when.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}</td><td></td>`;
+      const b = document.createElement('button'); b.textContent = 'Načíst'; b.onclick = () => this.net.send({ t: 'load', name: s.name }); tr.lastElementChild.appendChild(b);
+      const d = document.createElement('button'); d.textContent = 'Smazat'; d.className = 'secondary'; d.onclick = () => { if (confirm(`Smazat uloženou hru „${s.name}“?`)) this.net.send({ t: 'deleteSave', name: s.name }); }; tr.lastElementChild.appendChild(d); tb.appendChild(tr);
     }
   }
   renderServerList(list) {

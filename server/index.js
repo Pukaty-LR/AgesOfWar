@@ -301,6 +301,12 @@ wss.on('connection', (ws, req) => {
         send(ws, { t: 'saves', list });
         break;
       }
+      case 'deleteSave': {
+        if (!c.token) return;
+        try { fs.unlinkSync(path.join(SAVES, `${c.token}__${String(m.name).replace(/[\/]/g, '')}.json`)); } catch {}
+        handle({ t: 'saves' });
+        break;
+      }
       case 'load': { // recreate a single-player room from a save
         if (!c.token) return;
         const file = path.join(SAVES, `${c.token}__${String(m.name).replace(/[\\/]/g, '')}.json`);
