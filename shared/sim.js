@@ -268,8 +268,9 @@ export class Sim {
     const p = this.players[pid];
     if (!p || !p.alive || this.gameOver || !c) return;
     // coordinates from the network must be finite numbers, otherwise NaN would slip through range checks (invisible buildings etc.)
-    for (const k of ['x', 'y', 'tx', 'ty', 'x2', 'y2', 'ex', 'ey']) if (c[k] !== undefined && !Number.isFinite(c[k])) return;
+    for (const k of ['x', 'y', 'tx', 'ty', 'x0', 'y0', 'x1', 'y1']) if (c[k] !== undefined && !Number.isFinite(c[k])) return;
     if (c.tx !== undefined) { c.tx = c.tx | 0; c.ty = c.ty | 0; }
+    if (c.x0 !== undefined) { c.x0 = c.x0 | 0; c.y0 = c.y0 | 0; c.x1 = c.x1 | 0; c.y1 = c.y1 | 0; }
     const units = (c.ids || []).map(id => this.ents.get(id)).filter(e => e && e.owner === pid && !e.dead);
     const myUnits = units.filter(e => e.kind === 'unit');
     switch (c.t) {
