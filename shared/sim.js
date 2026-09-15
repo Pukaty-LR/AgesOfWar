@@ -1050,7 +1050,14 @@ export class Sim {
   }
   deltaSnapshot() {
     const ents = [];
-    for (const e of this.ents.values()) if (e.dirty) { ents.push(this.serializeEntity(e)); e.dirty = false; }
+    for (const e of this.ents.values()) if (e.dirty) {
+      const full = this.serializeEntity(e); e.dirty = false;
+      if (!e._last) { e._last = full; ents.push(full); continue; }
+      // field-level delta: only send what changed (client merges with Object.assign)
+      const last = e._last; const d = { i: full.i }; let n = 0;
+      for (const k in full) { if (k === 'i') continue; const v = full[k], lv = last[k]; if (typeof v === 'object' ? JSON.stringify(v) !== JSON.stringify(lv) : v !== lv) { d[k] = v; n++; } }
+      e._last = full; if (n) ents.push(d);
+    }
     const snap = { t: 'snap', tick: this.tick, ents, rem: this.removed, ev: this.events, players: this.players.map(p => this.serializePlayer(p)), gameOver: this.gameOver };
     this.removed = []; this.events = [];
     return snap;

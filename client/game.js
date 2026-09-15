@@ -68,10 +68,11 @@ export class Game {
       if (d.k === 'b' || d.k === 't' || d.k === 'm') this.setBlocked(e, true);
       return e;
     }
-    if (d.k === 'u' || d.k === 'p') { e.px = e.rx; e.py = e.ry; e.snapT = now; if (d.hp < e.hp) e.hitAt = this.renderer.time; }
-    if (d.k === 'b' && d.hp < e.hp && d.bl) e.hitAt = this.renderer.time;
+    const k = d.k || e.k; // deltas carry only changed fields
+    if ((k === 'u' || k === 'p') && d.x !== undefined) { e.px = e.rx; e.py = e.ry; e.snapT = now; }
+    if (d.hp !== undefined && d.hp < e.hp && (k !== 'b' || e.bl)) e.hitAt = this.renderer.time;
     Object.assign(e, d);
-    if (d.k === 'u' && e.hd) { e.px = e.x; e.py = e.y; e.rx = e.x; e.ry = e.y; }
+    if (k === 'u' && e.hd) { e.px = e.x; e.py = e.y; e.rx = e.x; e.ry = e.y; }
     return e;
   }
   removeEntity(id) {
