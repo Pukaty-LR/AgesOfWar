@@ -123,7 +123,7 @@ export class AIPlayer {
       if (!b.built || b.queue.length >= 2) continue;
       if (hasSiegeB && b.type !== 'siege' && siegeCount < 3 && p.res.s < 260 && tick > 20 * 60 * 3) continue; // save wood for siege engines
       const medics = units.filter(u => p.tech.units[u.type].heal).length;
-      const trains = sim.availableTrains(p, b).filter(t => t !== 'worker' && !p.tech.units[t].unique && !(p.tech.units[t].heal && medics >= 2));
+      const trains = sim.availableTrains(p, b).filter(t => t !== 'worker' && !p.tech.units[t].unique && !p.tech.units[t].capacity && !(p.tech.units[t].heal && medics >= 2));
       if (!trains.length) { if (b.type === 'hall' && sim.availableTrains(p, b).includes('hero') && !units.some(u => u.type === 'hero') && p.res.p > 700) sim.command(this.pid, { t: 'train', id: b.id, type: 'hero' }); continue; }
       let type;
       if (b.type === 'barracks') { const melee = trains.filter(t => p.tech.units[t].role === 'infantry'), rng = trains.filter(t => p.tech.units[t].role === 'ranged'); const wantMelee = army.filter(u => u.role === 'infantry').length <= army.filter(u => u.role === 'ranged').length * 1.2; const pool = wantMelee && melee.length ? melee : (rng.length ? rng : trains); type = pool[Math.floor(this.rng() * pool.length)]; }

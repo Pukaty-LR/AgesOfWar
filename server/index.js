@@ -344,6 +344,7 @@ wss.on('connection', (ws, req) => {
       }
       case 'wallPreview': { // ask the server for a wall path preview (uses sim's buildable grid)
         if (!l || !l.game) return;
+        const nowMs = Date.now(); if (!c.prevWin || nowMs - c.prevWin > 1000) { c.prevWin = nowMs; c.prevCount = 0; } if (++c.prevCount > 15) return; // A* per request: cap it
         const tiles = l.game.sim.wallPath(m.x0, m.y0, m.x1, m.y1);
         send(ws, { t: 'wallPreview', id: m.id, tiles });
         break;

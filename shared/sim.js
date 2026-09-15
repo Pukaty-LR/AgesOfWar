@@ -269,6 +269,8 @@ export class Sim {
     if (!p || !p.alive || this.gameOver || !c) return;
     // coordinates from the network must be finite numbers, otherwise NaN would slip through range checks (invisible buildings etc.)
     for (const k of ['x', 'y', 'tx', 'ty', 'x0', 'y0', 'x1', 'y1']) if (c[k] !== undefined && !Number.isFinite(c[k])) return;
+    const NEED = { move: ['x', 'y'], amove: ['x', 'y'], patrol: ['x', 'y'], smart: ['x', 'y'], rally: ['x', 'y'], unload: ['x', 'y'], wall: ['x0', 'y0', 'x1', 'y1'], build: ['tx', 'ty'] };
+    for (const k of NEED[c.t] || []) if (!Number.isFinite(c[k])) return;
     if (c.tx !== undefined) { c.tx = c.tx | 0; c.ty = c.ty | 0; }
     if (c.x0 !== undefined) { c.x0 = c.x0 | 0; c.y0 = c.y0 | 0; c.x1 = c.x1 | 0; c.y1 = c.y1 | 0; }
     const units = (c.ids || []).map(id => this.ents.get(id)).filter(e => e && e.owner === pid && !e.dead);
@@ -295,7 +297,7 @@ export class Sim {
       case 'move': { const f = this.formation(myUnits, c.x, c.y); myUnits.forEach((u, i) => this.setOrder(u, { type: 'move', x: f[i].x, y: f[i].y }, c.queue)); break; }
       case 'amove': { const f = this.formation(myUnits, c.x, c.y); myUnits.forEach((u, i) => this.setOrder(u, { type: 'amove', x: f[i].x, y: f[i].y }, c.queue)); break; }
       case 'patrol': { const f = this.formation(myUnits, c.x, c.y); myUnits.forEach((u, i) => { if (u.role === 'worker' || u.hidden) return; this.setOrder(u, { type: 'patrol', x: f[i].x, y: f[i].y, x0: u.x, y0: u.y }, c.queue); }); break; }
-      case 'attack': { const t = this.ents.get(c.targetId); if (!t || t.dead) break; for (const u of myUnits) this.setOrder(u, { type: 'attack', targetId: t.id }, c.queue); break; }
+      case 'attack': { const t = this.ents.get(c.targetId); if (!t || t.dead || !this.isEnemy({ owner: pid }, t)) break; for (const u of myUnits) this.setOrder(u, { type: 'attack', targetId: t.id }, c.queue); break; }
       case 'stop': for (const u of myUnits) { u.queue = []; this.setOrder(u, { type: 'idle' }); } break;
       case 'hold': for (const u of myUnits) { u.queue = []; this.setOrder(u, { type: 'hold' }); } break;
       case 'gather': { const t = this.ents.get(c.targetId); if (!t || (t.kind !== 'tree' && t.kind !== 'mine')) break; for (const u of myUnits) if (u.role === 'worker') this.setOrder(u, { type: 'gather', targetId: t.id, phase: 'go' }, c.queue); break; }
@@ -353,7 +355,7 @@ export class Sim {
       }
       case 'cancelTrain': {
         const b = this.ents.get(c.id); if (!b || b.kind !== 'building' || b.owner !== pid) break;
-        const idx = c.index ?? b.queue.length - 1;
+        const idx = Number.isInteger(c.index) ? c.index : b.queue.length - 1;
         if (idx < 0 || idx >= b.queue.length) break;
         const q = b.queue.splice(idx, 1)[0]; const cost = this.queueCost(p, b, q);
         p.res.p += cost.p; p.res.s += cost.s; p.dirty = true; b.dirty = true;
@@ -404,7 +406,7 @@ export class Sim {
       }
       case 'rally': for (const b of units.filter(e => e.kind === 'building')) this.setRally(b, c.x, c.y, c.targetId || 0); break;
       case 'cancelBuild': {
-        const b = this.ents.get(c.id); if (!b || b.kind !== 'building' || b.owner !== pid) break;
+        const b = this.ents.get(c.id); if (!b || b.kind !== 'building' || b.owner !== pid || b.built) break;
         const def = p.tech.buildings[b.type];
         if (!b.built) { p.res.p += Math.round(def.cost.p * 0.75); p.res.s += Math.round(def.cost.s * 0.75); }
         this.killBuilding(b, null, true);
@@ -507,6 +509,7 @@ export class Sim {
 
   setOrder(u, order, queue = false) {
     if (queue && u.order.type !== 'idle') { u.queue.push(order); return; }
+    if (u.hidden && !u.inside) { u.hidden = false; u.dirty = true; } // pulled out of a mine early
     // AoE-style: a worker pulled from gathering to build returns to the same resource afterwards
     if (order.type === 'build' && u.order.type === 'gather') u.resume = { type: 'gather', targetId: u.order.targetId, kind: u.order.kind, phase: 'go' };
     else if (order.type !== 'build') u.resume = null;
@@ -592,7 +595,7 @@ export class Sim {
       }
       case 'move': {
         moved = this.moveTo(u, def, o.x, o.y, 0.35);
-        if (!moved) { if (o.thenIdle) { u.order = { type: 'idle' }; u.dirty = true; } else this.nextOrder(u); }
+        if (!moved) { if (o.thenIdle) { u.order = { type: 'idle' }; u.path = null; u.dirty = true; } else this.nextOrder(u); }
         break;
       }
       case 'amove': {
@@ -736,6 +739,7 @@ export class Sim {
   }
 
   attackTarget(u, def, t, chase) {
+    if (t.inside) { u.engage = 0; return false; } // boarded units are out of reach
     const range = def.range + u.size;
     const d = this.distToEntity(u.x, u.y, t);
     const tooClose = def.minRange && d < def.minRange;
@@ -817,7 +821,7 @@ export class Sim {
   }
 
   dealDamage(t, dmg, bonus, attackerOwner, attackerId, attackerRole) {
-    if (t.dead || t.hp <= 0) return;
+    if (t.dead || t.hp <= 0 || t.owner === undefined) return;
     const p = this.players[t.owner];
     let armor = 0, mult = 1;
     if (t.kind === 'unit') { const d = p.tech.units[t.type]; armor = this.unitArmor(p, d) + this.buffArmor(t); mult = bonus[t.role] || 1; }
@@ -828,7 +832,7 @@ export class Sim {
     if (t.kind === 'unit' && attackerId && t.role !== 'worker' && (t.order.type === 'idle' || t.order.type === 'hold') && !t.engage) { t.engage = attackerId; if (!t.home) t.home = { x: t.x, y: t.y }; }
     if (t.kind === 'unit' && t.role === 'worker' && t.order.type === 'idle' && attackerId) {
       // flee toward nearest own hall
-      const hall = this.nearestDropoff(t); if (hall) t.order = { type: 'move', x: hall.x, y: hall.y + 2.5, thenIdle: true };
+      const hall = this.nearestDropoff(t); if (hall) { t.order = { type: 'move', x: hall.x, y: hall.y + 2.5, thenIdle: true }; t.path = null; }
     }
     if (this.tick - p.lastAlert > 200) { p.lastAlert = this.tick; this.events.push({ t: 'alert', owner: t.owner, x: t.x, y: t.y, k: t.kind === 'building' ? 'building' : 'unit' }); }
     if (t.hp <= 0) {
@@ -856,6 +860,7 @@ export class Sim {
     if (killerOwner !== null && killerOwner !== undefined && this.players[killerOwner]) this.players[killerOwner].stats.unitsKilled++;
     if (u.lastAttackerId) this.grantXp(u.lastAttackerId, 20 + Math.round(u.maxHp / 10));
     this.events.push({ t: 'death', x: u.x, y: u.y, o: u.owner, k: 'unit', ty: u.type, f: u.facing });
+    if (u.inside) { const tr = this.ents.get(u.inside); if (tr && tr.cargo) { const ci = tr.cargo.indexOf(u.id); if (ci >= 0) { tr.cargo.splice(ci, 1); tr.dirty = true; } } }
     // a sinking transport takes its passengers with it
     if (u.cargo) for (const id of u.cargo) { const c2 = this.ents.get(id); if (c2 && !c2.dead) { c2.dead = true; p.stats.unitsLost++; this.remove(c2); } }
     this.remove(u);
@@ -903,6 +908,7 @@ export class Sim {
     let node = this.ents.get(o.targetId);
     if (o.phase !== 'return' && (!node || node.dead || node.amount <= 0)) {
       const alt = this.nearestNode(u, o.kind || (node ? node.kind : 'tree'), 12);
+      if (o.phase === 'inside' && u.hidden) { u.hidden = false; u.dirty = true; o.phase = 'go'; }
       if (!alt) { if (u.carry) { o.phase = 'return'; } else { this.nextOrder(u); return false; } }
       else { o.targetId = alt.id; node = alt; u.path = null; }
     }
@@ -1080,7 +1086,7 @@ export class Sim {
     for (const p of this.players) {
       if (!p.alive || p.neutral) continue;
       let hasBuilding = false;
-      for (const e of this.ents.values()) if (e.kind === 'building' && e.owner === p.id && e.type !== 'wall' && !e.dead) { hasBuilding = true; break; }
+      for (const e of this.ents.values()) if (e.kind === 'building' && e.owner === p.id && e.type !== 'wall' && e.type !== 'gate' && !e.dead) { hasBuilding = true; break; }
       if (!hasBuilding) {
         p.alive = false; p.dirty = true;
         this.events.push({ t: 'eliminated', owner: p.id });
