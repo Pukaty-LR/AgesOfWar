@@ -34,6 +34,7 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - **Léčitelé** (Léčitel / Zdravotník / Opravný dron) se cvičí v radnici od úrovně 2 a léčí zraněné spojence v okolí.
 - **Encyklopedie** v menu ukazuje všechny jednotky, budovy, frakce a výzkumy každé éry. V singleplayeru jde v menu (Esc) nastavit rychlost hry 1× / 1,5× / 2×.
 - Boti nesou jména vůdců frakcí (Caesar, Vercingetorix, Guderian, Žukov, Admirál Vega…), kamera si pamatuje pozice F5–F8 (Ctrl+F5 uloží).
+- V lobby lze zadat **seed** mapy (stejný seed = stejná mapa) a zvolit **náhodnou frakci** pro hráče i boty; nastavit startovní suroviny a odkrytou mapu.
 - **Mapy**: v lobby vybíráš styl (Pevnina s mořem, Řeka, Ostrovy, Pláně, Jezera) a velikost (72, 96, 128). Generátor vždy zaručí pozemní cestu mezi základnami.
 - **Tři éry**: Starověk (Řím, Galové, Řecko, Kartágo), Druhá světová (Německo, Polsko, SSSR, USA, Británie) a Sci-fi (Terranská federace, Marťanská republika, Syntetici, Nomádi Prázdnoty) – každá s vlastními jednotkami, budovami, surovinami, hudbou a barevným tématem HUD.
 - Když ti spadne prohlížeč nebo obnovíš stránku, hra běží dál a po načtení se **automaticky připojíš zpět** do své rozehrané hry (server ji drží 3 minuty).
