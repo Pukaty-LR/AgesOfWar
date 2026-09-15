@@ -25,7 +25,7 @@ export class AIPlayer {
     const tick = sim.tick;
     const units = this.mine('unit'), buildings = this.mine('building');
     const workers = units.filter(u => u.role === 'worker');
-    const army = units.filter(u => u.role !== 'worker' && u.domain === 'land');
+    const army = units.filter(u => u.role !== 'worker' && u.domain !== 'sea');
     const ships = units.filter(u => u.domain === 'sea');
     const halls = buildings.filter(b => b.type === 'hall' && b.built);
     const hall = halls[0] || buildings.find(b => b.built) || buildings[0];
@@ -214,7 +214,7 @@ export class AIPlayer {
         if (taken) continue;
         let creeps = 0; sim.unitsNear(e.x, e.y, 8, u => { if (u.owner !== undefined && sim.players[u.owner].neutral) creeps++; });
         if (creeps) {
-          const idle = this.mine('unit').filter(u => u.role !== 'worker' && u.domain === 'land' && u.order.type === 'idle');
+          const idle = this.mine('unit').filter(u => u.role !== 'worker' && u.domain !== 'sea' && u.order.type === 'idle');
           if (idle.length >= Math.max(5, creeps * 2)) sim.command(this.pid, { t: 'amove', ids: idle.map(u => u.id), x: e.x, y: e.y });
           this._blocked = true; continue;
         }

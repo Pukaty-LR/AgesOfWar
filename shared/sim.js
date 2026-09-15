@@ -29,6 +29,7 @@ export class Sim {
     this.passSea = new Uint8Array(w * h);
     this.buildable = new Uint8Array(w * h);
     this.passTeam = []; for (let t = 0; t < MAX_TEAMS; t++) this.passTeam.push(new Uint8Array(w * h)); // land passability incl. own-team gates
+    this.passHover = []; for (let t = 0; t < MAX_TEAMS; t++) this.passHover.push(new Uint8Array(w * h)); // hover units: land (own gates) + shallow water
     for (let i = 0; i < w * h; i++) this.recomputeTile(i);
     this.players = players.map((p, idx) => {
       const tech = makeTechTable(eraId, p.faction);
@@ -60,9 +61,15 @@ export class Sim {
     // gates: passable for the owner's team only
     let gateTeam = -1;
     if (b) { const e = this.ents.get(this.blockId[i]); if (e && e.kind === 'building' && e.type === 'gate' && e.built) gateTeam = this.players[e.owner].team; }
-    for (let tm = 0; tm < MAX_TEAMS; tm++) this.passTeam[tm][i] = (land && (!b || gateTeam === tm)) ? 1 : 0;
+    const shallow = t === T.SHALLOW;
+    for (let tm = 0; tm < MAX_TEAMS; tm++) { const lp = (land && (!b || gateTeam === tm)) ? 1 : 0; this.passTeam[tm][i] = lp; this.passHover[tm][i] = (lp || (shallow && !b)) ? 1 : 0; }
   }
-  passFor(domain, team = -1) { if (domain === 'sea') return this.passSea; return team >= 0 && team < MAX_TEAMS ? this.passTeam[team] : this.passLand; }
+  passFor(domain, team = -1) {
+    if (domain === 'sea') return this.passSea;
+    const ok = team >= 0 && team < MAX_TEAMS;
+    if (domain === 'hover') return ok ? this.passHover[team] : this.passHover[0];
+    return ok ? this.passTeam[team] : this.passLand;
+  }
   teamOf(e) { return e && e.owner !== undefined ? this.players[e.owner].team : -1; }
   block(tx, ty, w, h, id) {
     for (let y = ty; y < ty + h; y++) for (let x = tx; x < tx + w; x++) {
@@ -610,7 +617,7 @@ export class Sim {
     let px = 0, py = 0, n = 0;
     const self = u;
     this.unitsNear(u.x, u.y, 1.2, e => {
-      if (e === self || e.domain !== self.domain) return;
+      if (e === self || (e.domain === 'sea') !== (self.domain === 'sea')) return;
       const dx = self.x - e.x, dy = self.y - e.y;
       const d = Math.hypot(dx, dy); const min = self.size + e.size;
       if (d < min && d > 1e-4) { const f = (min - d) / min; px += dx / d * f; py += dy / d * f; n++; }
