@@ -24,6 +24,7 @@
       <button id="btn-quick" class="big primary">Rychlá hra proti AI</button>
       <button id="btn-host" class="big">Hostovat hru</button>
       <button id="btn-join" class="big">Připojit se · seznam serverů</button>
+      <button id="btn-load" class="big">Načíst uloženou hru</button>
       <button id="btn-codex" class="big">Encyklopedie</button>
       <button id="btn-settings" class="big">Nastavení a ovládání</button>
     </div>
@@ -78,6 +79,15 @@
         <input id="lobby-chat-input" placeholder="Napiš zprávu a stiskni Enter">
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ===== SAVES ===== -->
+<div id="screen-saves" class="screen hidden">
+  <div class="panel wide">
+    <div class="panel-head"><h2>Uložené hry</h2><button id="btn-saves-back">← Zpět</button></div>
+    <table class="servers"><thead><tr><th>Název</th><th>Éra</th><th>Herní čas</th><th>Uloženo</th><th></th></tr></thead><tbody id="saves-list"></tbody></table>
+    <div class="empty" id="saves-empty">Zatím žádná uložená hra. Ve hře proti AI otevři menu (Esc) a zvol „Uložit hru".</div>
   </div>
 </div>
 
@@ -150,6 +160,7 @@
     <label class="field"><span>Rychlost kamery</span><input type="range" id="scroll-speed2" min="20" max="100"></label>
     <label class="field check"><input type="checkbox" id="opt-edge2"><span>Posun kamery okrajem obrazovky</span></label>
     <label class="field check"><input type="checkbox" id="opt-hp2"><span>Zobrazovat životy vždy</span></label>
+    <button id="btn-save" class="big">Uložit hru</button>
     <button id="btn-help" class="big">Nápověda a ovládání</button>
     <button id="btn-surrender" class="big">Vzdát se a odejít</button></div></div>
   <div id="help-overlay" class="overlay hidden"><div class="panel wide"><div class="panel-head"><h2>Ovládání</h2><button id="btn-help-close">← Zpět</button></div>

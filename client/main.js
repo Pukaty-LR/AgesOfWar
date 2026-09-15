@@ -9,7 +9,7 @@ import { Game } from './game.js';
 import { Renderer } from './render/renderer.js';
 
 const $ = id => document.getElementById(id);
-const screens = ['menu', 'browser', 'host', 'lobby', 'settings', 'game', 'codex'];
+const screens = ['menu', 'browser', 'host', 'lobby', 'settings', 'game', 'codex', 'saves'];
 
 class App {
   constructor() {
@@ -69,6 +69,9 @@ class App {
     this.codexEra = this.settings.era || 'antiquity'; this.codexTab = 'units';
     $('btn-codex').onclick = () => { this.show('codex'); this.renderCodex(); };
     $('btn-codex-back').onclick = () => this.show('menu');
+    $('btn-load').onclick = () => { if (!this.name()) return; this.show('saves'); this.net.send({ t: 'saves' }); };
+    $('btn-saves-back').onclick = () => this.show('menu');
+    $('btn-save').onclick = () => { const name = prompt('Název uložené hry:', `${ERAS[this.game.era].name} ${new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}`); if (name === null) return; this.net.send({ t: 'save', name }); };
     for (const b of document.querySelectorAll('.codex-tab')) b.onclick = () => { this.codexTab = b.dataset.tab; this.renderCodex(); };
     $('btn-settings-back').onclick = () => this.show('menu');
     $('btn-lobby-leave').onclick = () => { this.net.send({ t: 'leave' }); this.lobby = null; this.show('menu'); };
@@ -129,6 +132,8 @@ class App {
     n.on('snap', m => this.game.onSnap(m));
     n.on('wallPreview', m => this.game.onWallPreview(m));
     n.on('paused', m => this.ui.setPaused(!!m.v));
+    n.on('saved', m => { this.ui.alert(`Hra uložena jako „${m.name}".`, false); this.audio.sfx('buildingDone', 0.6); });
+    n.on('saves', m => this.renderSaves(m.list));
     n.on('countdown', m => { let n2 = m.n; const btn = $('btn-start'); const tick = () => { if (this.screen !== 'lobby') return; this.toast(`Hra začíná za ${n2}…`); this.audio.sfx('click', 0.5); if (--n2 > 0) setTimeout(tick, 1000); }; tick(); btn.disabled = true; setTimeout(() => { btn.disabled = false; }, m.n * 1000 + 500); });
     n.on('mping', m => { if (this.screen !== 'game') return; this.ui.minimapPing(m.x, m.y); this.game.renderer.addEffect({ kind: 'ring', x: m.x, y: m.y, color: 'rgba(255,230,90,0.9)' }); this.game.lastAlert = { x: m.x, y: m.y, t: performance.now() }; this.ui.alert(`${m.from} označil místo na mapě (Space = kamera)`, false); this.audio.sfx('select', 0.6); });
   }
@@ -167,6 +172,14 @@ class App {
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, c.width, c.height); const s = c.width / (2 * size); ctx.setTransform(s, s, -s, s, c.width / 2, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(tmp, 0, 0);
     map.spawns.forEach((sp, i) => { ctx.fillStyle = TEAM_COLORS[i].hex; ctx.fillRect(sp.x - 2, sp.y - 2, 4, 4); });
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  renderSaves(list) {
+    const tb = $('saves-list'); tb.innerHTML = ''; $('saves-empty').classList.toggle('hidden', list.length > 0);
+    for (const s of list) {
+      const tr = document.createElement('tr'); const t = Math.floor((s.tick || 0) / 20); const when = new Date(s.time);
+      tr.innerHTML = `<td>${esc(s.name)}</td><td>${ERAS[s.era]?.name || '?'}</td><td>${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}</td><td>${when.toLocaleDateString('cs-CZ')} ${when.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}</td><td></td>`;
+      const b = document.createElement('button'); b.textContent = 'Načíst'; b.onclick = () => this.net.send({ t: 'load', name: s.name }); tr.lastElementChild.appendChild(b); tb.appendChild(tr);
+    }
   }
   renderServerList(list) {
     const tb = $('server-list'); tb.innerHTML = ''; $('server-empty').classList.toggle('hidden', list.length > 0);

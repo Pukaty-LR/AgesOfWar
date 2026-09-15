@@ -10,7 +10,7 @@ const MAX_TEAMS = 8;
 
 export class Sim {
   constructor({ seed = 1, size = 96, eraId = 'antiquity', players = [], mapStyle = 'continent', startRes = 'normal' }) {
-    this.seed = seed; this.mapStyle = mapStyle;
+    this.seed = seed; this.mapStyle = mapStyle; this.startRes = startRes;
     const START = { low: { p: 200, s: 100 }, normal: { p: 450, s: 250 }, high: { p: 1500, s: 1000 } }[startRes] || { p: 450, s: 250 };
     this.rng = mulberry32(seed ^ 0x9E3779B9);
     this.eraId = eraId;
@@ -1036,6 +1036,28 @@ export class Sim {
       this.gameOver = { winnerTeam: winner, tick: this.tick };
       this.events.push({ t: 'gameover', winnerTeam: winner });
     }
+  }
+
+  // ---------- save / load (single-player) ----------
+  saveState(extra = {}) {
+    const ents = [];
+    for (const e of this.ents.values()) { const c = { ...e }; delete c._last; delete c.dirty; delete c.path; ents.push(c); }
+    return { v: 1, seed: this.seed, size: this.w, eraId: this.eraId, mapStyle: this.mapStyle, startRes: this.startRes, tick: this.tick, nextId: this.nextId,
+      players: this.players.map(p => ({ name: p.name, faction: p.faction, team: p.team, color: p.color, isAI: p.isAI, neutral: p.neutral, res: p.res, alive: p.alive, stats: p.stats, research: p.research, lastAlert: p.lastAlert })),
+      ents, gameOver: this.gameOver, ...extra };
+  }
+  static loadState(data) {
+    const sim = new Sim({ seed: data.seed, size: data.size, eraId: data.eraId, mapStyle: data.mapStyle, startRes: data.startRes, players: data.players.map(p => ({ name: p.name, faction: p.faction, team: p.team, color: p.color, isAI: p.isAI, neutral: p.neutral })) });
+    // drop the freshly generated world and restore the saved one
+    for (const e of Array.from(sim.ents.values())) sim.remove(e);
+    sim.removed = []; sim.events = [];
+    for (const e of data.ents) { e.dirty = true; e.path = null; sim.ents.set(e.id, e); if (e.kind === 'building' || e.kind === 'tree' || e.kind === 'mine') sim.block(e.tx, e.ty, e.w, e.h, e.id); }
+    // gates need a second pass so team passability sees the built gate entities
+    for (const e of sim.ents.values()) if (e.kind === 'building' && e.type === 'gate') sim.block(e.tx, e.ty, 1, 1, e.id);
+    data.players.forEach((p, i) => { const q = sim.players[i]; q.res = p.res; q.alive = p.alive; q.stats = p.stats; q.research = p.research || q.research; q.lastAlert = p.lastAlert || -1000; });
+    sim.tick = data.tick; sim.nextId = data.nextId; sim.gameOver = data.gameOver || null;
+    for (const p of sim.players) sim.recountPop(p);
+    return sim;
   }
 
   // ---------- serialization ----------

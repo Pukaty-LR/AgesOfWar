@@ -12,6 +12,7 @@ import { MAP_STYLES, MAP_SIZES } from '../shared/mapgen.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
+const SAVES = path.join(ROOT, 'saves');
 const PORT = +(process.env.PORT || 8080);
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
@@ -78,12 +79,13 @@ function leaveLobby(c, silent = false, explicit = false) {
   broadcastLobbyList();
 }
 
-function startGame(l) {
-  const seed = l.seed ? Math.abs(l.seed) : (Math.random() * 0x7fffffff) | 0;
+function startGame(l, presetSim = null, aiStates = null) {
+  const seed = presetSim ? presetSim.seed : (l.seed ? Math.abs(l.seed) : (Math.random() * 0x7fffffff) | 0);
   const players = l.slots.map(s => { let faction = s.faction; if (faction === 'random') { const fs = ERAS[l.era].factions; const fac = fs[Math.floor(Math.random() * fs.length)]; faction = fac.id; s.faction = faction; if (s.isAI) { s.name = ''; s.name = botName(l, fac); } } return { name: s.name, faction, team: s.team, color: s.color, isAI: s.isAI }; });
   players.push({ name: 'Divočina', faction: ERAS[l.era].factions[0].id, team: 99, color: 7, isAI: false, neutral: true }); // neutral creeps
-  const sim = new Sim({ seed, size: (MAP_SIZES[l.mapSize] || MAP_SIZES.medium).size, eraId: l.era, players, mapStyle: l.mapStyle || 'continent', startRes: l.startRes || 'normal' });
+  const sim = presetSim || new Sim({ seed, size: (MAP_SIZES[l.mapSize] || MAP_SIZES.medium).size, eraId: l.era, players, mapStyle: l.mapStyle || 'continent', startRes: l.startRes || 'normal' });
   const ais = l.slots.map((s, i) => s.isAI ? new AIPlayer(sim, i, s.diff || 'normal') : null).filter(Boolean);
+  if (aiStates) for (const a of ais) { const st = aiStates.find(x => x.pid === a.pid); if (st) Object.assign(a, { wave: st.wave, buildStep: st.buildStep, lastAttackTick: st.lastAttackTick, lastBuildTick: st.lastBuildTick, wallGateAt: st.wallGateAt, rallyPoint: st.rallyPoint }); }
   const game = { sim, ais, seed, interval: null, acc: 0, last: Date.now(), chat(text) { for (const s of l.slots) if (!s.isAI) { const c = clients.get(s.id); if (c) send(c.ws, { t: 'chat', from: '', text, sys: true }); } } };
   l.game = game; l.state = 'game';
   const map = sim.mapData();
@@ -268,6 +270,40 @@ wss.on('connection', (ws, req) => {
         const meSlot = l.slots.find(x => x.id === c.id);
         const teamOnly = /^\/t\s+/i.test(text); if (teamOnly) text = text.replace(/^\/t\s+/i, '');
         for (const s of l.slots) if (!s.isAI && (!teamOnly || (meSlot && s.team === meSlot.team))) { const o = clients.get(s.id); if (o) send(o.ws, { t: 'chat', from: (teamOnly ? '[tým] ' : '') + c.name, text, color: meSlot?.color }); }
+        break;
+      }
+      case 'save': { // single-player: write the whole simulation to disk
+        if (!l || !l.game || !c.token) return;
+        if (l.slots.filter(s => !s.isAI && s.token).length > 1) return send(ws, { t: 'error', msg: 'Ukládat lze jen hru proti AI.' });
+        try {
+          const sim = l.game.sim;
+          const data = sim.saveState({ savedAt: Date.now(), lobbyName: l.name, era: l.era, ais: l.game.ais.map(a => ({ pid: a.pid, diff: a.diff, wave: a.wave, buildStep: a.buildStep, lastAttackTick: a.lastAttackTick, lastBuildTick: a.lastBuildTick, wallGateAt: a.wallGateAt, rallyPoint: a.rallyPoint })), humanSlot: l.slots.findIndex(s => s.id === c.id), humanName: c.name });
+          fs.mkdirSync(SAVES, { recursive: true });
+          const name = String(m.name || 'uloz').replace(/[^\w\-áéíóúůýčďěňřšťžÁÉÍÓÚŮÝČĎĚŇŘŠŤŽ ]/g, '').slice(0, 30) || 'uloz';
+          fs.writeFileSync(path.join(SAVES, `${c.token}__${name}.json`), JSON.stringify(data));
+          send(ws, { t: 'saved', name });
+        } catch (err) { console.error('save failed', err); send(ws, { t: 'error', msg: 'Uložení selhalo.' }); }
+        break;
+      }
+      case 'saves': { // list this player's saves
+        if (!c.token) return send(ws, { t: 'saves', list: [] });
+        let list = [];
+        try { list = fs.readdirSync(SAVES).filter(f => f.startsWith(c.token + '__') && f.endsWith('.json')).map(f => { const st = fs.statSync(path.join(SAVES, f)); let meta = {}; try { const d = JSON.parse(fs.readFileSync(path.join(SAVES, f), 'utf8')); meta = { era: d.eraId, tick: d.tick, lobbyName: d.lobbyName }; } catch {} return { name: f.slice(c.token.length + 2, -5), time: st.mtimeMs, ...meta }; }).sort((a, b) => b.time - a.time); } catch {}
+        send(ws, { t: 'saves', list });
+        break;
+      }
+      case 'load': { // recreate a single-player room from a save
+        if (!c.token) return;
+        const file = path.join(SAVES, `${c.token}__${String(m.name).replace(/[\\/]/g, '')}.json`);
+        let data; try { data = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return send(ws, { t: 'error', msg: 'Uloženou hru se nepodařilo načíst.' }); }
+        try {
+          if (l) leaveLobby(c, true, true); abandonRooms(c);
+          const sim = Sim.loadState(data);
+          const slots = data.players.filter(p => !p.neutral).map((p, i) => ({ id: i === data.humanSlot ? c.id : -1 - i - Math.random(), name: i === data.humanSlot ? c.name : p.name, faction: p.faction, team: p.team, color: p.color, ready: true, isAI: p.isAI, diff: (data.ais.find(a => a.pid === i) || {}).diff || 'normal', token: i === data.humanSlot ? c.token : undefined }));
+          const lobby = { id: nextLobbyId++, name: data.lobbyName || 'Načtená hra', hostId: c.id, era: data.eraId, max: slots.length, state: 'lobby', slots, game: null, mapStyle: data.mapStyle, mapSize: 'medium', startRes: data.startRes, reveal: false, seed: data.seed };
+          lobbies.set(lobby.id, lobby); c.lobby = lobby;
+          startGame(lobby, sim, data.ais);
+        } catch (err) { console.error('load failed', err); send(ws, { t: 'error', msg: 'Načtení selhalo.' }); }
         break;
       }
       case 'speed': { // single-player only: 1x / 1.5x / 2x simulation speed
