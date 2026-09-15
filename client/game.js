@@ -40,6 +40,7 @@ export class Game {
     this.blocked = new Uint8Array(this.map.w * this.map.h); this.wallGrid.clear();
     delete this.renderer.updateFog; // undo the end-of-game map reveal from a previous match
     this.renderer.setMap(this.map, this.era); this.renderer.prebuild();
+    if (g.explored) { try { const bin = atob(g.explored); const R = this.renderer, w = this.map.w, h = this.map.h; for (let i = 0; i < w * h && i < bin.length; i++) if (bin.charCodeAt(i)) { R.explored[i] = 1; const tx = i % w, ty = (i / w) | 0; for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 3; dx++) R.expF[(ty * 3 + dy) * R.fw + tx * 3 + dx] = 1; } } catch (err) { console.warn('explored map', err); } }
     if (g.reveal) this.renderer.updateFog = function () { this.expF.fill(1); this.visF.fill(1); this.explored.fill(1); this.visible.fill(1); this.fogCtx.clearRect(0, 0, this.fw, this.fh); };
     const s = this.map.spawns[this.me]; this.renderer.cam.x = s.x; this.renderer.cam.y = s.y; this.renderer.cam.zoom = 1;
     this.memB = new Map(); // enemy buildings remembered under the fog (AoE-style ghosts)

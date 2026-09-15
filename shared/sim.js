@@ -540,8 +540,22 @@ export class Sim {
       else if (e.kind === 'building') this.stepBuilding(e);
       else if (e.kind === 'proj') this.stepProj(e);
     }
+    if (this.tick % 10 === 5) this.updateExplored();
     if (this.tick % 20 === 0) this.checkVictory();
   }
+  /** Per-team explored map (tile level), kept on the server so fog memory survives reconnects and saves. */
+  updateExplored() {
+    const w = this.w, h = this.h; if (!this.explored) this.explored = {};
+    for (const e of this.ents.values()) {
+      if (e.dead || (e.kind !== 'unit' && e.kind !== 'building')) continue;
+      const p = this.players[e.owner]; if (!p || p.neutral) continue;
+      let arr = this.explored[p.team]; if (!arr) arr = this.explored[p.team] = new Uint8Array(w * h);
+      let r; if (e.kind === 'unit') { if (e.inside) continue; r = p.tech.units[e.type]?.sight || 7; } else r = e.type === 'tower' ? 9 : (e.w > 1 ? 8 : 5);
+      const cx = e.x, cy = e.y, r2 = r * r; const x0 = Math.max(0, (cx - r) | 0), x1 = Math.min(w - 1, (cx + r) | 0), y0 = Math.max(0, (cy - r) | 0), y1 = Math.min(h - 1, (cy + r) | 0);
+      for (let ty = y0; ty <= y1; ty++) { const dy = ty + 0.5 - cy; const row = ty * w; for (let tx = x0; tx <= x1; tx++) { const dx = tx + 0.5 - cx; if (dx * dx + dy * dy <= r2) arr[row + tx] = 1; } }
+    }
+  }
+  exploredFor(team) { const a = this.explored?.[team]; return a ? Buffer.from(a).toString('base64') : null; }
 
   // ---------- units ----------
   stepUnit(u) {
@@ -1081,7 +1095,7 @@ export class Sim {
     for (const e of this.ents.values()) { const c = { ...e }; delete c._last; delete c.dirty; delete c.path; ents.push(c); }
     return { v: 1, seed: this.seed, size: this.w, eraId: this.eraId, mapStyle: this.mapStyle, startRes: this.startRes, tick: this.tick, nextId: this.nextId,
       players: this.players.map(p => ({ name: p.name, faction: p.faction, team: p.team, color: p.color, isAI: p.isAI, neutral: p.neutral, res: p.res, alive: p.alive, stats: p.stats, research: p.research, lastAlert: p.lastAlert })),
-      ents, gameOver: this.gameOver, ...extra };
+      ents, gameOver: this.gameOver, explored: Object.fromEntries(Object.entries(this.explored || {}).map(([t, a]) => [t, Buffer.from(a).toString('base64')])), ...extra };
   }
   static loadState(data) {
     const sim = new Sim({ seed: data.seed, size: data.size, eraId: data.eraId, mapStyle: data.mapStyle, startRes: data.startRes, players: data.players.map(p => ({ name: p.name, faction: p.faction, team: p.team, color: p.color, isAI: p.isAI, neutral: p.neutral })) });
@@ -1093,6 +1107,7 @@ export class Sim {
     for (const e of sim.ents.values()) if (e.kind === 'building' && e.type === 'gate') sim.block(e.tx, e.ty, 1, 1, e.id);
     data.players.forEach((p, i) => { const q = sim.players[i]; q.res = p.res; q.alive = p.alive; q.stats = p.stats; q.research = p.research || q.research; q.lastAlert = p.lastAlert || -1000; });
     sim.tick = data.tick; sim.nextId = data.nextId; sim.gameOver = data.gameOver || null;
+    if (data.explored) { sim.explored = {}; for (const [t, b] of Object.entries(data.explored)) sim.explored[t] = new Uint8Array(Buffer.from(b, 'base64')); }
     for (const p of sim.players) sim.recountPop(p);
     return sim;
   }
