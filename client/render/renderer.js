@@ -346,6 +346,14 @@ export class Renderer {
       ctx.strokeStyle = buffed ? `rgba(255,240,160,${pulse + 0.3})` : `rgba(255,220,120,${pulse * 0.5})`; ctx.lineWidth = (buffed ? 3 : 2) * z; ctx.setLineDash([6 * z, 6 * z]); ctx.beginPath(); ctx.ellipse(sx, sy, r * TW / 2 * z, r * TH / 2 * z, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
       if (buffed) { const grd = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * TW / 2 * z); grd.addColorStop(0, 'rgba(255,220,120,0.12)'); grd.addColorStop(1, 'rgba(255,220,120,0)'); ctx.fillStyle = grd; ctx.beginPath(); ctx.ellipse(sx, sy, r * TW / 2 * z, r * TH / 2 * z, 0, 0, Math.PI * 2); ctx.fill(); }
     }
+    // attack range of selected own towers (Age of Empires style)
+    for (const id of g.selection) {
+      const e = g.ents.get(id); if (!e || e.k !== 'b' || e.o !== g.me || !e.bl) continue;
+      const def = g.buildingDef(e); if (!def || !def.attack) continue;
+      let r = def.attack.range; for (const up of def.upgrades || []) if (up.level <= (e.lv || 1) && up.rangeAdd) r += up.rangeAdd;
+      const [sx, sy] = this.worldToScreen(e.x, e.y);
+      ctx.strokeStyle = 'rgba(255,120,90,0.55)'; ctx.lineWidth = 1.5 * z; ctx.setLineDash([5 * z, 5 * z]); ctx.beginPath(); ctx.ellipse(sx, sy, r * TW / 2 * z, r * TH / 2 * z, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    }
     // rally points of selected buildings
     for (const id of g.selection) {
       const e = g.ents.get(id); if (!e || e.k !== 'b' || !e.r || e.o !== g.me) continue;

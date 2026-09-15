@@ -193,7 +193,8 @@ export class UI {
       single.classList.add('hidden'); multi.classList.remove('hidden');
       if (sig !== this.lastSig || multi.children.length !== sel.length + 1) {
         multi.innerHTML = '';
-        const head = document.createElement('div'); head.className = 'multi-head'; head.textContent = tf(sel.length < 5 ? t('%1 jednotky vybráno') : t('%1 jednotek vybráno'), sel.length); multi.appendChild(head);
+        const head = document.createElement('div'); head.className = 'multi-head'; const byType = new Map(); for (const e of sel) { const n = game.entName(e); byType.set(n, (byType.get(n) || 0) + 1); }
+        head.textContent = tf(sel.length < 5 ? t('%1 jednotky vybráno') : t('%1 jednotek vybráno'), sel.length) + (byType.size > 1 ? ': ' + [...byType.entries()].sort((a, b) => b[1] - a[1]).map(([n, c]) => `${c}× ${n}`).join(', ') : ''); multi.appendChild(head);
         for (const e of sel) { const d = document.createElement('div'); d.className = 'mi' + (e.k === 'u' && e.t === game.subgroup && game.subgroupTypes().length > 1 ? ' sub' : ''); d.title = game.entName(e) + (game.subgroupTypes().length > 1 ? t(' (Tab přepíná podskupinu)') : ''); const c = this.portrait(game, e); const cc = document.createElement('canvas'); cc.width = 44; cc.height = 44; cc.getContext('2d').drawImage(c, 0, 0, 44, 44); d.appendChild(cc); const hp = document.createElement('div'); hp.className = 'hp'; hp.style.width = (e.hp / e.m * 100) + '%'; d.appendChild(hp); d.onclick = ev => { if (ev.shiftKey) { game.selection.delete(e.i); game.ui.dirty = true; game.ui.selectionChanged = true; } else game.select(sel.filter(x => x.k === e.k && x.t === e.t && x.o === e.o)); }; multi.appendChild(d); }
       } else { let i = 1; for (const e of sel) { const hp = multi.children[i++]?.querySelector('.hp'); if (hp) hp.style.width = (e.hp / e.m * 100) + '%'; } }
     }
