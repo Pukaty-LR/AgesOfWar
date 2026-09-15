@@ -24,9 +24,9 @@ const STAT_SVG = {
   left: '<svg viewBox="0 0 24 24"><path d="M12 3v18M5 8l7-5 7 5M7 14l5 7 5-7"/></svg>',
 };
 
-// Soft hyphens for long Czech words so command-card labels wrap at syllables instead of being clipped.
-const HYPH = { 'Shromaždiště': 'Shromaž­diště', 'Dělostřelecký': 'Dělo­střelecký', 'Dělostřelectvo': 'Dělo­střelectvo', 'Energetická': 'Energe­tická', 'Kulometčík': 'Kulo­metčík', 'Lučištník': 'Lučišt­ník', 'lučištník': 'lučišt­ník', 'Marťanská': 'Mar­ťanská', 'Odstřelovací': 'Odstřelo­vací', 'Odstřelovač': 'Odstře­lovač', 'Plamenometčík': 'Plameno­metčík', 'Protitankové': 'Proti­tankové', 'Přetížení': 'Pře­tížení', 'Torpédoborec': 'Torpédo­borec', 'Velitelství': 'Velitel­ství', 'Výcviková': 'Výcvi­ková', 'Výsadkový': 'Výsad­kový', 'Výsadkář': 'Výsad­kář', 'Zdravotník': 'Zdravot­ník', 'transportér': 'trans­portér', 'Štítonoš': 'Štíto­noš' };
-function hyph(s) { return String(s).replace(/[A-Za-zÀ-ž]+/g, w => HYPH[w] || w); }
+// Syllable break points (·) for long Czech words; hyph() turns them into U+00AD soft hyphens so labels wrap with a hyphen instead of being clipped.
+const HYPH = { 'Shromaždiště': 'Shro·maž·diš·tě', 'Dělostřelecký': 'Dě·lo·stře·lec·ký', 'Dělostřelectvo': 'Dě·lo·stře·lec·tvo', 'Energetická': 'Ener·ge·tic·ká', 'Kulometčík': 'Ku·lo·met·čík', 'Lučištník': 'Lu·čišt·ník', 'lučištník': 'lu·čišt·ník', 'Marťanská': 'Mar·ťan·ská', 'Odstřelovací': 'Od·stře·lo·va·cí', 'Odstřelovač': 'Od·stře·lo·vač', 'Plamenometčík': 'Pla·me·no·met·čík', 'Protitankové': 'Pro·ti·tan·ko·vé', 'Přetížení': 'Pře·tí·že·ní', 'Torpédoborec': 'Tor·pé·do·bo·rec', 'Velitelství': 'Ve·li·tel·ství', 'Výcviková': 'Vý·cvi·ko·vá', 'Výsadkový': 'Vý·sad·ko·vý', 'Výsadkář': 'Vý·sad·kář', 'Zdravotník': 'Zdra·vot·ník', 'transportér': 'trans·por·tér', 'Štítonoš': 'Ští·to·noš', 'Obléhací': 'Ob·lé·ha·cí', 'Dělostřelecká': 'Dě·lo·stře·lec·ká', 'Kybernetický': 'Ky·ber·ne·tic·ký', 'Vznášedlo': 'Vzná·šed·lo', 'Bombardér': 'Bom·bar·dér', 'Průzkumník': 'Prů·zkum·ník', 'Generátor': 'Ge·ne·rá·tor' };
+function hyph(s) { return String(s).replace(/[A-Za-zÀ-ž]+/g, w => (HYPH[w] || w).replace(/·/g, '­')); }
 export class UI {
   constructor(app) {
     this.app = app; this.dirty = true; this.selectionChanged = true; this.buildMenu = false; this.lastSig = '';
