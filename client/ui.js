@@ -112,7 +112,7 @@ export class UI {
     }
     for (const e of game.ents.values()) {
       if (e.k === 'b') { if (!R.isExploredTile(e.x, e.y)) continue; ctx.fillStyle = TEAM_COLORS[game.players[e.o].color].hex; ctx.fillRect(e.tx, e.ty, e.w, e.h); }
-      else if (e.k === 'u') { if (e.hd) continue; const own = game.players[e.o].team === game.myTeam; if (!own && !R.isVisibleTile(e.x, e.y)) continue; ctx.fillStyle = own ? (e.o === game.me ? '#ffffff' : '#ffe680') : TEAM_COLORS[game.players[e.o].color].hex; ctx.fillRect(e.x - 0.6, e.y - 0.6, 1.2, 1.2); }
+      else if (e.k === 'u') { if (e.hd) continue; const pl = game.players[e.o]; const own = pl.team === game.myTeam; if (!own && !R.isVisibleTile(e.x, e.y)) continue; ctx.fillStyle = own ? (e.o === game.me ? '#ffffff' : '#ffe680') : (pl.neutral ? '#b070d0' : TEAM_COLORS[pl.color].hex); ctx.fillRect(e.x - 0.6, e.y - 0.6, 1.2, 1.2); }
     }
     // selected units highlight
     for (const id of game.selection) { const e = game.ents.get(id); if (e && e.k === 'u') { ctx.fillStyle = '#5eff7a'; ctx.fillRect(e.x - 0.7, e.y - 0.7, 1.4, 1.4); } }
