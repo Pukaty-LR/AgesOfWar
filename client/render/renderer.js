@@ -235,7 +235,7 @@ export class Renderer {
       else if (e.k === 't') { if (!this.isExploredTile(e.x, e.y)) continue; list.push({ depth: e.x + e.y, kind: 't', e }); }
       else if (e.k === 'm') { if (!this.isExploredTile(e.x, e.y)) continue; list.push({ depth: e.tx + e.ty + 3, kind: 'm', e }); }
     }
-    for (const e of g.memB.values()) { if (e.x < minX - 2 || e.x > maxX + 2 || e.y < minY - 2 || e.y > maxY + 2 || this.isVisibleTile(e.x, e.y)) continue; list.push({ depth: e.tx + e.w + e.ty + e.h - 1.0 - (e.w > 1 ? 0.5 : 0), kind: 'b', e }); }
+    if (g.memB) for (const e of g.memB.values()) { if (e.x < minX - 2 || e.x > maxX + 2 || e.y < minY - 2 || e.y > maxY + 2 || this.isVisibleTile(e.x, e.y)) continue; list.push({ depth: e.tx + e.w + e.ty + e.h - 1.0 - (e.w > 1 ? 0.5 : 0), kind: 'b', e }); }
     for (const ef of this.effects) if (ef.kind === 'corpse' || ef.kind === 'rubble' || ef.kind === 'stump') list.push({ depth: ef.x + ef.y - 0.01, kind: 'fx', ef });
     list.sort((a, b) => a.depth - b.depth);
     for (const it of list) {

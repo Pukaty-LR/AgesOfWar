@@ -16,7 +16,7 @@ export class Game {
   constructor(canvas, net, audio, ui) {
     this.canvas = canvas; this.net = net; this.audio = audio; this.ui = ui;
     this.renderer = new Renderer(canvas, this);
-    this.ents = new Map(); this.players = []; this.me = 0; this.myTeam = 0;
+    this.ents = new Map(); this.memB = new Map(); this.players = []; this.me = 0; this.myTeam = 0;
     this.selection = new Set(); this.groups = {};
     this.state = { mode: null, placing: null, drag: null, dragMoved: false, mouse: { x: -1, y: -1 }, altHeld: false, shift: false, ctrl: false, midDrag: null };
     this.keys = {}; this.running = false; this.lastFrame = 0; this.lastTick = 0; this.lastSnapAt = 0;
