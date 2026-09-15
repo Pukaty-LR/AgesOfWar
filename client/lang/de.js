@@ -109,4 +109,5 @@ export default {
   'Vrhač': 'Werfer',
   'Hover korzár': 'Schwebekorsar',
   'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Mauer: %1 Segmente · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – nicht genug Rohstoffe',
+  'Radnice vylepšena na úroveň %1': 'Rathaus auf Stufe %1 ausgebaut',
 };

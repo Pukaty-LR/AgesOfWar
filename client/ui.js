@@ -83,6 +83,8 @@ export class UI {
     log.appendChild(d); while (log.children.length > 8) log.removeChild(log.firstChild);
   }
   alert(text, warn) { const a = $('alerts'); const d = document.createElement('div'); d.textContent = text; if (warn) d.className = 'warn'; a.appendChild(d); while (a.children.length > 4) a.removeChild(a.firstChild); setTimeout(() => d.remove(), 4100); }
+  /** big centred banner (age-up, etc.) that fades out on its own */
+  banner(title, sub) { let b = $('age-banner'); if (!b) { b = document.createElement('div'); b.id = 'age-banner'; document.getElementById('screen-game').appendChild(b); } b.innerHTML = `<div class="ab-title">${title}</div><div class="ab-sub">${sub}</div>`; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); clearTimeout(this.bannerT); this.bannerT = setTimeout(() => b.classList.remove('show'), 3200); }
   placementHint(text) { const h = $('placement-hint'); if (!text) h.classList.add('hidden'); else { h.textContent = text; h.classList.remove('hidden'); } }
   minimapPing(x, y) { this.pings.push({ x, y, t: performance.now() }); }
   hoverChanged(game, e) { if (!e) { this.hideTooltip(); return; } if (game.state.placing) return; const name = game.entName(e); let html = `<b>${name}</b>`; if (e.o !== undefined) html += `<div>${game.players[e.o].name}</div>`; if (e.k === 't' || e.k === 'm') html += `<div class="desc">${t('Zbývá')}: ${e.a}</div>`; if (e.hp !== undefined && e.m) html += `<div class="desc">${e.hp} / ${e.m} HP</div>`; this.showTooltip(html, game.state.mouse.x + 16, game.state.mouse.y + 16); }

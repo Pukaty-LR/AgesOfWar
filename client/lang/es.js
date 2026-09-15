@@ -109,4 +109,5 @@ export default {
   'Vrhač': 'Lanzador',
   'Hover korzár': 'Corsario flotante',
   'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Muralla: %1 segmentos · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – recursos insuficientes',
+  'Radnice vylepšena na úroveň %1': 'Ayuntamiento mejorado al nivel %1',
 };

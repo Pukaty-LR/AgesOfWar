@@ -243,4 +243,5 @@ export default {
   'Hover korzár': 'Hover corsair',
   ' (ty)': ' (you)',
   'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Wall: %1 segments · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – not enough resources',
+  'Radnice vylepšena na úroveň %1': 'Town hall upgraded to level %1',
 };
