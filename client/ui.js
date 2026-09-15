@@ -121,9 +121,10 @@ export class UI {
       else if (e.k === 'm') { if (!R.explored[e.ty * game.map.w + e.tx]) continue; ctx.fillStyle = game.era === 'ww2' ? '#222' : '#f2c94c'; ctx.fillRect(e.tx, e.ty, 2, 2); }
     }
     for (const e of game.ents.values()) {
-      if (e.k === 'b') { if (!R.isExploredTile(e.x, e.y)) continue; ctx.fillStyle = TEAM_COLORS[game.players[e.o].color].hex; ctx.fillRect(e.tx, e.ty, e.w, e.h); }
+      if (e.k === 'b') { if (!R.isExploredTile(e.x, e.y)) continue; if (game.players[e.o].team !== game.myTeam && !R.isVisibleTile(e.x, e.y)) continue; ctx.fillStyle = TEAM_COLORS[game.players[e.o].color].hex; ctx.fillRect(e.tx, e.ty, e.w, e.h); }
       else if (e.k === 'u') { if (e.hd) continue; const pl = game.players[e.o]; const own = pl.team === game.myTeam; if (!own && !R.isVisibleTile(e.x, e.y)) continue; ctx.fillStyle = own ? (e.o === game.me ? '#ffffff' : '#ffe680') : (pl.neutral ? '#b070d0' : TEAM_COLORS[pl.color].hex); ctx.fillRect(e.x - 0.6, e.y - 0.6, 1.2, 1.2); }
     }
+    for (const e of game.memB.values()) { if (R.isVisibleTile(e.x, e.y)) continue; ctx.fillStyle = TEAM_COLORS[game.players[e.o].color].hex; ctx.globalAlpha = 0.7; ctx.fillRect(e.tx, e.ty, e.w, e.h); ctx.globalAlpha = 1; }
     // selected units highlight
     for (const id of game.selection) { const e = game.ents.get(id); if (e && e.k === 'u') { ctx.fillStyle = '#5eff7a'; ctx.fillRect(e.x - 0.7, e.y - 0.7, 1.4, 1.4); } }
     // fog

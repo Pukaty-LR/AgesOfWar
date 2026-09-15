@@ -42,6 +42,7 @@ export class Game {
     this.renderer.setMap(this.map, this.era); this.renderer.prebuild();
     if (g.reveal) this.renderer.updateFog = function () { this.expF.fill(1); this.visF.fill(1); this.explored.fill(1); this.visible.fill(1); this.fogCtx.clearRect(0, 0, this.fw, this.fh); };
     const s = this.map.spawns[this.me]; this.renderer.cam.x = s.x; this.renderer.cam.y = s.y; this.renderer.cam.zoom = 1;
+    this.memB = new Map(); // enemy buildings remembered under the fog (AoE-style ghosts)
     this.gameOver = null; this.paused = false; this.eliminated = false; this.running = true; this.startedAt = performance.now(); this.tick = 0; this.lastSnapAt = performance.now();
     this.state.mode = null; this.state.placing = null; this.state.drag = null; this.state.mouse = { x: -1, y: -1 }; this.keys = {};
     this.ui.onGameStart(this);
@@ -75,6 +76,12 @@ export class Game {
     Object.assign(e, d);
     if (k === 'u' && e.hd) { e.px = e.x; e.py = e.y; e.rx = e.x; e.ry = e.y; }
     return e;
+  }
+  /** Remember enemy buildings while they are visible; the copy is drawn under the fog until the tile is seen again. */
+  updateMemory() {
+    const R = this.renderer, mem = this.memB;
+    for (const e of this.ents.values()) { if (e.k !== 'b' || this.players[e.o].team === this.myTeam) continue; if (R.isVisibleTile(e.x, e.y)) { const m = mem.get(e.i); if (!m || m.hp !== e.hp || m.lv !== e.lv || m.bl !== e.bl || m.pr !== e.pr) mem.set(e.i, { i: e.i, k: 'b', o: e.o, t: e.t, x: e.x, y: e.y, tx: e.tx, ty: e.ty, w: e.w, h: e.h, bl: e.bl, pr: e.pr, lv: e.lv, hp: e.hp, mhp: e.mhp, ghost: true }); } }
+    for (const [id, m] of mem) if (R.isVisibleTile(m.x, m.y) && (!this.ents.has(id) || this.players[this.ents.get(id).o].team === this.myTeam)) mem.delete(id);
   }
   removeEntity(id) {
     const e = this.ents.get(id); if (!e) return;
@@ -110,7 +117,7 @@ export class Game {
     this.tick = snap.tick; this.lastSnapAt = performance.now();
     for (const d of snap.ents) this.applyEntity(d, true);
     this.players = snap.players; this.ui.onPlayers(this);
-    this.renderer.updateFog(this.ents, this.myTeam, this.players);
+    this.renderer.updateFog(this.ents, this.myTeam, this.players); this.updateMemory();
     setTimeout(() => document.getElementById('loading').classList.add('hidden'), 250);
   }
   onSnap(snap) {
@@ -399,7 +406,7 @@ export class Game {
       e.rx = nx; e.ry = ny;
       if (e.k === 'u') { let df = (e.f - e.rf); while (df > Math.PI) df -= Math.PI * 2; while (df < -Math.PI) df += Math.PI * 2; e.rf += df * Math.min(1, dt * 14); }
     }
-    if (now - this.lastFogAt > 150) { this.lastFogAt = now; this.renderer.updateFog(this.ents, this.myTeam, this.players); }
+    if (now - this.lastFogAt > 150) { this.lastFogAt = now; this.renderer.updateFog(this.ents, this.myTeam, this.players); this.updateMemory(); }
     this.combatHeat = Math.max(0, this.combatHeat - dt * 0.08); this.audio.setIntensity(this.combatHeat);
     this.renderer.showHp = this.settings.showHp;
     this.renderer.draw(dt, this.state);

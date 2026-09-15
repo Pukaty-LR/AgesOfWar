@@ -231,10 +231,11 @@ export class Renderer {
       const ex = e.rx ?? e.x, ey = e.ry ?? e.y;
       if (ex < minX - 2 || ex > maxX + 2 || ey < minY - 2 || ey > maxY + 2) continue;
       if (e.k === 'u') { if (e.hd) continue; if (players[e.o].team !== myTeam && !this.isVisibleTile(ex, ey)) continue; list.push({ depth: ex + ey, kind: 'u', e }); }
-      else if (e.k === 'b') { if (!this.isExploredTile(e.x, e.y) && !this.isExploredTile(e.tx, e.ty)) continue; list.push({ depth: e.tx + e.w + e.ty + e.h - 1.0 - (e.w > 1 ? 0.5 : 0), kind: 'b', e }); }
+      else if (e.k === 'b') { if (!this.isExploredTile(e.x, e.y) && !this.isExploredTile(e.tx, e.ty)) continue; if (players[e.o].team !== myTeam && !this.isVisibleTile(e.x, e.y)) continue; list.push({ depth: e.tx + e.w + e.ty + e.h - 1.0 - (e.w > 1 ? 0.5 : 0), kind: 'b', e }); }
       else if (e.k === 't') { if (!this.isExploredTile(e.x, e.y)) continue; list.push({ depth: e.x + e.y, kind: 't', e }); }
       else if (e.k === 'm') { if (!this.isExploredTile(e.x, e.y)) continue; list.push({ depth: e.tx + e.ty + 3, kind: 'm', e }); }
     }
+    for (const e of g.memB.values()) { if (e.x < minX - 2 || e.x > maxX + 2 || e.y < minY - 2 || e.y > maxY + 2 || this.isVisibleTile(e.x, e.y)) continue; list.push({ depth: e.tx + e.w + e.ty + e.h - 1.0 - (e.w > 1 ? 0.5 : 0), kind: 'b', e }); }
     for (const ef of this.effects) if (ef.kind === 'corpse' || ef.kind === 'rubble' || ef.kind === 'stump') list.push({ depth: ef.x + ef.y - 0.01, kind: 'fx', ef });
     list.sort((a, b) => a.depth - b.depth);
     for (const it of list) {
@@ -544,6 +545,7 @@ export class Renderer {
   }
 
   // ---------- picking ----------
+  knownBuilding(e) { const g = this.game; return g.players[e.o].team === g.myTeam || this.isVisibleTile(e.x, e.y) || g.memB.has(e.i); }
   pick(sx, sy) {
     const g = this.game; let best = null, bestD = Infinity;
     // 1) units by sprite box
@@ -557,12 +559,12 @@ export class Renderer {
     // 2) buildings by exact footprint (world space) - reliable when buildings are close together
     const [wx0, wy0] = this.screenToWorld(sx, sy);
     for (const e of g.ents.values()) {
-      if (e.k !== 'b' || e.sx === undefined || !this.isExploredTile(e.x, e.y)) continue;
+      if (e.k !== 'b' || e.sx === undefined || !this.isExploredTile(e.x, e.y) || !this.knownBuilding(e)) continue;
       if (wx0 >= e.tx && wx0 < e.tx + e.w && wy0 >= e.ty && wy0 < e.ty + e.h) return e;
     }
     // 3) buildings by the upper part of their sprite (walls/roofs above the footprint), nearest footprint wins
     for (const e of g.ents.values()) {
-      if (e.k !== 'b' || e.sx === undefined || !this.isExploredTile(e.x, e.y)) continue;
+      if (e.k !== 'b' || e.sx === undefined || !this.isExploredTile(e.x, e.y) || !this.knownBuilding(e)) continue;
       const z = this.cam.zoom; const cx = e.sx + (e.w - e.h) * TW / 4 * z, hw = Math.max(e.w, e.h) * TW / 2 * 0.5 * z; const top = e.sy - e.say * 0.9, bottom = e.sy + (e.w + e.h) * TH / 4 * z;
       if (sx >= cx - hw && sx <= cx + hw && sy >= top && sy <= bottom) { const d = Math.hypot(wx0 - e.x, wy0 - e.y); if (d < bestD) { bestD = d; best = e; } }
     }
