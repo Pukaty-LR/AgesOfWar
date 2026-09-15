@@ -391,6 +391,8 @@ export class Renderer {
       this.particles.push({ x: e.x + (Math.random() - 0.5) * e.w * 0.6, y: e.y + (Math.random() - 0.5) * e.h * 0.6, z: 20 + Math.random() * 20, vx: 0.2, vy: -0.2, vz: 18, life: 0, max: 2.2, color: [60, 55, 50], size: 5, g: -6, drag: 0.98, grow: 4, alpha: 0.5 });
       if (e.hp < e.m * 0.25 && Math.random() < 0.3) this.particles.push({ x: e.x + (Math.random() - 0.5) * e.w * 0.5, y: e.y + (Math.random() - 0.5) * e.h * 0.5, z: 10, vx: 0, vy: 0, vz: 25, life: 0, max: 0.5, color: [255, 150, 40], size: 4, g: 0, drag: 0.95, grow: -2 });
     }
+    // night: warm window lights on the front walls
+    { const ph = (this.time / 600) * Math.PI * 2; const night = Math.max(0, -Math.cos(ph)); if (night > 0.25 && e.bl && !def.isWall && e.w > 1) { const a = (night - 0.25) * 1.2; const col = this.era === 'scifi' ? `rgba(120,230,255,${a})` : `rgba(255,190,90,${a})`; ctx.fillStyle = col; for (const [px, py, zz] of [[e.tx + e.w * 0.3, e.ty + e.h, 14], [e.tx + e.w * 0.7, e.ty + e.h, 14], [e.tx + e.w, e.ty + e.h * 0.35, 14], [e.tx + e.w, e.ty + e.h * 0.7, 14]]) { const [wx, wy] = this.worldToScreen(px, py, zz); const grd = ctx.createRadialGradient(wx, wy, 0, wx, wy, 9 * z); grd.addColorStop(0, col); grd.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(wx, wy, 9 * z, 0, 7); ctx.fill(); } } }
     // ambient life: chimney smoke, forge glow, energy pulses; tower muzzle flash
     if (e.bl && visible) {
       const sp = def.sprite;
