@@ -44,6 +44,7 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - Hudbu lze ztlumit tlačítkem v horní liště, ostatní nastavení a nápověda jsou v menu (Esc). Ve hře proti AI menu zároveň **pozastaví** simulaci.
 - Atmosféra: stíny mraků, den a noc s rozsvícenými okny, na některých mapách déšť (i se zvukem), ve sci-fi poletující spory.
 - Kurzor mění tvar podle akce (útok, stavba, těžba, hlídka), po vyřazení lze hru sledovat dál, po konci hry se odkryje celá mapa.
+- Po skončení hry proti AI jde tlačítkem **Hrát znovu** rozehrát odvetu se stejnými boty a stejným typem mapy. Načítací obrazovka ukazuje tipy k ovládání.
 - Panel výběru ukazuje efektivní útok a pancíř jako „základ +bonus“ (výzkumy, úroveň hrdiny, úroveň věže).
 - **Výška terénu** hraje roli jako v Age of Empires: útok z kopce dolů +25 % poškození, do kopce −25 %.
 - Cíl: zničit všechny nepřátelské budovy (kromě hradeb).
