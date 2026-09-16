@@ -139,6 +139,14 @@ export class AIPlayer {
         for (const [rid, rd] of Object.entries(RESEARCH)) { if (rd.building !== b.type) continue; const lvl = p.research[rid] || 0; if (lvl >= rd.maxLevel) continue; const cost = sim.researchCost(rid, lvl + 1); if (p.res.p >= cost.p + 250 && p.res.s >= cost.s + 150) { sim.command(this.pid, { t: 'research', id: b.id, rid }); break; } }
       }
     }
+    // 3a. Base defence (WC3/AoE style): when enemies are inside the base and the army is out raiding, recall it
+    if (tick % 40 === 0 && tick - (this.defendAt || -9999) > 20 * 25) {
+      let intruders = 0; sim.unitsNear(hall.x, hall.y, 14, e => { if (e.owner !== undefined && !e.dead && sim.players[e.owner].team !== p.team && !sim.players[e.owner].neutral) intruders++; });
+      if (intruders >= 2) {
+        const away = army.filter(u => Math.hypot(u.x - hall.x, u.y - hall.y) > 18 && !u.hidden);
+        if (away.length >= 3 && away.length >= army.length * 0.5) { sim.command(this.pid, { t: 'amove', ids: away.map(u => u.id), x: hall.x, y: hall.y + 2 }); this.defendAt = tick; }
+      }
+    }
     // 3b. Upgrades: hall first, then military buildings, when resources allow
     if (tick % 100 === 0 && !easy) {
       const order = [...halls, ...buildings.filter(b => b.built && b.type !== 'hall' && b.type !== 'tower' && b.type !== 'wall' && b.type !== 'gate')];
