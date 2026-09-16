@@ -1,6 +1,6 @@
 // Isometric renderer: terrain chunks with elevation, water animation, entities, effects, fog of war.
 import { T, ERAS, TEAM_COLORS } from '../../shared/data.js';
-import { TW, TH, S, iso, facingToDir, clearSpriteCache, unitSprite, buildingSprite, treeSprite, mineSprite, decoSprite, blit, rgb, shade, mix, teamRgb, animFrameCount, hexToRgb } from './sprites.js';
+import { TW, TH, S, iso, facingToDir, clearSpriteCache, unitSprite, hasDieAnim, buildingSprite, treeSprite, mineSprite, decoSprite, blit, rgb, shade, mix, teamRgb, animFrameCount, hexToRgb } from './sprites.js';
 import { isPixel } from './style.js';
 
 const CHUNK = 12;
@@ -489,11 +489,13 @@ export class Renderer {
     if (ef.kind === 'corpse') {
       if (age > 10) return;
       const [sx, sy] = this.worldToScreen(ef.x, ef.y);
-      const fall = Math.min(1, age / 0.45);
-      const spr = unitSprite(ef.sprite, ef.color, facingToDir(ef.f), 'idle', 0, { faction: ef.faction });
+      const fall = Math.min(1, age / 0.45); const dies = hasDieAnim(ef.sprite); const pix = isPixel();
+      const spr = dies ? unitSprite(ef.sprite, ef.color, facingToDir(ef.f), 'die', Math.min(3, Math.floor(age / 0.12)), { faction: ef.faction }) : unitSprite(ef.sprite, ef.color, facingToDir(ef.f), 'idle', 0, { faction: ef.faction });
       ctx.save(); ctx.globalAlpha = age > 7 ? Math.max(0, 1 - (age - 7) / 3) : 1; ctx.translate(sx, sy);
-      ctx.rotate((ef.f > Math.PI ? -1 : 1) * fall * Math.PI / 2 * (ef.big ? 0.25 : 1)); ctx.scale(1, 1 - fall * 0.4);
-      ctx.filter = `brightness(${1 - fall * 0.5}) saturate(${1 - fall * 0.5})`;
+      if (!dies && !pix) { ctx.rotate((ef.f > Math.PI ? -1 : 1) * fall * Math.PI / 2 * (ef.big ? 0.25 : 1)); ctx.scale(1, 1 - fall * 0.4); }
+      else if (!dies) ctx.scale(1, 1 - fall * 0.35);
+      if (!pix) ctx.filter = `brightness(${1 - fall * 0.5}) saturate(${1 - fall * 0.5})`; else if (age > 0.5) ctx.globalAlpha *= 0.85;
+      if (pix) ctx.imageSmoothingEnabled = false;
       ctx.drawImage(spr.canvas, -spr.ax * z, -spr.ay * z, spr.w * z, spr.h * z); ctx.restore(); ctx.filter = 'none';
       if (age < 0.3 && ef.blood && !ef.big) { const [bx, by] = this.worldToScreen(ef.x, ef.y); ctx.fillStyle = `rgba(120,20,20,${0.5 * (age / 0.3)})`; ctx.beginPath(); ctx.ellipse(bx, by, 9 * z, 4.5 * z, 0, 0, 7); ctx.fill(); }
       else if (ef.blood && !ef.big) { const [bx, by] = this.worldToScreen(ef.x, ef.y); ctx.fillStyle = `rgba(110,18,18,${0.5 * Math.max(0, 1 - (age - 7) / 3)})`; ctx.beginPath(); ctx.ellipse(bx, by, 9 * z, 4.5 * z, 0, 0, 7); ctx.fill(); }

@@ -577,7 +577,10 @@ function commandCar(ctx, o) {
 function gateDiag(M) { return !(M & 15) && (M & 240) ? ((M & (16 | 64)) ? 'ne' : 'nw') : null; }
 function gatePillars(M, horiz) { const d = gateDiag(M); if (d === 'ne') return [[0.5 + 0.3, 0.5 - 0.3], [0.5 - 0.3, 0.5 + 0.3]]; if (d === 'nw') return [[0.5 - 0.3, 0.5 - 0.3], [0.5 + 0.3, 0.5 + 0.3]]; return horiz ? [[0.5 - 0.42, 0.5], [0.5 + 0.42, 0.5]] : [[0.5, 0.5 - 0.42], [0.5, 0.5 + 0.42]]; }
 function gateSegMask(M, horiz) { return gateDiag(M) ? (M & 240) : (M & (horiz ? 10 : 5)); }
-const ANIM_FRAMES = { idle: 4, walk: 6, attack: 4, work: 4 };
+const ANIM_FRAMES = { idle: 4, walk: 6, attack: 4, work: 4, die: 4 };
+const DIE_SPRITES = new Set(Object.entries(UNIT_DRAW).filter(([, fn]) => { const src = fn.toString(); return src.includes('humanoid(') && !src.includes('horse(') && !src.includes('chariot('); }).map(([k]) => k));
+/** true when the sprite has a proper falling animation ('die', 4 frames) */
+export function hasDieAnim(sprite) { return DIE_SPRITES.has(sprite); }
 
 export function unitSprite(sprite, colorIdx, dir, anim, frame, extra = {}) {
   const frames = ANIM_FRAMES[anim] || 1; frame = frame % frames;
@@ -585,7 +588,7 @@ export function unitSprite(sprite, colorIdx, dir, anim, frame, extra = {}) {
   const workKind = anim === 'work' || anim === 'attack' ? (extra.workKind || '') : '';
   const cargo = extra.cargo ? Math.min(4, extra.cargo) : 0;
   const key = `u|${sprite}|${colorIdx}|${dir}|${anim}|${frame}|${extra.carry || ''}|${extra.faction || ''}|${workKind}|${cargo}`;
-  const box = UNIT_BOX[sprite] || UNIT_BOX.default;
+  const box = anim === 'die' ? [64, 56, 32, 46] : (UNIT_BOX[sprite] || UNIT_BOX.default); // a fallen body is wider than a standing one
   return cached(key, box[0], box[1], box[2], box[3], ctx => {
     const fn = UNIT_DRAW[sprite]; if (!fn) { ellipse(ctx, 0, -8, 8, 8, '#f0f', '#000'); return; }
     fn(ctx, { dir, anim, frame, team: teamRgb(colorIdx), carry: extra.carry, faction: extra.faction, workKind: extra.workKind, cargo: extra.cargo || 0 });

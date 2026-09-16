@@ -40,11 +40,13 @@ function poseSwing(t) { let w, th; if (t < 0.4) { w = ease(t / 0.4); th = 0; } e
 function poseAim(t, kick) { const k = kick ? Math.max(0, 1 - Math.abs(t - 0.3) / 0.2) : 0;
   return { bob: 0, lean: 0.08 - k * 0.05, legL: { thigh: 0.25, knee: 0.15 }, legR: { thigh: -0.2, knee: 0.1 }, armL: { up: 1.35, fore: 0.55, out: -0.15 }, armR: { up: 1.25 - k * 0.15, fore: 0.35, out: 0.05, kick: k }, cape: 0.15, crest: 0, headNod: 0.02 }; }
 function poseBow(t) { const draw = t < 0.5 ? ease(t / 0.5) : Math.max(0, 1 - ease((t - 0.5) / 0.2)); return { bob: 0, lean: 0.04, legL: { thigh: 0.2, knee: 0.15 }, legR: { thigh: -0.2, knee: 0.1 }, armL: { up: 1.45, fore: 0.1, out: 0.05 }, armR: { up: 1.3 - draw * 0.5, fore: 0.4 + draw * 1.3, out: 0.35, draw }, cape: 0.15, crest: 0, headNod: 0 }; }
+function poseDie(t) { const k = ease(Math.min(1, t * 1.15)); return { bob: -k * 0.6, lean: -k * 0.2, legL: { thigh: 0.35 * k, knee: 1.1 * k }, legR: { thigh: -0.2 * k, knee: 0.9 * k }, armL: { up: 0.6 * k, fore: 0.2, out: 0.9 * k }, armR: { up: 0.8 * k, fore: 0.15, out: 0.8 * k, wrist: 0 }, cape: 0.5 * k, crest: -0.2 * k, headNod: -0.15 * k, fall: k * 1.42 }; }
 function poseRider(P) { return { ...P, legL: { thigh: 1.15, knee: 1.35 }, legR: { thigh: 1.15, knee: 1.35 }, bob: 0, lean: 0.02 }; }
 const GUNS = new Set(['rifle', 'mg', 'plasmaRifle', 'rail', 'rocket', 'flamer']);
 const SWINGERS = new Set(['axe', 'pick', 'wrench', 'shovel', 'sling']);
-function poseFor(o) { const { anim, frame } = o; const n = { idle: 4, walk: 6, attack: 4, work: 4 }[anim] || 4; const t = ((frame % n) + 0.5) / n; const wp = o.weapon;
+function poseFor(o) { const { anim, frame } = o; const n = { idle: 4, walk: 6, attack: 4, work: 4, die: 4 }[anim] || 4; const t = ((frame % n) + 0.5) / n; const wp = o.weapon;
   let P;
+  if (anim === 'die') return poseDie(t);
   if (anim === 'walk') P = poseWalk(t);
   else if (anim === 'attack') { if (GUNS.has(wp)) P = poseAim(t, true); else if (wp === 'bow') P = poseBow(t); else if (wp === 'spear' || wp === 'sword') P = poseThrust(t); else P = poseSwing(t); }
   else if (anim === 'work') P = poseSwing(t);
@@ -145,6 +147,7 @@ export function humanoidModel(o, P) {
   head = xf(head, p => { const k = 1.14, base = SHOULDER + 0.4; const q = rotX([p[0] * k, (p[1] - base) * k + base - SHOULDER, p[2] * k], -P.headNod * 2); return [q[0], q[1] + SHOULDER, q[2]]; }); // slightly oversized head reads better at sprite size
   F.push(...xf(head, T));
   // ---- cape (heroes / elites)
+  if (P.fall) { const a = -P.fall; for (const f of F) f.pts = f.pts.map(p => rotX(p, a)); } // topple backwards around the feet
   if (o.cape) { const cape = []; const cp = P.cape; const cc = shade(team, 0.8); for (let i = 0; i < 5; i++) { const y0 = SHOULDER - 0.2 - i * 1.25, y1 = y0 - 1.25; const z0 = -1.45 - i * i * cp * 0.16, z1 = -1.45 - (i + 1) * (i + 1) * cp * 0.16; const w0 = 1.45 + i * 0.16, w1 = 1.45 + (i + 1) * 0.16; cape.push({ pts: [[-w0, y0, z0], [w0, y0, z0], [w1, y1, z1], [-w1, y1, z1]], color: cc }); } F.push(...xf(cape, T)); }
   return F;
 }
