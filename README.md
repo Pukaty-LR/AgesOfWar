@@ -51,6 +51,7 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - Po skončení hry proti AI jde tlačítkem **Hrát znovu** rozehrát odvetu se stejnými boty a stejným typem mapy. Načítací obrazovka ukazuje tipy k ovládání.
 - Věž ukazuje dosah střelby už při pokládání i po výběru, hlavička smíšeného výběru vypisuje počty podle typu a u surovin v liště je vidět počet dělníků, kteří je těží (jako v Age of Empires).
 - Panel výběru ukazuje efektivní útok a pancíř jako „základ +bonus“ (výzkumy, úroveň hrdiny, úroveň věže).
+- **Radnice sama vynáší** +10 zlata (ropy / krystalů) a +5 dřeva každých 15 s, s úrovní radnice víc – pojistka, aby hra neskončila, když dojdou dělníci i doly.
 - **Střed mapy** (v přehledu hráčů F3 je vidět, kdo ho drží) skrývá nevyčerpatelnou zlatou žílu a čtyři prastaré stromy (nekonečné dřevo) – hlídané silnější tlupou; kdo drží střed, nikdy nevyhladoví.
 - Dělníci po dostavění pokračují na další rozestavěnou budovu (hradby segment po segmentu), nečinní dělníci sami opravují poškozené budovy (jeden na budovu), léčitelé si sami hledají zraněné, nečinné jednotky přiběhnou na pomoc napadeným spojencům v okolí a útočící jednotky po zničení cíle pokračují na další nepřátele (ozbrojené jednotky mají přednost před budovami). Smíšená skupina jde tempem nejpomalejšího.
 - Zamčené jednotky jsou na kartě budovy vidět šedě s požadovanou úrovní; kliknutí na portrét ve smíšeném výběru vybere všechny jednotky toho typu.
