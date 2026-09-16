@@ -1,186 +1,260 @@
 <!DOCTYPE html>
-<html lang="cs"><head><meta charset="utf-8"><title>Ages of War – varianty grafiky jednotek</title>
+<html lang="cs"><head><meta charset="utf-8"><title>Ages of War – varianty grafiky jednotek (animované)</title>
 <style>
 body { margin: 0; background: #1a140c; color: #eadfc4; font-family: Georgia, serif; }
-h1 { font-size: 18px; margin: 12px 16px 4px; color: #e2bc4a; letter-spacing: 1px; }
+h1 { font-size: 18px; margin: 12px 16px 2px; color: #e2bc4a; letter-spacing: 1px; }
 p.sub { margin: 0 16px 10px; font-size: 12px; color: #b9a98c; }
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 12px 12px; }
 .card { background: #2a2016; border: 1px solid #5a4630; border-radius: 6px; padding: 8px; }
 .card h2 { font-size: 13px; margin: 0 0 4px; color: #f1d36a; }
-.card .d { font-size: 11px; color: #cdbb95; min-height: 28px; }
-canvas { display: block; background: radial-gradient(#4f7a38, #35552a); border-radius: 4px; width: 100%; image-rendering: pixelated; }
+.card .d { font-size: 11px; color: #cdbb95; min-height: 30px; }
+canvas { display: block; background: radial-gradient(ellipse at 50% 70%, #5a8a42, #34542a 75%); border-radius: 4px; width: 100%; }
+.lbl { font-size: 10px; color: #cdbb95; display: flex; justify-content: space-around; margin-top: 3px; }
 </style></head><body>
-<h1>Varianty grafiky jednotek – římský legionář (stejná jednotka, šest provedení)</h1>
-<p class="sub">0 = dnešní stav · 1 = paper-doll 2.0 · 2 = kostra + vrstvy (3 fáze chůze) · 3 = zapečené pseudo-3D (vlastní rasterizér, 4 směry) · 4 = skutečné 3D (hladké stínování, stíny) · 5 = ruční pixel-art</p>
+<h1>Varianty grafiky jednotek – římský legionář, vše animované</h1>
+<p class="sub">V každém panelu: vlevo chůze, uprostřed klid (dýchání), vpravo útok. U 3D variant navíc otáčení do všech 8 směrů. 0 = dnešní stav · 1 = paper-doll 2.0 (4 snímky) · 2 = kostra + vrstvy (plynulá interpolace, sekundární pohyb) · 3 = zapečené pseudo-3D · 4 = skutečné 3D · 5 = pixel-art</p>
 <div class="grid" id="grid"></div>
 <script type="module">
-import { unitSprite } from '../render/sprites.js';
+import { unitSprite, animFrameCount } from '../render/sprites.js';
 
 const cards = [
-  ['0 · Dnešní stav', 'Hranoly a elipsy, ploché barvy, žádné světlo.'],
-  ['1 · Paper-doll 2.0', 'Proporce, směrové světlo, obrysy, odlesky, měkký stín.'],
-  ['2 · Kostra + vrstvy', 'Rig s klíčovými pózami; zbroj, plášť a zbraň jako vrstvy. Tři fáze chůze.'],
-  ['3 · Zapečené pseudo-3D', 'Low-poly model → vlastní rasterizér → sprite cache; 4 z 8 směrů.'],
-  ['4 · Skutečné 3D (WebGL)', 'Hladké stínování, rim light, měkký stín, vyšší detail.'],
-  ['5 · Pixel-art', 'Ručně kreslené pixely, vlastní paleta, 32×48.'],
+  ['0 · Dnešní stav', 'Současné sprity ze hry (4–6 snímků, ploché barvy).'],
+  ['1 · Paper-doll 2.0', 'Stejný snímkový systém (4 snímky/animaci), ale správné proporce, směrové světlo, obrysy, dvojkloubové končetiny.'],
+  ['2 · Kostra + vrstvy', 'Kostra s klíčovými pózami interpolovaná v každém snímku; plášť, chochol a pteruges se hýbou setrvačností.'],
+  ['3 · Zapečené pseudo-3D', 'Low-poly model s klouby → vlastní rasterizér (ploché stínování, obrys) → sprite pro 8 směrů × snímky.'],
+  ['4 · Skutečné 3D', 'Stejný model, hladké stínování, rim light, projektovaný stín, vyšší dělení.'],
+  ['5 · Pixel-art', 'Vektorová kostra pixelizovaná do 40×52 s paletou 14 barev a 1px obrysem – klasický look AoE 2.'],
 ];
 const grid = document.getElementById('grid'); const C = [];
-for (const [t, d] of cards) { const c = document.createElement('div'); c.className = 'card'; c.innerHTML = `<h2>${t}</h2><div class="d">${d}</div>`; const cv = document.createElement('canvas'); cv.width = 420; cv.height = 300; c.appendChild(cv); grid.appendChild(c); C.push(cv.getContext('2d')); }
+for (const [t, d] of cards) { const c = document.createElement('div'); c.className = 'card'; c.innerHTML = `<h2>${t}</h2><div class="d">${d}</div>`; const cv = document.createElement('canvas'); cv.width = 480; cv.height = 340; c.appendChild(cv); const l = document.createElement('div'); l.className = 'lbl'; l.innerHTML = '<span>chůze</span><span>klid</span><span>útok</span>'; c.appendChild(l); grid.appendChild(c); C.push(cv.getContext('2d')); }
 
 // ---------- palette & helpers ----------
-const RED = [178, 34, 34], RED_D = [120, 20, 20], IRON = [150, 155, 162], IRON_D = [90, 95, 104], BRONZE = [186, 140, 62], BRONZE_D = [120, 86, 34], SKIN = [232, 190, 150], SKIN_D = [170, 125, 90], LEATHER = [110, 74, 40], LEATHER_D = [70, 46, 24], GOLD = [230, 190, 80], OUT = '#1a120a';
+const RED = [178, 34, 34], RED_D = [120, 20, 20], IRON = [152, 158, 166], IRON_D = [92, 98, 108], BRONZE = [188, 142, 64], BRONZE_D = [122, 88, 36], SKIN = [232, 190, 150], SKIN_D = [170, 125, 90], LEATHER = [110, 74, 40], LEATHER_D = [70, 46, 24], GOLD = [232, 194, 84], STEEL = [222, 226, 234], OUT = '#1a120a';
 const rgb = (c, a = 1) => `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
 const shade = (c, k) => c.map(v => Math.max(0, Math.min(255, v * k)));
-function lit(ctx, x0, y0, x1, y1, c) { const g = ctx.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, rgb(shade(c, 1.28))); g.addColorStop(0.45, rgb(c)); g.addColorStop(1, rgb(shade(c, 0.58))); return g; }
-function path(ctx, pts, close = true) { ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); if (close) ctx.closePath(); }
-function fillStroke(ctx, fill, lw = 2) { ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.lineJoin = 'round'; ctx.stroke(); }
-function capsule(ctx, x, y, w, h, c, lw = 2, tilt = 0) { ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, w / 2); ctx.fillStyle = lit(ctx, -w / 2, -h / 2, w / 2, h / 2, c); ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.stroke(); ctx.restore(); }
-function shadow(ctx, x, y, rx, ry) { const g = ctx.createRadialGradient(x, y, 0, x, y, rx); g.addColorStop(0, 'rgba(0,0,0,0.45)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); }
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+function lit(ctx, c, x0, y0, x1, y1, hi = 1.3, lo = 0.58) { const g = ctx.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, rgb(shade(c, hi))); g.addColorStop(0.45, rgb(c)); g.addColorStop(1, rgb(shade(c, lo))); return g; }
+function stroke(ctx, lw = 1.6) { ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke(); }
+function shadow(ctx, x, y, rx, ry, a = 0.45) { const g = ctx.createRadialGradient(x, y, 0, x, y, rx); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); }
+/** limb segment from (x0,y0) to (x1,y1) with width w, shaded */
+function seg(ctx, x0, y0, x1, y1, w, c, lw = 1.4) { const a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0); ctx.save(); ctx.translate(x0, y0); ctx.rotate(a - Math.PI / 2); ctx.beginPath(); ctx.roundRect(-w / 2, -w / 2, w, L + w, w / 2); ctx.fillStyle = lit(ctx, c, -w / 2, 0, w / 2, 0, 1.28, 0.6); ctx.fill(); stroke(ctx, lw); ctx.restore(); }
 
-// ---------- 0: current game sprite (scaled up) ----------
-{ const ctx = C[0]; const s = unitSprite('ant_infantry', 0, 3, 'idle', 0, { faction: 'rome' }); const k = 4; const sc = s.canvas.width / s.w; ctx.imageSmoothingEnabled = false; shadow(ctx, 210, 250, 44, 18); ctx.drawImage(s.canvas, 210 - s.ax * k, 250 - s.ay * k, s.w * k, s.h * k); }
+// ---------- 2D rig: poses ----------
+// angles in radians, 0 = hanging straight down; positive = forward (towards -x, the unit faces left)
+function poseWalk(t) { const p = t * Math.PI * 2; const s = Math.sin(p), c = Math.cos(p);
+  const leg = ph => { const sp = Math.sin(ph); return { thigh: 0.62 * sp, knee: 0.25 + 0.55 * Math.max(0, Math.sin(ph - 0.4)) }; };
+  return { bob: -Math.abs(s) * 1.6, lean: 0.06, legL: leg(p), legR: leg(p + Math.PI), armL: { up: -0.35 * s, fore: 0.5 }, armR: { up: 0.45 * s - 0.2, fore: 0.9, out: 0.45, wrist: 2.34 + 0.45 * s }, cape: 0.35 + 0.25 * c, crest: 0.15 * s, torsoTwist: 0.04 * s, headNod: 0.03 * Math.sin(2 * p) }; }
+function poseIdle(t) { const b = Math.sin(t * Math.PI * 2); return { bob: b * 0.35, lean: 0, legL: { thigh: 0.05, knee: 0.08 }, legR: { thigh: -0.05, knee: 0.08 }, armL: { up: -0.05, fore: 0.5 }, armR: { up: -0.1 + b * 0.03, fore: 0.55 + b * 0.05, out: 0.55, wrist: 2.79 + b * 0.05 }, cape: 0.15, crest: 0, torsoTwist: 0, headNod: b * 0.015 }; }
+function poseAttack(t) { // wind-up 0-0.35, thrust 0.35-0.55, recover 0.55-1
+  let w, th; if (t < 0.35) { w = ease(t / 0.35); th = 0; } else if (t < 0.55) { const k = ease((t - 0.35) / 0.2); w = 1 - k; th = k; } else { w = 0; th = 1 - ease((t - 0.55) / 0.45); }
+  return { bob: -th * 0.9, lean: 0.03 + th * 0.17 - w * 0.06, legL: { thigh: 0.05 + 0.5 * th, knee: 0.1 + 0.4 * th }, legR: { thigh: -0.05 - 0.35 * th, knee: 0.12 + 0.1 * th }, armL: { up: -0.2 - th * 0.2 + w * 0.1, fore: 0.6 }, armR: { up: -0.1 - 0.7 * w + 2.1 * th, fore: lerp(0.55 + 1.0 * w, 0.1, th), out: 0.55 * (1 - th) + 0.1 * th, wrist: lerp(2.79 - 1.8 * w, 0.05, th) }, cape: 0.2 + th * 0.25, crest: -th * 0.12 + w * 0.05, torsoTwist: -w * 0.05 + th * 0.06, headNod: th * 0.05 }; }
 
-// ---------- 1: paper-doll 2.0 ----------
-function legionary2(ctx, x, y, S, pose = {}) {
-  const { legL = 0, legR = 0, armSwing = 0, cape = 0.2, bob = 0 } = pose;
-  ctx.save(); ctx.translate(x, y + bob); ctx.scale(S, S);
-  shadow(ctx, 0, 0, 14, 5.5);
-  // cape behind
-  ctx.beginPath(); ctx.moveTo(-3, -30); ctx.quadraticCurveTo(-14 - cape * 20, -18, -9 - cape * 14, 2); ctx.lineTo(4, -2); ctx.quadraticCurveTo(6, -18, 5, -30); ctx.closePath(); fillStroke(ctx, lit(ctx, -14, -30, 6, 2, [140, 20, 24]), 1.6);
-  // legs (back leg first)
-  capsule(ctx, 3.2, -8 + legR * 2, 5.5, 16, SKIN, 1.6, legR * 0.35); capsule(ctx, -3.2, -8 + legL * 2, 5.5, 16, SKIN, 1.6, -legL * 0.35);
-  // sandals
-  capsule(ctx, 3.4 + legR * 2, 1.5, 6.5, 3.2, LEATHER_D, 1.4); capsule(ctx, -3.4 - legL * 2, 1.5, 6.5, 3.2, LEATHER_D, 1.4);
-  // tunic skirt with pteruges
-  ctx.beginPath(); ctx.moveTo(-8, -20); ctx.lineTo(8, -20); ctx.lineTo(9.5, -6); ctx.lineTo(-9.5, -6); ctx.closePath(); fillStroke(ctx, lit(ctx, -9, -20, 9, -6, RED), 1.6);
-  for (let i = -3; i <= 3; i++) { const lx = i * 2.7; ctx.beginPath(); ctx.moveTo(lx - 1.1, -11); ctx.lineTo(lx + 1.1, -11); ctx.lineTo(lx + 1.3, -5.5); ctx.lineTo(lx - 1.3, -5.5); ctx.closePath(); fillStroke(ctx, rgb(shade(LEATHER, i < 0 ? 1.15 : 0.85)), 1.1); }
-  // torso: lorica segmentata (curved iron bands)
-  ctx.beginPath(); ctx.moveTo(-9.5, -33); ctx.quadraticCurveTo(0, -35.5, 9.5, -33); ctx.lineTo(8.5, -19); ctx.quadraticCurveTo(0, -17, -8.5, -19); ctx.closePath(); fillStroke(ctx, lit(ctx, -10, -34, 10, -18, IRON), 1.8);
-  for (let i = 0; i < 5; i++) { const by = -31 + i * 2.8; ctx.beginPath(); ctx.moveTo(-9.3 + i * 0.2, by); ctx.quadraticCurveTo(0, by + 1.8, 9.3 - i * 0.2, by); ctx.strokeStyle = rgb(IRON_D); ctx.lineWidth = 0.9; ctx.stroke(); ctx.beginPath(); ctx.moveTo(-9.3 + i * 0.2, by + 0.9); ctx.quadraticCurveTo(0, by + 2.7, 9.3 - i * 0.2, by + 0.9); ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 0.6; ctx.stroke(); }
-  // shoulder guards
-  capsule(ctx, -9.5, -31.5, 7, 5, IRON, 1.5, 0.35); capsule(ctx, 9.5, -31.5, 7, 5, IRON, 1.5, -0.35);
-  // right arm with gladius (raised slightly)
-  capsule(ctx, 12 + armSwing * 2, -24 + armSwing * 2, 4.8, 13, SKIN, 1.5, -0.5 + armSwing * 0.3);
-  ctx.save(); ctx.translate(15.5 + armSwing * 2, -18 + armSwing * 2); ctx.rotate(-0.9); capsule(ctx, 0, -1.5, 3, 5, LEATHER_D, 1.2); ctx.beginPath(); ctx.moveTo(-1.3, -4); ctx.lineTo(1.3, -4); ctx.lineTo(0.9, -18); ctx.lineTo(0, -20); ctx.lineTo(-0.9, -18); ctx.closePath(); fillStroke(ctx, lit(ctx, -1, -20, 1, -4, [215, 220, 228]), 1.1); ctx.restore();
-  // scutum (left arm behind it)
-  ctx.save(); ctx.translate(-13, -22); ctx.beginPath(); ctx.roundRect(-6.5, -13, 13, 26, 3.2); fillStroke(ctx, lit(ctx, -6, -13, 6, 13, RED), 1.9);
-  ctx.beginPath(); ctx.roundRect(-4.6, -11, 9.2, 22, 2.2); ctx.strokeStyle = rgb(GOLD); ctx.lineWidth = 0.9; ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(0, 0, 2.2, 2.2, 0, 0, 7); fillStroke(ctx, lit(ctx, -2, -2, 2, 2, BRONZE), 1); // boss
-  for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 2.6, -1.5); ctx.quadraticCurveTo(s * 5.2, -6, s * 2.8, -9); ctx.quadraticCurveTo(s * 4.4, -5, s * 2.6, -1.5); ctx.fillStyle = rgb(GOLD); ctx.fill(); } // wings
-  ctx.beginPath(); ctx.moveTo(-6.5, -13); ctx.lineTo(-2, -13); ctx.lineTo(-2, 13); ctx.lineTo(-6.5, 13); ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fill(); // sheen
+// ---------- rich legionary drawn from a pose (unit faces left, 3/4 view) ----------
+function drawLegionary(ctx, x, y, S, P, opt = {}) {
+  const { detail = 1 } = opt;
+  ctx.save(); ctx.translate(x, y); ctx.scale(S, S);
+  shadow(ctx, 0, 0, 15, 6, 0.42);
+  const hipY = -21 + P.bob, hipX = P.lean * 6;
+  const shoulderY = hipY - 14, shoulderX = hipX + P.lean * 10;
+  const headX = shoulderX + P.lean * 4, headY = shoulderY - 10 + P.headNod * 6;
+  // ---- far (right) arm + sword behind the body when not thrusting
+  const armR = arm(shoulderX + 3.5, shoulderY + 1.5, P.armR, 1);
+  const swordFront = P.armR.up > 0.4;
+  // ---- far (right) leg
+  const legR = leg(hipX + 2.6, hipY, P.legR);
+  drawLeg(ctx, legR, 0.85);
+  // ---- cape
+  { const cx = hipX + 3, top = shoulderY - 1; const fl = P.cape; ctx.beginPath(); ctx.moveTo(cx - 4, top); ctx.lineTo(cx + 5, top + 1); ctx.bezierCurveTo(cx + 9 + fl * 8, top + 10, cx + 12 + fl * 16, hipY + 6, cx + 8 + fl * 18, hipY + 12); ctx.lineTo(cx - 2 + fl * 10, hipY + 13); ctx.bezierCurveTo(cx - 3 + fl * 4, hipY + 2, cx - 6, top + 8, cx - 4, top); ctx.closePath(); ctx.fillStyle = lit(ctx, [140, 22, 26], cx - 6, top, cx + 14, hipY + 12, 1.2, 0.5); ctx.fill(); stroke(ctx, 1.4);
+    if (detail) { ctx.beginPath(); ctx.moveTo(cx + 1, top + 4); ctx.bezierCurveTo(cx + 4 + fl * 6, top + 12, cx + 5 + fl * 12, hipY + 4, cx + 3 + fl * 14, hipY + 11); ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1; ctx.stroke(); } }
+  if (!swordFront) { seg(ctx, armR.s[0], armR.s[1], armR.e[0], armR.e[1], 4.4, shade(SKIN, 0.85)); seg(ctx, armR.e[0], armR.e[1], armR.h[0], armR.h[1], 4, shade(SKIN, 0.85)); sword(ctx, armR.h, armR.dir, wrist2d(P.armR), 0.85); }
+  // ---- tunic skirt + pteruges (hang from the hip, sway with the lean)
+  { const sw = P.lean * 8 + (P.cape - 0.2) * 3; ctx.beginPath(); ctx.moveTo(hipX - 8, hipY - 2); ctx.lineTo(hipX + 8, hipY - 2); ctx.lineTo(hipX + 9.5 + sw, hipY + 11); ctx.lineTo(hipX - 9.5 + sw, hipY + 11); ctx.closePath(); ctx.fillStyle = lit(ctx, RED, hipX - 9, hipY - 2, hipX + 9, hipY + 11); ctx.fill(); stroke(ctx, 1.4);
+    for (let i = -3; i <= 3; i++) { const lx = hipX + i * 2.7 + sw * 0.5; ctx.beginPath(); ctx.moveTo(lx - 1.1, hipY + 3); ctx.lineTo(lx + 1.1, hipY + 3); ctx.lineTo(lx + 1.3 + sw * 0.5, hipY + 12); ctx.lineTo(lx - 1.3 + sw * 0.5, hipY + 12); ctx.closePath(); ctx.fillStyle = rgb(shade(LEATHER, i < 0 ? 1.15 : 0.85)); ctx.fill(); stroke(ctx, 1); ctx.fillStyle = rgb(BRONZE); ctx.fillRect(lx - 0.8 + sw * 0.5, hipY + 10, 1.6, 1.2); } }
+  // ---- near (left) leg
+  const legL = leg(hipX - 2.6, hipY, P.legL);
+  drawLeg(ctx, legL, 1);
+  // ---- torso: lorica segmentata
+  ctx.save(); ctx.translate(shoulderX, shoulderY); ctx.rotate(-P.lean * 0.6 + P.torsoTwist);
+  ctx.beginPath(); ctx.moveTo(-9.5, 0); ctx.quadraticCurveTo(0, -2.5, 9.5, 0); ctx.lineTo(8.5, 13); ctx.quadraticCurveTo(0, 15, -8.5, 13); ctx.closePath(); ctx.fillStyle = lit(ctx, IRON, -10, -2, 10, 15); ctx.fill(); stroke(ctx, 1.7);
+  for (let i = 0; i < 5; i++) { const by = 1.5 + i * 2.7; ctx.beginPath(); ctx.moveTo(-9.3 + i * 0.2, by); ctx.quadraticCurveTo(0, by + 1.9, 9.3 - i * 0.2, by); ctx.strokeStyle = rgb(IRON_D); ctx.lineWidth = 0.9; ctx.stroke(); ctx.beginPath(); ctx.moveTo(-9.1 + i * 0.2, by + 0.9); ctx.quadraticCurveTo(0, by + 2.8, 9.1 - i * 0.2, by + 0.9); ctx.strokeStyle = 'rgba(255,255,255,0.38)'; ctx.lineWidth = 0.6; ctx.stroke(); }
+  // belt with brass plates
+  ctx.beginPath(); ctx.moveTo(-8.6, 12.2); ctx.quadraticCurveTo(0, 14.2, 8.6, 12.2); ctx.strokeStyle = rgb(LEATHER_D); ctx.lineWidth = 2.2; ctx.stroke(); for (let i = -2; i <= 2; i++) { ctx.fillStyle = rgb(BRONZE); ctx.fillRect(i * 3 - 0.7, 12.1 + Math.abs(i) * 0.3, 1.4, 1.6); }
+  // shoulder plates
+  for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sgn * 9.6, 1.6, 4, 2.9, sgn * 0.4, 0, 7); ctx.fillStyle = lit(ctx, IRON, sgn * 9.6 - 4, -2, sgn * 9.6 + 4, 5); ctx.fill(); stroke(ctx, 1.3); }
   ctx.restore();
-  // head + galea
-  capsule(ctx, 0, -38, 3.6, 4, SKIN, 1.2); // neck
-  ctx.beginPath(); ctx.ellipse(0, -44, 6.2, 6.8, 0, 0, 7); fillStroke(ctx, lit(ctx, -6, -50, 6, -38, SKIN), 1.6);
-  ctx.fillStyle = rgb(SKIN_D); ctx.beginPath(); ctx.ellipse(-2.2, -43.5, 0.9, 1.1, 0, 0, 7); ctx.ellipse(2.2, -43.5, 0.9, 1.1, 0, 0, 7); ctx.fill(); // eyes
-  ctx.beginPath(); ctx.moveTo(-7.4, -45); ctx.quadraticCurveTo(0, -55.5, 7.4, -45); ctx.lineTo(7.8, -41); ctx.quadraticCurveTo(0, -43.5, -7.8, -41); ctx.closePath(); fillStroke(ctx, lit(ctx, -8, -55, 8, -41, BRONZE), 1.6); // helmet bowl
-  for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 5.8, -42); ctx.lineTo(s * 6.6, -36.5); ctx.lineTo(s * 3.8, -37.5); ctx.closePath(); fillStroke(ctx, rgb(shade(BRONZE, s < 0 ? 1.1 : 0.85)), 1.2); } // cheek guards
-  ctx.beginPath(); ctx.moveTo(-9, -41.5); ctx.quadraticCurveTo(0, -44.5, 9, -41.5); ctx.strokeStyle = rgb(BRONZE_D); ctx.lineWidth = 1.4; ctx.stroke(); // brow band
-  ctx.beginPath(); ctx.moveTo(-2, -51.5); ctx.quadraticCurveTo(0, -60, 2, -51.5); ctx.lineTo(3, -49); ctx.quadraticCurveTo(0, -47, -3, -49); ctx.closePath(); fillStroke(ctx, lit(ctx, -3, -60, 3, -47, RED), 1.3); // crest
-  ctx.beginPath(); ctx.ellipse(-3.2, -49.5, 1.6, 2.6, -0.4, 0, 7); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill(); // highlight
+  // ---- near (left) arm with the scutum
+  const armL = arm(shoulderX - 3.5, shoulderY + 1.5, P.armL, -1);
+  seg(ctx, armL.s[0], armL.s[1], armL.e[0], armL.e[1], 4.6, SKIN); seg(ctx, armL.e[0], armL.e[1], armL.h[0], armL.h[1], 4.2, SKIN);
+  // ---- head + galea (drawn before the shield so the shield can overlap the body edge)
+  drawHead(ctx, headX, headY, P);
+  // scutum held on the near side, slightly angled
+  scutum(ctx, armL.h[0] - 3, armL.h[1] - 3, P);
+  // ---- sword arm in front when thrusting
+  if (swordFront) { seg(ctx, armR.s[0], armR.s[1], armR.e[0], armR.e[1], 4.4, SKIN); seg(ctx, armR.e[0], armR.e[1], armR.h[0], armR.h[1], 4, SKIN); sword(ctx, armR.h, armR.dir, wrist2d(P.armR), 1); }
   ctx.restore();
 }
-{ const ctx = C[1]; legionary2(ctx, 210, 250, 4.4); }
+function leg(hx, hy, L) { const L1 = 9.5, L2 = 9; const a1 = -L.thigh; const kx = hx + Math.sin(a1) * L1, ky = hy + Math.cos(a1) * L1; const a2 = a1 + L.knee; const ax = kx + Math.sin(a2) * L2, ay = ky + Math.cos(a2) * L2; return { h: [hx, hy], k: [kx, ky], a: [ax, ay], a2 }; }
+function drawLeg(ctx, L, br) { const c = shade(SKIN, br); seg(ctx, L.h[0], L.h[1], L.k[0], L.k[1], 5.4, c); seg(ctx, L.k[0], L.k[1], L.a[0], L.a[1], 4.6, c);
+  // sandal + straps
+  ctx.save(); ctx.translate(L.a[0], L.a[1]); ctx.rotate(Math.max(-0.3, Math.min(0.3, -L.a2 * 0.5))); ctx.beginPath(); ctx.roundRect(-4.2, -0.5, 7.6, 3, 1.4); ctx.fillStyle = rgb(shade(LEATHER_D, br)); ctx.fill(); stroke(ctx, 1.2); ctx.strokeStyle = rgb(shade(LEATHER_D, br * 1.3)); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(-2.4, -4); ctx.lineTo(0.6, -0.5); ctx.moveTo(1.8, -4.2); ctx.lineTo(-1.6, -0.5); ctx.stroke(); ctx.restore(); }
+const wrist2d = A => A.wrist + (A.out || 0) - 2 * A.up;
+function arm(sx, sy, A, side) { const L1 = 8, L2 = 7.5; const ang1 = -A.up + side * (A.out || 0); const ex = sx + Math.sin(ang1) * L1, ey = sy + Math.cos(ang1) * L1; const ang2 = ang1 - A.fore; const hx = ex + Math.sin(ang2) * L2, hy = ey + Math.cos(ang2) * L2; return { s: [sx, sy], e: [ex, ey], h: [hx, hy], dir: ang2 }; }
+function sword(ctx, h, dir, wrist, br) { ctx.save(); ctx.translate(h[0], h[1]); ctx.rotate(Math.PI - dir + wrist); // wrist 0 = blade continues the forearm, PI = blade up
+  ctx.beginPath(); ctx.roundRect(-1.4, -1.5, 2.8, 5.5, 1.2); ctx.fillStyle = rgb(shade(LEATHER_D, br)); ctx.fill(); stroke(ctx, 1); // grip
+  ctx.beginPath(); ctx.roundRect(-3.2, -2.6, 6.4, 1.6, 0.6); ctx.fillStyle = rgb(shade(BRONZE, br)); ctx.fill(); stroke(ctx, 0.9); // guard
+  ctx.beginPath(); ctx.arc(0, 4.6, 1.5, 0, 7); ctx.fillStyle = rgb(shade(BRONZE, br)); ctx.fill(); stroke(ctx, 0.8); // pommel
+  ctx.beginPath(); ctx.moveTo(-1.5, -2.6); ctx.lineTo(1.5, -2.6); ctx.lineTo(1.1, -18); ctx.lineTo(0, -21); ctx.lineTo(-1.1, -18); ctx.closePath(); ctx.fillStyle = lit(ctx, shade(STEEL, br), -1.5, -21, 1.5, -2, 1.05, 0.7); ctx.fill(); stroke(ctx, 1); ctx.beginPath(); ctx.moveTo(0, -3.5); ctx.lineTo(0, -17.5); ctx.strokeStyle = 'rgba(60,60,70,0.6)'; ctx.lineWidth = 0.6; ctx.stroke(); ctx.restore(); }
+function scutum(ctx, x, y, P) { ctx.save(); ctx.translate(x, y); ctx.rotate(-0.08 + P.lean * 0.3);
+  ctx.beginPath(); ctx.roundRect(-6.5, -13, 13, 26, 3.2); ctx.fillStyle = lit(ctx, RED, -6.5, -13, 6.5, 13, 1.25, 0.55); ctx.fill(); stroke(ctx, 1.9);
+  ctx.beginPath(); ctx.roundRect(-4.6, -11.1, 9.2, 22.2, 2.2); ctx.strokeStyle = rgb(GOLD); ctx.lineWidth = 1; ctx.stroke();
+  for (const sg of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sg * 2.6, -1.5); ctx.quadraticCurveTo(sg * 5.6, -6.5, sg * 3, -10.5); ctx.quadraticCurveTo(sg * 4.6, -5.5, sg * 2.6, -1.5); ctx.fillStyle = rgb(GOLD); ctx.fill(); ctx.beginPath(); ctx.moveTo(sg * 2.4, 2); ctx.lineTo(sg * 4.2, 5.5); ctx.lineTo(sg * 2.2, 9); ctx.strokeStyle = rgb(GOLD); ctx.lineWidth = 1.1; ctx.stroke(); } // wings + lightning
+  ctx.beginPath(); ctx.arc(0, 0, 2.4, 0, 7); ctx.fillStyle = lit(ctx, BRONZE, -2, -2, 2, 2); ctx.fill(); stroke(ctx, 1); // boss
+  ctx.beginPath(); ctx.roundRect(-6.5, -13, 3.6, 26, 3.2); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill(); // sheen
+  ctx.restore(); }
+function drawHead(ctx, hx, hy, P) { ctx.save(); ctx.translate(hx, hy);
+  seg(ctx, 0, 4.5, 0, 7.5, 4, shade(SKIN, 0.9), 1.1); // neck
+  ctx.beginPath(); ctx.ellipse(-0.6, 0, 6.2, 6.8, 0, 0, 7); ctx.fillStyle = lit(ctx, SKIN, -7, -7, 6, 7, 1.22, 0.62); ctx.fill(); stroke(ctx, 1.5);
+  ctx.fillStyle = rgb(SKIN_D); ctx.beginPath(); ctx.ellipse(-3.6, 0.2, 0.9, 1.1, 0, 0, 7); ctx.ellipse(0.4, 0.2, 0.9, 1.1, 0, 0, 7); ctx.fill(); // eyes (looking left)
+  ctx.beginPath(); ctx.moveTo(-4.8, 1); ctx.lineTo(-6.4, 3); ctx.lineTo(-4.4, 3.4); ctx.fillStyle = rgb(shade(SKIN, 0.92)); ctx.fill(); // nose
+  ctx.strokeStyle = 'rgba(80,40,30,0.5)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(-4, 4.6); ctx.quadraticCurveTo(-2, 5.4, 0, 4.8); ctx.stroke(); // mouth
+  // galea
+  ctx.beginPath(); ctx.moveTo(-7.8, -3.4); ctx.quadraticCurveTo(-0.6, -14.5, 6.8, -3.4); ctx.lineTo(7.2, -0.6); ctx.quadraticCurveTo(0, -2.6, -8.2, -0.6); ctx.closePath(); ctx.fillStyle = lit(ctx, BRONZE, -8, -14, 7, 0); ctx.fill(); stroke(ctx, 1.5);
+  ctx.beginPath(); ctx.moveTo(-8.6, -0.9); ctx.quadraticCurveTo(0, -3.4, 7.6, -0.9); ctx.strokeStyle = rgb(BRONZE_D); ctx.lineWidth = 1.5; ctx.stroke(); // brow band
+  ctx.beginPath(); ctx.moveTo(-7.0, -0.6); ctx.lineTo(-7.6, 5.2); ctx.lineTo(-5.0, 4.6); ctx.closePath(); ctx.fillStyle = rgb(shade(BRONZE, 1.05)); ctx.fill(); stroke(ctx, 1.1); // cheek guard (near)
+  ctx.beginPath(); ctx.moveTo(6.4, -0.6); ctx.lineTo(7.0, 4.8); ctx.lineTo(4.8, 4.4); ctx.closePath(); ctx.fillStyle = rgb(shade(BRONZE, 0.8)); ctx.fill(); stroke(ctx, 1); // cheek guard (far)
+  ctx.beginPath(); ctx.moveTo(4.5, -8); ctx.quadraticCurveTo(8, -6.5, 8.6, -1.5); ctx.strokeStyle = rgb(shade(BRONZE, 0.7)); ctx.lineWidth = 1.2; ctx.stroke(); // neck guard edge
+  // crest with texture, swaying
+  const cr = P.crest * 10; ctx.beginPath(); ctx.moveTo(-3, -12.2); ctx.quadraticCurveTo(-1 + cr, -22, 3 + cr * 1.5, -11.6); ctx.lineTo(4.6, -8.8); ctx.quadraticCurveTo(0, -10.6, -4.4, -9.2); ctx.closePath(); ctx.fillStyle = lit(ctx, RED, -4, -19, 5, -6, 1.2, 0.6); ctx.fill(); stroke(ctx, 1.3);
+  for (let i = 0; i < 5; i++) { const t = i / 4; ctx.beginPath(); ctx.moveTo(-3.6 + t * 8, -9.4 - t * 0.6); ctx.quadraticCurveTo(-2.4 + t * 6 + cr * t, -14.6 - (1 - Math.abs(t - 0.5) * 2) * 5, -1.5 + t * 6 + cr * t, -17.6 + Math.abs(t - 0.5) * 6); ctx.strokeStyle = 'rgba(60,10,10,0.35)'; ctx.lineWidth = 0.6; ctx.stroke(); }
+  ctx.beginPath(); ctx.ellipse(-3.8, -6.6, 1.3, 2.2, -0.55, 0, 7); ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill(); // helmet highlight
+  ctx.restore(); }
 
-// ---------- 2: rig + layers: three walk phases ----------
-{ const ctx = C[2]; const S = 3.2; const poses = [{ legL: -1, legR: 1, armSwing: 0.6, cape: 0.5, bob: -3 }, { legL: 0, legR: 0, armSwing: 0, cape: 0.15, bob: 0 }, { legL: 1, legR: -1, armSwing: -0.6, cape: 0.5, bob: -3 }];
-  poses.forEach((p, i) => legionary2(ctx, 90 + i * 120, 250, S, p));
-  ctx.fillStyle = '#eadfc4'; ctx.font = '11px Georgia'; ctx.textAlign = 'center'; ['krok 1', 'stoj', 'krok 2'].forEach((t, i) => ctx.fillText(t, 90 + i * 120, 285)); }
-
-// ---------- 3 & 4: tiny software 3D rasteriser ----------
-const V = { add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], norm: a => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; } };
-function box(cx, cy, cz, w, h, d, color, rotY = 0) { const c = Math.cos(rotY), s = Math.sin(rotY); const P = []; for (const [sx, sy, sz] of [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]]) { const x = sx * w / 2, z = sz * d / 2; P.push([cx + x * c - z * s, cy + sy * h / 2, cz + x * s + z * c]); } const F = [[0, 1, 2, 3], [5, 4, 7, 6], [4, 0, 3, 7], [1, 5, 6, 2], [4, 5, 1, 0], [3, 2, 6, 7]]; return F.map(f => ({ pts: f.map(i => P[i]), color })); }
-function cylinder(cx, cy, cz, r, h, color, n = 10, rTop = r) { const faces = []; for (let i = 0; i < n; i++) { const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2; faces.push({ pts: [[cx + Math.cos(a0) * r, cy + h / 2, cz + Math.sin(a0) * r], [cx + Math.cos(a1) * r, cy + h / 2, cz + Math.sin(a1) * r], [cx + Math.cos(a1) * rTop, cy - h / 2, cz + Math.sin(a1) * rTop], [cx + Math.cos(a0) * rTop, cy - h / 2, cz + Math.sin(a0) * rTop]], color }); } faces.push({ pts: [...Array(n)].map((_, i) => { const a = i / n * Math.PI * 2; return [cx + Math.cos(a) * rTop, cy - h / 2, cz + Math.sin(a) * rTop]; }), color }); return faces; }
-function sphere(cx, cy, cz, r, color, n = 8) { const faces = []; for (let i = 0; i < n; i++) for (let j = 0; j < n * 2; j++) { const t0 = i / n * Math.PI, t1 = (i + 1) / n * Math.PI, p0 = j / (n * 2) * Math.PI * 2, p1 = (j + 1) / (n * 2) * Math.PI * 2; const pt = (t, p) => [cx + Math.sin(t) * Math.cos(p) * r, cy - Math.cos(t) * r, cz + Math.sin(t) * Math.sin(p) * r]; faces.push({ pts: [pt(t0, p0), pt(t0, p1), pt(t1, p1), pt(t1, p0)], color }); } return faces; }
-function arcPlate(cx, cy, cz, r, h, a0, a1, thick, color, n = 6) { // curved shield plate (part of a cylinder wall)
-  const F = []; for (let i = 0; i < n; i++) { const t0 = a0 + (a1 - a0) * i / n, t1 = a0 + (a1 - a0) * (i + 1) / n; const o = [Math.cos(t0) * r, Math.sin(t0) * r], p = [Math.cos(t1) * r, Math.sin(t1) * r], o2 = [Math.cos(t0) * (r + thick), Math.sin(t0) * (r + thick)], p2 = [Math.cos(t1) * (r + thick), Math.sin(t1) * (r + thick)];
-    F.push({ pts: [[cx + o[0], cy + h / 2, cz + o[1]], [cx + p[0], cy + h / 2, cz + p[1]], [cx + p[0], cy - h / 2, cz + p[1]], [cx + o[0], cy - h / 2, cz + o[1]]], color }); // inner face
-    F.push({ pts: [[cx + o2[0], cy - h / 2, cz + o2[1]], [cx + p2[0], cy - h / 2, cz + p2[1]], [cx + p2[0], cy + h / 2, cz + p2[1]], [cx + o2[0], cy + h / 2, cz + o2[1]]], color }); // outer face
-    F.push({ pts: [[cx + o[0], cy - h / 2, cz + o[1]], [cx + p[0], cy - h / 2, cz + p[1]], [cx + p2[0], cy - h / 2, cz + p2[1]], [cx + o2[0], cy - h / 2, cz + o2[1]]], color: shade(color, 0.8) }); // top rim
-  } return F; }
-function legionaryModel(walk = 0) { // y grows downward on screen; the unit is ~13 units tall
-  const F = []; const sw = Math.sin(walk);
-  // legs + sandals
-  F.push(...cylinder(-1.3, 6.4, sw * 1.2, 1.05, 6.4, SKIN, 10), ...cylinder(1.3, 6.4, -sw * 1.2, 1.05, 6.4, SKIN, 10));
-  F.push(...box(-1.3, 9.9, 0.4 + sw * 1.2, 2.2, 0.8, 3.2, LEATHER_D), ...box(1.3, 9.9, 0.4 - sw * 1.2, 2.2, 0.8, 3.2, LEATHER_D));
-  // tunic skirt (flared), belt
-  F.push(...cylinder(0, 2.4, 0, 3.1, 3.4, RED, 14, 2.5));
-  F.push(...cylinder(0, 0.6, 0, 2.75, 0.7, LEATHER_D, 14));
-  // lorica: torso with 5 bands
-  F.push(...cylinder(0, -1.6, 0, 2.6, 4.2, IRON, 14, 2.9));
-  for (let i = 0; i < 5; i++) F.push(...cylinder(0, -3.3 + i * 0.85, 0, 2.62 + i * 0.05, 0.28, IRON_D, 14));
-  // shoulder plates + arms
-  F.push(...sphere(-3.0, -3.1, 0, 1.3, IRON, 6), ...sphere(3.0, -3.1, 0, 1.3, IRON, 6));
-  F.push(...cylinder(-3.4, -0.2, 1.2, 0.85, 4.8, SKIN, 8)); // left arm holds the shield forward-left
-  F.push(...cylinder(3.5, -0.4, -0.6, 0.85, 4.6, SKIN, 8)); // right arm
-  // scutum: curved red plate with brass boss, held on the left
-  F.push(...arcPlate(-2.2, 0.2, 2.2, 3.4, 9.2, Math.PI * 0.62, Math.PI * 1.22, 0.35, RED, 7));
-  F.push(...sphere(-5.55, 0.2, 2.2, 0.75, BRONZE, 5));
-  // gladius in the right hand, blade up
-  F.push(...box(3.9, 1.9, -0.9, 0.7, 1.9, 0.7, LEATHER_D), ...box(3.9, 0.5, -0.9, 1.8, 0.35, 0.5, BRONZE_D), ...box(3.9, -2.7, -0.9, 0.5, 6.0, 0.22, [220, 224, 232]));
-  // neck, head, face plate, helmet with brow band, cheek guards and crest
-  F.push(...cylinder(0, -4.4, 0, 0.95, 1.1, SKIN, 8));
-  F.push(...sphere(0, -6.6, 0, 1.9, SKIN, 8));
-  F.push(...sphere(0, -6.9, 0, 2.15, BRONZE, 8).filter(f => f.pts.every(p => p[1] <= -6.6)));
-  F.push(...cylinder(0, -6.55, 0, 2.2, 0.5, BRONZE_D, 14));
-  F.push(...box(-1.9, -5.6, 0.9, 0.6, 1.6, 1.3, BRONZE), ...box(1.9, -5.6, 0.9, 0.6, 1.6, 1.3, BRONZE));
-  F.push(...box(0, -9.3, 0, 0.7, 1.7, 4.2, RED), ...box(0, -8.6, -1.2, 0.5, 0.8, 2.0, RED_D));
+// ---------- 3D: jointed model, software rasteriser (y up, ground y=0, unit faces +z at yaw 0, camera at +z above) ----------
+const V = { sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], norm: a => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; } };
+const rotX = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0], p[1] * c - p[2] * s, p[1] * s + p[2] * c]; };
+const rotY = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c + p[2] * s, p[1], -p[0] * s + p[2] * c]; };
+const rotZ = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c, p[2]]; };
+const mv = (p, x, y, z) => [p[0] + x, p[1] + y, p[2] + z];
+const xf = (faces, fn) => faces.map(f => ({ ...f, pts: f.pts.map(fn) }));
+/** positive = forward (+z) for a part hanging down from its joint */
+const swing = (faces, a) => xf(faces, p => rotX(p, -a));
+function box(cx, cy, cz, w, h, d, color) { const P = []; for (const [sx, sy, sz] of [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]]) P.push([cx + sx * w / 2, cy + sy * h / 2, cz + sz * d / 2]); const F = [[0, 1, 2, 3], [5, 4, 7, 6], [4, 0, 3, 7], [1, 5, 6, 2], [4, 5, 1, 0], [3, 2, 6, 7]]; return F.map(f => ({ pts: f.map(i => P[i]), color })); }
+/** vertical cylinder/cone: radius r at the bottom, rTop at the top */
+function cyl(cx, cy, cz, r, h, color, n = 10, rTop = r, caps = true) { const F = []; const ring = (rr, y) => [...Array(n)].map((_, i) => { const a = i / n * Math.PI * 2; return [cx + Math.cos(a) * rr, y, cz + Math.sin(a) * rr]; }); const B = ring(r, cy - h / 2), T = ring(rTop, cy + h / 2); for (let i = 0; i < n; i++) { const j = (i + 1) % n; F.push({ pts: [B[i], B[j], T[j], T[i]], color }); } if (caps) { F.push({ pts: T, color }); F.push({ pts: B.slice().reverse(), color }); } return F; }
+function sph(cx, cy, cz, r, color, n = 8, keep = null) { const F = []; for (let i = 0; i < n; i++) for (let j = 0; j < n * 2; j++) { const t0 = i / n * Math.PI, t1 = (i + 1) / n * Math.PI, p0 = j / (n * 2) * Math.PI * 2, p1 = (j + 1) / (n * 2) * Math.PI * 2; const pt = (t, p) => [cx + Math.sin(t) * Math.cos(p) * r, cy + Math.cos(t) * r, cz + Math.sin(t) * Math.sin(p) * r]; const f = { pts: [pt(t0, p0), pt(t0, p1), pt(t1, p1), pt(t1, p0)], color }; if (!keep || f.pts.every(keep)) F.push(f); } return F; }
+/** curved plate: part of a vertical cylinder wall of radius r around (cx,*,cz), angles a0..a1 in the xz plane, with thickness */
+function arcPlate(cx, cy, cz, r, h, a0, a1, thick, color, n = 7, rim = null) { const F = []; for (let i = 0; i < n; i++) { const t0 = a0 + (a1 - a0) * i / n, t1 = a0 + (a1 - a0) * (i + 1) / n; const o = [Math.cos(t0) * r, Math.sin(t0) * r], p = [Math.cos(t1) * r, Math.sin(t1) * r], o2 = [Math.cos(t0) * (r + thick), Math.sin(t0) * (r + thick)], p2 = [Math.cos(t1) * (r + thick), Math.sin(t1) * (r + thick)]; const c2 = rim && (i === 0 || i === n - 1) ? rim : color; F.push({ pts: [[cx + o2[0], cy - h / 2, cz + o2[1]], [cx + p2[0], cy - h / 2, cz + p2[1]], [cx + p2[0], cy + h / 2, cz + p2[1]], [cx + o2[0], cy + h / 2, cz + o2[1]]], color: c2 }); F.push({ pts: [[cx + o[0], cy + h / 2, cz + o[1]], [cx + p[0], cy + h / 2, cz + p[1]], [cx + p[0], cy - h / 2, cz + p[1]], [cx + o[0], cy - h / 2, cz + o[1]]], color: shade(color, 0.7) }); F.push({ pts: [[cx + o[0], cy + h / 2, cz + o[1]], [cx + o2[0], cy + h / 2, cz + o2[1]], [cx + p2[0], cy + h / 2, cz + p2[1]], [cx + p[0], cy + h / 2, cz + p[1]]], color: rim || color }); F.push({ pts: [[cx + o[0], cy - h / 2, cz + o[1]], [cx + p[0], cy - h / 2, cz + p[1]], [cx + p2[0], cy - h / 2, cz + p2[1]], [cx + o2[0], cy - h / 2, cz + o2[1]]], color: rim || color }); } return F; }
+const HIP = 6.7, SHOULDER = 10.4, SHX = 1.75;
+function model3D(P, hi = false) {
+  const n = hi ? 14 : 8, ns = hi ? 10 : 6; const F = [];
+  const bob = P.bob * 0.25;
+  // ---- legs: thigh 3.3, shin 3.0, sandal
+  const legM = (x, L, br) => { const c = shade(SKIN, br); const up = cyl(0, -1.65, 0, 0.62, 3.3, c, n, 0.55); const knee = sph(0, -3.3, 0, 0.5, c, 4); let lo = [...cyl(0, -1.5, 0, 0.5, 3.0, c, n, 0.42), ...box(0, -3.15, 0.3, 0.9, 0.45, 1.7, shade(LEATHER_D, br)), ...box(0, -2.55, 0.1, 0.95, 0.12, 0.9, shade(LEATHER, br))]; lo = swing(lo, -L.knee).map(f => ({ ...f, pts: f.pts.map(p => mv(p, 0, -3.3, 0)) })); return swing([...up, ...knee, ...lo], L.thigh).map(f => ({ ...f, pts: f.pts.map(p => mv(p, x, HIP + bob, 0)) })); };
+  F.push(...legM(-0.75, P.legR, 0.92), ...legM(0.75, P.legL, 1));
+  // ---- hips, tunic skirt, pteruges, belt (lean with the torso)
+  const lean = P.lean; const T = p => { const q = rotX([p[0], p[1] - HIP - bob, p[2]], lean); return [q[0], q[1] + HIP + bob, q[2]]; };
+  let body = [...cyl(0, HIP - 0.9, 0, 1.75, 1.9, RED, n + 4, 1.45), ...cyl(0, HIP + 0.15, 0, 1.5, 0.4, LEATHER_D, n + 4)];
+  for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; body.push(...xf(box(0, HIP - 2.35, 1.72, 0.55, 1.5, 0.16, shade(LEATHER, (i % 2) ? 0.85 : 1.1)), p => rotY(p, a))); body.push(...xf(box(0, HIP - 3.15, 1.72, 0.32, 0.18, 0.2, BRONZE), p => rotY(p, a))); }
+  for (let i = -2; i <= 2; i++) body.push(...xf(box(0, HIP + 0.15, 1.52, 0.35, 0.3, 0.1, BRONZE), p => rotY(p, i * 0.32)));
+  // ---- lorica segmentata: banded torso (bottom r 1.35 → top r 1.55)
+  body.push(...cyl(0, HIP + 2.1, 0, 1.38, 3.5, IRON, n + 4, 1.58));
+  for (let i = 0; i < 5; i++) body.push(...cyl(0, HIP + 0.75 + i * 0.65, 0, 1.42 + i * 0.045, 0.16, IRON_D, n + 4, 1.42 + i * 0.045, false));
+  body.push(...cyl(0, HIP + 3.85, 0, 1.6, 0.45, IRON, n + 4, 1.45)); // upper chest plate
+  for (const sx of [-1, 1]) { body.push(...sph(sx * SHX, SHOULDER, 0, 0.72, IRON, 5, p => p[1] >= SHOULDER - 0.15)); body.push(...cyl(sx * SHX, SHOULDER - 0.2, 0, 0.7, 0.3, IRON_D, 8, 0.72, false)); }
+  F.push(...xf(body, T));
+  // ---- arms: upper 2.9, forearm 2.7; right hand sword (x<0), left forearm scutum (x>0)
+  const armM = (x, A, side, holds) => { const up = cyl(0, -1.45, 0, 0.54, 2.9, SKIN, n, 0.48); const elbow = sph(0, -2.9, 0, 0.46, SKIN, 4); let fa = [...cyl(0, -1.35, 0, 0.46, 2.7, SKIN, n, 0.4), ...sph(0, -2.75, 0, 0.46, SKIN, 4)]; let extra = [];
+    if (holds === 'sword') { let sw = [...box(0, -0.45, 0, 0.32, 0.9, 0.32, LEATHER_D), ...box(0, -0.95, 0, 1.0, 0.16, 0.38, BRONZE_D), ...box(0, -3.75, 0, 0.3, 5.5, 0.08, STEEL), ...box(0, -6.65, 0, 0.16, 0.3, 0.08, STEEL), ...sph(0, 0.1, 0, 0.2, BRONZE, 3)]; sw = xf(sw, p => rotX(p, -A.wrist)); extra = xf(sw, p => mv(p, 0, -2.75, 0)); }
+    if (holds === 'shield') { const R = 3.2; extra = [...arcPlate(-R + 0.55, -1.5, 0.2, R, 4.8, -0.52, 0.52, 0.16, RED, 8, GOLD), ...sph(0.72, -1.5, 0.2, 0.34, BRONZE, 4)]; }
+    fa = swing([...fa, ...extra], A.fore).map(f => ({ ...f, pts: f.pts.map(p => mv(p, 0, -2.9, 0)) }));
+    return xf(swing([...up, ...elbow, ...fa], A.up), p => T(mv(rotZ(p, -side * (A.out || 0)), x, SHOULDER - 0.1, 0))); };
+  F.push(...armM(-SHX - 0.35, P.armR, -1, 'sword'), ...armM(SHX + 0.35, P.armL, 1, 'shield'));
+  // ---- head: neck, face, galea with brow band, cheek guards, neck guard, crest
+  const HY = SHOULDER + 1.9; let head = [...cyl(0, SHOULDER + 0.55, 0, 0.42, 0.9, SKIN, 8), ...sph(0, HY, 0, 1.0, SKIN, ns), ...sph(0, HY + 0.12, 0, 1.15, BRONZE, ns, p => p[1] >= HY + 0.05), ...cyl(0, HY + 0.05, 0, 1.2, 0.26, BRONZE_D, n + 4, 1.2, false), ...box(-0.95, HY - 0.55, 0.55, 0.28, 0.95, 0.75, BRONZE), ...box(0.95, HY - 0.55, 0.55, 0.28, 0.95, 0.75, BRONZE), ...box(0, HY - 0.35, -1.05, 1.9, 0.22, 0.7, shade(BRONZE, 0.85)),
+    ...box(-0.35, HY + 0.05, 0.98, 0.22, 0.12, 0.1, [40, 30, 25]), ...box(0.35, HY + 0.05, 0.98, 0.22, 0.12, 0.1, [40, 30, 25]), ...box(0, HY - 0.2, 1.02, 0.2, 0.35, 0.16, SKIN_D)]; // eyes, nose
+  const cr = P.crest * 0.8; head.push(...box(0, HY + 1.55, 0.1 + cr, 0.32, 0.85, 2.1, RED), ...box(0, HY + 2.1, 0.2 + cr * 1.6, 0.24, 0.4, 1.4, RED_D), ...box(0, HY + 1.15, 0, 0.38, 0.2, 1.4, BRONZE_D));
+  head = xf(head, p => { const q = rotX([p[0], p[1] - SHOULDER, p[2]], -P.headNod * 2); return [q[0], q[1] + SHOULDER, q[2]]; });
+  F.push(...xf(head, T));
+  // ---- cape: bent strips hanging from the shoulders behind the back, flaring with P.cape
+  const cape = []; const cp = P.cape; for (let i = 0; i < 5; i++) { const y0 = SHOULDER - 0.2 - i * 1.25, y1 = y0 - 1.25; const z0 = -1.45 - i * i * cp * 0.16, z1 = -1.45 - (i + 1) * (i + 1) * cp * 0.16; const w0 = 1.45 + i * 0.16, w1 = 1.45 + (i + 1) * 0.16; cape.push({ pts: [[-w0, y0, z0], [w0, y0, z0], [w1, y1, z1], [-w1, y1, z1]], color: [140, 22, 26] }); }
+  F.push(...xf(cape, T));
   return F;
 }
+let _sc = null; function shadowCanvas(w, h) { if (!_sc || _sc.canvas.width !== w || _sc.canvas.height !== h) { const c = document.createElement("canvas"); c.width = w; c.height = h; _sc = c.getContext("2d"); } return _sc; }
 function render3D(ctx, faces, cx, cy, scale, yaw, opts = {}) {
-  const { smooth = false, ambient = 0.35, rim = 0, outline = true, shadow: sh = true } = opts;
-  const cyaw = Math.cos(yaw), syaw = Math.sin(yaw); const tilt = Math.atan(0.5); const ct = Math.cos(tilt), st = Math.sin(tilt);
-  const L = V.norm([-0.5, -1, -0.6]);
-  const proj = p => { const x = p[0] * cyaw - p[2] * syaw, z = p[0] * syaw + p[2] * cyaw; const y = p[1]; return { sx: cx + x * scale, sy: cy + (y * ct + z * st) * scale, depth: z * ct - y * st }; };
-  if (sh) { ctx.save(); ctx.translate(cx, cy + 11 * scale * ct); shadow(ctx, 0, 0, 7 * scale, 3.2 * scale); ctx.restore(); }
-  const out = faces.map(f => { const n = V.norm(V.cross(V.sub(f.pts[1], f.pts[0]), V.sub(f.pts[2], f.pts[0]))); const nr = [n[0] * cyaw - n[2] * syaw, n[1], n[0] * syaw + n[2] * cyaw]; const view = [0, -st, -ct]; const facing = V.dot(nr, [0, -st, ct]); const P = f.pts.map(proj); const d = P.reduce((s, p) => s + p.depth, 0) / P.length; const diff = Math.max(0, V.dot(nr, L)); let k = ambient + diff * 0.85; if (rim) k += rim * Math.pow(1 - Math.abs(V.dot(nr, [0, -st, -ct])), 3); return { P, d, k, facing, color: f.color }; });
+  const { smooth = false, ambient = 0.34, rim = 0, outline = true, shadow: sh = true, shadowSkew = 0 } = opts;
+  const tilt = Math.PI / 5.2, ct = Math.cos(tilt), st = Math.sin(tilt);
+  const L = V.norm([-0.55, 0.9, 0.75]); const camDir = [0, st, ct];
+  const R = p => rotY(p, yaw);
+  const proj = p => ({ sx: cx + p[0] * scale, sy: cy - p[1] * ct * scale + p[2] * st * scale, depth: p[2] * ct + p[1] * st });
+  if (sh) { if (shadowSkew) { const sc = shadowCanvas(ctx.canvas.width, ctx.canvas.height); sc.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); sc.fillStyle = '#000'; for (const f of faces) { const P = f.pts.map(R).map(p => proj([p[0] - p[1] * shadowSkew, 0, p[2] - p[1] * 0.35])); sc.beginPath(); P.forEach((p, i) => i ? sc.lineTo(p.sx, p.sy) : sc.moveTo(p.sx, p.sy)); sc.closePath(); sc.fill(); } ctx.save(); ctx.globalAlpha = 0.3; ctx.drawImage(sc.canvas, 0, 0); ctx.restore(); }
+    else shadow(ctx, cx, cy, 2.6 * scale, 1.1 * scale, 0.42); }
+  const out = faces.map(f => { const pts = f.pts.map(R); let nrm = V.norm(V.cross(V.sub(pts[1], pts[0]), V.sub(pts[2], pts[0]))); if (V.dot(nrm, camDir) < 0) nrm = [-nrm[0], -nrm[1], -nrm[2]]; const P = pts.map(proj); const d = P.reduce((s, p) => s + p.depth, 0) / P.length; const diff = Math.max(0, V.dot(nrm, L)); let k = ambient + diff * 0.8; if (rim) k += rim * Math.pow(1 - Math.max(0, V.dot(nrm, camDir)), 3); return { P, d, k, color: f.color }; });
   out.sort((a, b) => a.d - b.d);
-  for (const f of out) { if (f.facing < -0.05) continue; ctx.beginPath(); f.P.forEach((p, i) => i ? ctx.lineTo(p.sx, p.sy) : ctx.moveTo(p.sx, p.sy)); ctx.closePath(); if (smooth) { const g = ctx.createLinearGradient(f.P[0].sx, f.P[0].sy, f.P[2].sx, f.P[2].sy); g.addColorStop(0, rgb(shade(f.color, f.k * 1.12))); g.addColorStop(1, rgb(shade(f.color, f.k * 0.88))); ctx.fillStyle = g; } else ctx.fillStyle = rgb(shade(f.color, f.k)); ctx.fill(); if (outline) { ctx.strokeStyle = 'rgba(20,14,8,0.55)'; ctx.lineWidth = 0.7; ctx.stroke(); } else { ctx.strokeStyle = rgb(shade(f.color, f.k)); ctx.lineWidth = 0.6; ctx.stroke(); } }
+  for (const f of out) { ctx.beginPath(); f.P.forEach((p, i) => i ? ctx.lineTo(p.sx, p.sy) : ctx.moveTo(p.sx, p.sy)); ctx.closePath(); if (smooth) { const g = ctx.createLinearGradient(f.P[0].sx, f.P[0].sy, f.P[2].sx, f.P[2].sy); g.addColorStop(0, rgb(shade(f.color, f.k * 1.08))); g.addColorStop(1, rgb(shade(f.color, f.k * 0.92))); ctx.fillStyle = g; } else ctx.fillStyle = rgb(shade(f.color, f.k)); ctx.fill(); ctx.strokeStyle = outline ? 'rgba(20,14,8,0.55)' : rgb(shade(f.color, f.k)); ctx.lineWidth = outline ? 0.7 : 0.6; ctx.stroke(); }
 }
-{ const ctx = C[3]; const m = legionaryModel(0); render3D(ctx, m, 150, 150, 9.5, Math.PI * 1.25); [1.0, 1.5, 0.0, 0.5].forEach((k, i) => render3D(ctx, m, 300 + (i % 2) * 70, 110 + Math.floor(i / 2) * 110, 4.2, Math.PI * k)); ctx.fillStyle = '#eadfc4'; ctx.font = '11px Georgia'; ctx.textAlign = 'center'; ctx.fillText('hlavní pohled', 150, 285); ctx.fillText('4 z 8 směrů (z cache)', 335, 285); }
-{ const ctx = C[4]; const m = legionaryModel(0.6); ctx.save(); const g = ctx.createRadialGradient(210, 262, 10, 210, 262, 120); g.addColorStop(0, 'rgba(0,0,0,0.5)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(210 + 40, 262, 110, 26, 0, 0, 7); ctx.fill(); ctx.restore(); render3D(ctx, m, 210, 150, 10.5, Math.PI * 1.25, { smooth: true, ambient: 0.3, rim: 0.45, outline: false, shadow: false }); }
 
-// ---------- 5: pixel-art ----------
-{ const ctx = C[5]; const P = { '.': null, k: '#1a120a', s: '#e8be96', S: '#b07e5a', r: '#c8302e', R: '#7d1613', i: '#b9bec6', I: '#6f757e', b: '#d1a052', B: '#8a6122', g: '#f0d070', w: '#f4f4f8', l: '#6b4a28', L: '#3d2914' };
-  const rows = [
-    '............kkkk............',
-    '...........krrrrk...........',
-    '..........krRrrRrk..........',
-    '..........kkrrrrkk..........',
-    '.........kbbbbbbbbk.........',
-    '........kbbgbbbbbbbk........',
-    '........kbbbbbbbbbbk........',
-    '........kBBBBBBBBBBk........',
-    '........kBkssssssskBk.......',
-    '........kBksksssksskBk......',
-    '.........kkssssssskk........',
-    '..........kSssssSk..........',
-    '...........kSSSSk...........',
-    '........kkkkksssskkkkk......',
-    '......kkiiiiIssIiiiiikk.....',
-    '.....kiiIIiiiiiiiiIIiik.....',
-    '.....kiIkkiIIIIIIiikkIik....',
-    '....kIIk.kiiiiiiiiik.kIIk...',
-    '...krrrk.kIIIIIIIIIk.ksssk..',
-    '..krrrrrk.kiiiiiiiik.ksskwk.',
-    '..krgggrk.kIIIIIIIIk.kssk.wk',
-    '..krgbgrk.kiiiiiiiik..kk..wk',
-    '..krgggrk.krrrrrrrrk......wk',
-    '..krrrrrk.krrrrrrrrk......k.',
-    '..krRrRrk.krRrrrrRrk........',
-    '..krrrrrk.krrrrrrrrk........',
-    '..kRrRrRk.kllllllllk........',
-    '...kkkkk..kLlLlLlLlk........',
-    '..........kssk..kssk........',
-    '..........kssk..kssk........',
-    '..........kSSk..kSSk........',
-    '..........kssk..kssk........',
-    '.........kLLLk.kLLLk........',
-    '.........kkkkk.kkkkk........',
-  ];
-  const px = 7, ox = 210 - rows[0].length * px / 2, oy = 268 - rows.length * px;
-  shadow(ctx, 210, 262, 60, 20);
-  rows.forEach((row, y) => [...row].forEach((ch, x) => { const c = P[ch]; if (!c) return; ctx.fillStyle = c; ctx.fillRect(ox + x * px, oy + y * px, px, px); }));
+// ---------- 5: pixelization of the rig ----------
+const PAL = [[26, 18, 10], [178, 34, 34], [120, 20, 20], [152, 158, 166], [92, 98, 108], [188, 142, 64], [122, 88, 36], [232, 190, 150], [170, 125, 90], [110, 74, 40], [70, 46, 24], [232, 194, 84], [222, 226, 234], [140, 22, 26]];
+const pixCanvas = document.createElement('canvas'); pixCanvas.width = 44; pixCanvas.height = 56; const pctx = pixCanvas.getContext('2d');
+const pixOut = document.createElement('canvas'); pixOut.width = 44; pixOut.height = 56; const poctx = pixOut.getContext('2d');
+function drawPixel(ctx, x, y, P) {
+  pctx.clearRect(0, 0, 44, 56); drawLegionary(pctx, 22, 52, 0.72, P, { detail: 0 });
+  const img = pctx.getImageData(0, 0, 44, 56), d = img.data; const idx = new Int8Array(44 * 56).fill(-1);
+  for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 140) continue; let best = 0, bd = 1e9; for (let k = 0; k < PAL.length; k++) { const c = PAL[k]; const dist = (c[0] - d[i]) ** 2 + (c[1] - d[i + 1]) ** 2 + (c[2] - d[i + 2]) ** 2; if (dist < bd) { bd = dist; best = k; } } idx[i / 4] = best; }
+  const o = poctx.createImageData(44, 56); const od = o.data;
+  for (let y2 = 0; y2 < 56; y2++) for (let x2 = 0; x2 < 44; x2++) { const k = idx[y2 * 44 + x2]; const p = (y2 * 44 + x2) * 4; if (k < 0) { // outline: transparent pixel next to a filled one
+      const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const xx = x2 + dx, yy = y2 + dy; return xx >= 0 && yy >= 0 && xx < 44 && yy < 56 && idx[yy * 44 + xx] >= 0; }); if (nb && y2 > 6) { od[p] = 26; od[p + 1] = 18; od[p + 2] = 10; od[p + 3] = 255; } continue; }
+    const c = PAL[k]; od[p] = c[0]; od[p + 1] = c[1]; od[p + 2] = c[2]; od[p + 3] = 255; }
+  poctx.putImageData(o, 0, 0);
+  ctx.save(); ctx.imageSmoothingEnabled = false; shadow(ctx, x, y + 2, 60, 22, 0.4); ctx.drawImage(pixOut, x - 22 * 4, y - 52 * 4, 44 * 4, 56 * 4); ctx.restore();
 }
+
+// ---------- animation loop ----------
+const frames0 = { walk: [], idle: [], attack: [] }; for (const a of Object.keys(frames0)) for (let i = 0; i < animFrameCount(a); i++) frames0[a].push(unitSprite('ant_infantry', 0, 3, a, i, { faction: 'rome' }));
+const t0 = performance.now();
+function render(t) {
+  const walkT = (t / 0.9) % 1, idleT = (t / 2.7) % 1, atkT = (t / 1.35) % 1;
+  const PW = poseWalk(walkT), PI = poseIdle(idleT), PA = poseAttack(atkT);
+  const clear = i => { const ctx = C[i]; ctx.clearRect(0, 0, 480, 340); return ctx; };
+  // 0: current game sprites
+  { const ctx = clear(0); ctx.imageSmoothingEnabled = false; const k = 4.2; [['walk', walkT], ['idle', idleT], ['attack', atkT]].forEach(([a, tt], i) => { const fr = frames0[a][Math.floor(tt * frames0[a].length) % frames0[a].length]; const x = 80 + i * 160, y = 280; shadow(ctx, x, y, 40, 16); ctx.drawImage(fr.canvas, x - fr.ax * k, y - fr.ay * k, fr.w * k, fr.h * k); }); }
+  // 1: paper-doll 2.0 sampled at 4 frames per animation
+  { const ctx = clear(1); const q = tt => Math.floor(tt * 4) / 4 + 0.125; drawLegionary(ctx, 80, 300, 3.0, poseWalk(q(walkT))); drawLegionary(ctx, 240, 300, 3.0, poseIdle(q(idleT))); drawLegionary(ctx, 400, 300, 3.0, poseAttack(q(atkT))); }
+  // 2: rig, smooth
+  { const ctx = clear(2); drawLegionary(ctx, 80, 300, 3.0, PW); drawLegionary(ctx, 240, 300, 3.0, PI); drawLegionary(ctx, 400, 300, 3.0, PA); }
+  // 3: baked pseudo-3D: walking figure snapped to 8 directions, plus idle and attack
+  { const ctx = clear(3); const yaw = -Math.PI * 0.25 + Math.floor((t / 2.7 * 8) % 8) * Math.PI / 4; const q = tt => Math.floor(tt * 8) / 8; render3D(ctx, model3D(poseWalk(q(walkT))), 75, 300, 15, yaw); render3D(ctx, model3D(poseIdle(q(idleT))), 215, 300, 15, -Math.PI * 0.25); render3D(ctx, model3D(poseAttack(q(atkT))), 345, 300, 15, -Math.PI * 0.25); ctx.fillStyle = '#eadfc4'; ctx.font = '10px Georgia'; ctx.textAlign = 'center'; ctx.fillText('8 směrů, 8 snímků (cache)', 80, 330); }
+  // 4: real 3D, smooth
+  { const ctx = clear(4); const yaw = -Math.PI * 0.25 + t / 2.7 * Math.PI * 2; const o = { smooth: true, ambient: 0.3, rim: 0.35, outline: false, shadowSkew: 0.7 }; render3D(ctx, model3D(PW, true), 75, 300, 15, yaw, o); render3D(ctx, model3D(PI, true), 215, 300, 15, -Math.PI * 0.25, o); render3D(ctx, model3D(PA, true), 345, 300, 15, -Math.PI * 0.25, o); }
+  // 5: pixel-art at 6 fps
+  { const ctx = clear(5); const q = tt => Math.floor(tt * 6) / 6; drawPixel(ctx, 80, 300, poseWalk(q(walkT))); drawPixel(ctx, 240, 300, poseIdle(q(idleT))); drawPixel(ctx, 400, 300, poseAttack(q(atkT))); }
+}
+let gifBusy = false;
+function loop(now) { if (!gifBusy) render((now - t0) / 1000); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+function sheet(scale = 1) { const W = 480 * 3 + 40, H = 340 * 2 + 90; const out = document.createElement('canvas'); out.width = W * scale; out.height = H * scale; const c = out.getContext('2d'); c.scale(scale, scale); c.fillStyle = '#1a140c'; c.fillRect(0, 0, W, H); c.fillStyle = '#e2bc4a'; c.font = 'bold 20px Georgia'; c.fillText('Ages of War – varianty grafiky jednotek', 12, 28); const titles = [...document.querySelectorAll('.card h2')].map(h => h.textContent); [...document.querySelectorAll('.card canvas')].forEach((cv, i) => { const x = 10 + (i % 3) * 490, y = 44 + Math.floor(i / 3) * 365; c.fillStyle = '#f1d36a'; c.font = 'bold 14px Georgia'; c.fillText(titles[i], x, y + 14); panelBg(c, x, y + 20, 480, 340); c.drawImage(cv, x, y + 20, 480, 340); }); return out; }
+function panelBg(c, x, y, w, h) { const g = c.createRadialGradient(x + w / 2, y + h * 0.7, 0, x + w / 2, y + h * 0.7, w * 0.75); g.addColorStop(0, '#5a8a42'); g.addColorStop(1, '#34542a'); c.fillStyle = g; c.fillRect(x, y, w, h); }
+// ---------- animated GIF export (popularity palette + LZW), used only for previews ----------
+function buildPalette(frames) { const cnt = new Map(); for (const d of frames) for (let i = 0; i < d.length; i += 16) { const k = ((d[i] >> 3) << 10) | ((d[i + 1] >> 3) << 5) | (d[i + 2] >> 3); cnt.set(k, (cnt.get(k) || 0) + 1); } const top = [...cnt.entries()].sort((a, b) => b[1] - a[1]).slice(0, 256).map(([k]) => [((k >> 10) & 31) * 8 + 4, ((k >> 5) & 31) * 8 + 4, (k & 31) * 8 + 4]); while (top.length < 256) top.push([0, 0, 0]); return top; }
+function indexFrame(d, pal, cache) { const out = new Uint8Array(d.length / 4); for (let i = 0, j = 0; i < d.length; i += 4, j++) { const k = ((d[i] >> 3) << 10) | ((d[i + 1] >> 3) << 5) | (d[i + 2] >> 3); let v = cache[k]; if (v < 0) { let best = 0, bd = 1e9; for (let p = 0; p < pal.length; p++) { const c = pal[p]; const dist = (c[0] - d[i]) ** 2 + (c[1] - d[i + 1]) ** 2 + (c[2] - d[i + 2]) ** 2; if (dist < bd) { bd = dist; best = p; } } v = cache[k] = best; } out[j] = v; } return out; }
+function lzw(indices, minCode = 8) { const out = []; let cur = 0, curBits = 0; const emit = (code, bits) => { cur |= code << curBits; curBits += bits; while (curBits >= 8) { out.push(cur & 255); cur >>>= 8; curBits -= 8; } };
+  const CLEAR = 1 << minCode, EOI = CLEAR + 1; let dict = new Map(), next = EOI + 1, codeSize = minCode + 1; const reset = () => { dict = new Map(); next = EOI + 1; codeSize = minCode + 1; };
+  emit(CLEAR, codeSize); let prefix = indices[0];
+  for (let i = 1; i < indices.length; i++) { const c = indices[i]; const key = prefix * 256 + c; const hit = dict.get(key); if (hit !== undefined) { prefix = hit; continue; } emit(prefix, codeSize); if (next < 4096) { dict.set(key, next++); if (next - 1 === (1 << codeSize) && codeSize < 12) codeSize++; } else { emit(CLEAR, codeSize); reset(); } prefix = c; }
+  emit(prefix, codeSize); emit(EOI, codeSize); if (curBits > 0) out.push(cur & 255); return out; }
+function encodeGif(w, h, frames, delayCs) { const bytes = []; const u16 = v => { bytes.push(v & 255, (v >> 8) & 255); }; const str = s => { for (const ch of s) bytes.push(ch.charCodeAt(0)); };
+  const pal = buildPalette(frames); const cache = new Int16Array(32768).fill(-1);
+  str('GIF89a'); u16(w); u16(h); bytes.push(0xF7, 0, 0); for (const c of pal) bytes.push(c[0], c[1], c[2]);
+  bytes.push(0x21, 0xFF, 11); str('NETSCAPE2.0'); bytes.push(3, 1, 0, 0, 0);
+  for (const d of frames) { const idx = indexFrame(d, pal, cache); bytes.push(0x21, 0xF9, 4, 0, delayCs & 255, (delayCs >> 8) & 255, 0, 0); bytes.push(0x2C); u16(0); u16(0); u16(w); u16(h); bytes.push(0); bytes.push(8); const data = lzw(idx, 8); for (let i = 0; i < data.length; i += 255) { const chunk = data.slice(i, i + 255); bytes.push(chunk.length, ...chunk); } bytes.push(0); }
+  bytes.push(0x3B); return new Uint8Array(bytes); }
+/** render `n` frames of the whole sheet at `fps` into an animated GIF; returns a base64 string */
+window.__gif = (n = 27, fps = 10, scale = 0.6) => { gifBusy = true; const frames = []; let w = 0, h = 0; for (let i = 0; i < n; i++) { render(i / fps); const cv = sheet(scale); w = cv.width; h = cv.height; frames.push(cv.getContext('2d').getImageData(0, 0, w, h).data); } gifBusy = false; const g = encodeGif(w, h, frames, Math.round(100 / fps)); let s = ''; for (let i = 0; i < g.length; i += 8192) s += String.fromCharCode.apply(null, g.subarray(i, i + 8192)); return 'data:image/gif;base64,' + btoa(s); };
+/** one panel only (index) as an animated GIF at full size */
+window.__gifPanel = (idx, n = 27, fps = 10) => { gifBusy = true; const frames = []; const src = document.querySelectorAll('.card canvas')[idx]; const cv = document.createElement('canvas'); cv.width = src.width; cv.height = src.height; const c = cv.getContext('2d'); for (let i = 0; i < n; i++) { render(i / fps); panelBg(c, 0, 0, cv.width, cv.height); c.drawImage(src, 0, 0); frames.push(c.getImageData(0, 0, cv.width, cv.height).data); } gifBusy = false; const g = encodeGif(cv.width, cv.height, frames, Math.round(100 / fps)); let s = ''; for (let i = 0; i < g.length; i += 8192) s += String.fromCharCode.apply(null, g.subarray(i, i + 8192)); return 'data:image/gif;base64,' + btoa(s); };
+
+window.__capture = () => sheet(1).toDataURL('image/png');
 </script>
 </body></html>
