@@ -128,4 +128,12 @@ export default {
   'Odpor je zbytečný.': 'Widerstand ist zwecklos.',
   'Žádný důl v dosahu – dělníci nemají co těžit.': 'Keine Mine in Reichweite – die Arbeiter haben nichts zu sammeln.', 'Žádné stromy v dosahu – dělníci nemají co těžit.': 'Keine Bäume in Reichweite – die Arbeiter haben nichts zu sammeln.',
   'Mechaniky': 'Mechaniken',
+  // map styles and sizes
+  'Pevnina s mořem': 'Kontinent',
+  'Řeka': 'Fluss',
+  'Ostrovy': 'Inseln',
+  'Pláně': 'Ebenen',
+  'Jezera': 'Seen',
+  'Malá': 'Klein',
+  'Velká': 'Groß',
 };

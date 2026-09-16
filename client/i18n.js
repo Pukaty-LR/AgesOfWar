@@ -2,6 +2,7 @@
 // Missing entries fall back to English, then to the Czech source. Game data (unit/building names…) is localized
 // in place on the client at startup; a language switch saves the choice and reloads the page.
 import { ERAS, RESEARCH, TEAM_COLORS } from '../shared/data.js';
+import { MAP_STYLES, MAP_SIZES } from '../shared/mapgen.js';
 import EN from './lang/en.js';
 import DE from './lang/de.js';
 import FR from './lang/fr.js';
@@ -84,6 +85,8 @@ export function localizeData() {
   }
   for (const r of Object.values(RESEARCH)) { L(r); if (r.names) for (const k of Object.keys(r.names)) r.names[k] = t(r.names[k]); }
   for (const c of TEAM_COLORS) L(c);
+  for (const m of Object.values(MAP_STYLES)) L(m);
+  for (const m of Object.values(MAP_SIZES)) L(m);
 }
 
 /** build the language switch (flag chips) into a container */

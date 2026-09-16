@@ -128,4 +128,12 @@ export default {
   'Odpor je zbytečný.': 'La resistencia es inútil.',
   'Žádný důl v dosahu – dělníci nemají co těžit.': 'No hay minas al alcance: los trabajadores no tienen qué recolectar.', 'Žádné stromy v dosahu – dělníci nemají co těžit.': 'No hay árboles al alcance: los trabajadores no tienen qué recolectar.',
   'Mechaniky': 'Mecánicas',
+  // map styles and sizes
+  'Pevnina s mořem': 'Continente',
+  'Řeka': 'Río',
+  'Ostrovy': 'Islas',
+  'Pláně': 'Llanuras',
+  'Jezera': 'Lagos',
+  'Malá': 'Pequeño',
+  'Velká': 'Grande',
 };

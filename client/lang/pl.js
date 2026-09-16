@@ -128,4 +128,12 @@ export default {
   'Odpor je zbytečný.': 'Opór jest daremny.',
   'Žádný důl v dosahu – dělníci nemají co těžit.': 'Brak kopalni w zasięgu – robotnicy nie mają co zbierać.', 'Žádné stromy v dosahu – dělníci nemají co těžit.': 'Brak drzew w zasięgu – robotnicy nie mają co zbierać.',
   'Mechaniky': 'Mechaniki',
+  // map styles and sizes
+  'Pevnina s mořem': 'Kontynent',
+  'Řeka': 'Rzeka',
+  'Ostrovy': 'Wyspy',
+  'Pláně': 'Równiny',
+  'Jezera': 'Jeziora',
+  'Malá': 'Mała',
+  'Velká': 'Duża',
 };

@@ -135,4 +135,12 @@ export default {
   'Odpor je zbytečný.': 'Сопротивление бесполезно.',
   'Žádný důl v dosahu – dělníci nemají co těžit.': 'Рядом нет рудника – рабочим нечего добывать.', 'Žádné stromy v dosahu – dělníci nemají co těžit.': 'Рядом нет деревьев – рабочим нечего добывать.',
   'Mechaniky': 'Механики',
+  // map styles and sizes
+  'Pevnina s mořem': 'Континент',
+  'Řeka': 'Река',
+  'Ostrovy': 'Острова',
+  'Pláně': 'Равнины',
+  'Jezera': 'Озёра',
+  'Malá': 'Малая',
+  'Velká': 'Большая',
 };
