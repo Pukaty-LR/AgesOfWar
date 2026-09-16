@@ -1,5 +1,6 @@
 // Ages of War - authoritative simulation. Runs on the server (and can run headless for tests).
 import { ERAS, T, makeTechTable, TICK_RATE, RESEARCH, HERO_XP } from './data.js';
+const HALL_INCOME_TICKS = 300, HALL_INCOME_P = 10, HALL_INCOME_S = 5; // every 15 s: +10 gold-type, +5 wood-type (+5 / +2 per hall level)
 import { generateMap, mulberry32 } from './mapgen.js';
 import { astar, smoothPath, nearestTile } from './pathfinding.js';
 
@@ -1059,6 +1060,8 @@ export class Sim {
     const def = p.tech.buildings[b.type];
     b.builders = 0; // recounted by builders each tick (before they act next tick) - use decay
     if (!b.built) return;
+    // safety net (AoE-style trickle): a finished town hall yields resources on its own, so a player without workers or mines is never completely stuck
+    if (b.type === 'hall' && !p.neutral && (this.tick + b.id) % HALL_INCOME_TICKS === 0) { const lv = b.level || 1; p.res.p += HALL_INCOME_P + (lv - 1) * 5; p.res.s += HALL_INCOME_S + (lv - 1) * 2; }
     // training / upgrading / research
     if (b.queue.length && b.queue[0].type === '__res') {
       const q = b.queue[0]; const rd = RESEARCH[q.rid];

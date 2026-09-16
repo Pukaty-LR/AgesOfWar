@@ -13,7 +13,7 @@ export class Renderer {
     this.canvas = canvas; this.ctx = canvas.getContext('2d', { alpha: false }); this.game = game;
     this.cam = { x: 0, y: 0, zoom: 1 };
     this.W = 0; this.H = 0; this.dpr = 1;
-    this.chunks = new Map();
+    this.chunks = new Map(); this.maxElevPx = undefined;
     this.particles = []; this.effects = [];
     this.time = 0;
     this.fogCanvas = null; this.fogCtx = null; this.fogImg = null; this.fogDirtyAt = 0;
@@ -27,7 +27,7 @@ export class Renderer {
     this.canvas.width = Math.floor(this.W * this.dpr); this.canvas.height = Math.floor(this.H * this.dpr);
   }
   setMap(map, era) {
-    this.map = map; this.era = era; this.eraDef = ERAS[era]; for (const c of this.chunks.values()) c.canvas.width = 0; this.chunks.clear(); clearSpriteCache();
+    this.map = map; this.era = era; this.eraDef = ERAS[era]; for (const c of this.chunks.values()) c.canvas.width = 0; this.chunks.clear(); this.maxElevPx = undefined; clearSpriteCache();
     const { w, h } = map;
     // vertex heights (w+1)*(h+1)
     this.vh = new Float32Array((w + 1) * (h + 1));
@@ -84,14 +84,14 @@ export class Renderer {
     const e = (vx, vy) => this.elevV(vx, vy);
     return [iso(x, y, e(x, y)), iso(x + 1, y, e(x + 1, y)), iso(x + 1, y + 1, e(x + 1, y + 1)), iso(x, y + 1, e(x, y + 1))];
   }
-  buildChunk(cx, cy) {
+  buildChunk(cx, cy, lod = 0) {
     const map = this.map, w = map.w, h = map.h;
     const x0 = cx * CHUNK, y0 = cy * CHUNK, x1 = Math.min(w, x0 + CHUNK), y1 = Math.min(h, y0 + CHUNK);
     // bounds in iso px
     let maxE = 0; for (let vy = Math.max(0, y0 - 1); vy <= Math.min(h, y1 + 1); vy++) for (let vx = Math.max(0, x0 - 1); vx <= Math.min(w, x1 + 1); vx++) maxE = Math.max(maxE, this.elevV(vx, vy));
     const left = iso(x0, y1)[0] - TW, right = iso(x1, y0)[0] + TW, top = iso(x0 - 1, y0 - 1)[1] - maxE - TH - 8, bottom = iso(x1, y1)[1] + TH;
     const cw = Math.ceil(right - left), ch = Math.ceil(bottom - top);
-    const ss = this.dpr > 1.2 ? 1.5 : 1; // supersample only on high-dpi screens: chunk canvases are the biggest memory user
+    const ss = lod ? 0.5 : (this.dpr > 1.2 ? 1.5 : 1); // supersample only on high-dpi screens; half resolution when zoomed out
     const canvas = document.createElement('canvas'); canvas.width = Math.ceil(cw * ss); canvas.height = Math.ceil(ch * ss);
     const ctx = canvas.getContext('2d'); ctx.scale(ss, ss); ctx.translate(-left, -top);
     const pal = this.eraDef.palette;
@@ -159,9 +159,11 @@ export class Renderer {
     // grid-ish subtle edge darkening for land/water boundary
     return { canvas, left, top, cw, ch };
   }
-  getChunk(cx, cy) {
-    const k = cy * 1000 + cx; let c = this.chunks.get(k);
-    if (!c) { c = this.buildChunk(cx, cy); this.chunks.set(k, c); if (this.chunks.size > 40) { let oldK = null, oldT = Infinity; for (const [kk, cc] of this.chunks) if (cc.last < oldT) { oldT = cc.last; oldK = kk; } if (oldK !== null) { const old = this.chunks.get(oldK); old.canvas.width = 0; this.chunks.delete(oldK); } } }
+  /** screen-space bounds of a chunk without building it (elevation approximated by the map maximum) */
+  chunkBounds(cx, cy) { const w = this.map.w, h = this.map.h; const x0 = cx * CHUNK, y0 = cy * CHUNK, x1 = Math.min(w, x0 + CHUNK), y1 = Math.min(h, y0 + CHUNK); if (this.maxElevPx === undefined) { let m = 0; for (let vy = 0; vy <= h; vy++) for (let vx = 0; vx <= w; vx++) m = Math.max(m, this.elevV(vx, vy)); this.maxElevPx = m; } return { left: iso(x0, y1)[0] - TW, right: iso(x1, y0)[0] + TW, top: iso(x0 - 1, y0 - 1)[1] - this.maxElevPx - TH - 8, bottom: iso(x1, y1)[1] + TH }; }
+  getChunk(cx, cy, lod = 0) {
+    const k = lod * 1000000 + cy * 1000 + cx; let c = this.chunks.get(k);
+    if (!c) { c = this.buildChunk(cx, cy, lod); this.chunks.set(k, c); if (this.chunks.size > (this.chunkCap || 40)) { let oldK = null, oldT = Infinity; for (const [kk, cc] of this.chunks) if (cc.last < oldT) { oldT = cc.last; oldK = kk; } if (oldK !== null) { const old = this.chunks.get(oldK); old.canvas.width = 0; this.chunks.delete(oldK); } } }
     c.last = this.chunkTick = (this.chunkTick || 0) + 1; return c;
   }
   /** warm the chunks around the camera; the rest are built lazily (LRU-capped, see getChunk) */
@@ -226,11 +228,12 @@ export class Renderer {
     const c0x = Math.max(0, Math.floor(minX / CHUNK)), c1x = Math.min(Math.ceil(w / CHUNK) - 1, Math.floor(maxX / CHUNK));
     const c0y = Math.max(0, Math.floor(minY / CHUNK)), c1y = Math.min(Math.ceil(h / CHUNK) - 1, Math.floor(maxY / CHUNK));
     ctx.imageSmoothingEnabled = !isPixel(); // pixel art: terrain chunks scale as crisp blocks like the sprites
-    for (let cy = c0y; cy <= c1y; cy++) for (let cx = c0x; cx <= c1x; cx++) {
-      const ch = this.getChunk(cx, cy);
-      const sx = ox + ch.left * z, sy = oy + ch.top * z, sw = ch.cw * z, sh = ch.ch * z;
-      if (sx + sw < 0 || sy + sh < 0 || sx > this.W || sy > this.H) continue;
-      ctx.drawImage(ch.canvas, sx, sy, sw, sh);
+    const lod = z < 0.75 ? 1 : 0; const visible = [];
+    for (let cy = c0y; cy <= c1y; cy++) for (let cx = c0x; cx <= c1x; cx++) { const b = this.chunkBounds(cx, cy); if (ox + b.right * z < 0 || oy + b.bottom * z < 0 || ox + b.left * z > this.W || oy + b.top * z > this.H) continue; visible.push([cx, cy]); }
+    this.chunkCap = Math.min(lod ? 200 : 80, Math.max(40, Math.ceil(visible.length * 1.5))); // never evict what the current view needs
+    for (const [cx, cy] of visible) {
+      const ch = this.getChunk(cx, cy, lod);
+      ctx.drawImage(ch.canvas, ox + ch.left * z, oy + ch.top * z, ch.cw * z, ch.ch * z);
     }
     // water animation
     this.drawWater(ctx, minX, maxX, minY, maxY, ox, oy, z);

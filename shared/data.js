@@ -122,7 +122,7 @@ export const ERAS = {
       creep:    { ...commonUnits.infantry, name: 'Bandita',     sprite: 'ant_creep', hp: 140, dmg: 14, armor: 1, creep: true, desc: 'Neutrální lupiči hlídající doly v divočině.' },
     },
     buildings: {
-      hall:     { ...commonBuildings.hall,     name: 'Radnice',         sprite: 'ant_hall',     desc: 'Hlavní budova. Cvičí dělníky, sklad surovin, +40 populace.' },
+      hall:     { ...commonBuildings.hall,     name: 'Radnice',         sprite: 'ant_hall',     desc: 'Hlavní budova. Cvičí dělníky, sklad surovin, +40 populace. Sama vynáší +10 zlata a +5 dřeva každých 15 s (víc s úrovní).' },
       house:    { ...commonBuildings.house,    name: 'Dům',             sprite: 'ant_house',    desc: 'Ubytování: +8 populace.' },
       barracks: { ...commonBuildings.barracks, name: 'Kasárna',         sprite: 'ant_barracks', desc: 'Cvičí pěchotu a lučištníky.' },
       stable:   { ...commonBuildings.stable,   name: 'Stáje',           sprite: 'ant_stable',   desc: 'Cvičí jezdectvo.' },
@@ -181,7 +181,7 @@ export const ERAS = {
       creep:    { ...commonUnits.infantry, name: 'Partyzán',    sprite: 'ww2_creep', hp: 120, dmg: 10, armor: 1, range: 3.5, projectile: 'bullet', cooldown: 0.7, creep: true, desc: 'Neutrální partyzáni hlídající ropná pole.' },
     },
     buildings: {
-      hall:     { ...commonBuildings.hall,     name: 'Velitelství',     sprite: 'ww2_hall',     desc: 'Hlavní budova. Cvičí ženisty, sklad surovin, +40 populace.' },
+      hall:     { ...commonBuildings.hall,     name: 'Velitelství',     sprite: 'ww2_hall',     desc: 'Hlavní budova. Cvičí ženisty, sklad surovin, +40 populace. Sama vynáší +10 ropy a +5 dřeva každých 15 s (víc s úrovní).' },
       house:    { ...commonBuildings.house,    name: 'Ubytovna',        sprite: 'ww2_house',    desc: 'Ubytování: +8 populace.' },
       barracks: { ...commonBuildings.barracks, name: 'Kasárna',         sprite: 'ww2_barracks', desc: 'Cvičí pěchotu a kulometčíky.' },
       stable:   { ...commonBuildings.stable,   name: 'Tanková továrna', sprite: 'ww2_factory',  desc: 'Vyrábí tanky.' },
@@ -238,7 +238,7 @@ export const ERAS = {
       creep:    { ...commonUnits.cavalry,  name: 'Xeno šelma',  sprite: 'sf_creep', hp: 180, dmg: 16, armor: 2, speed: 3.6, size: 0.4, pop: 0, creep: true, desc: 'Mimozemské šelmy hlídající krystaly.' },
     },
     buildings: {
-      hall:     { ...commonBuildings.hall,     name: 'Nexus',              sprite: 'sf_hall',     desc: 'Hlavní budova. Vyrábí drony, sklad surovin, +40 populace.' },
+      hall:     { ...commonBuildings.hall,     name: 'Nexus',              sprite: 'sf_hall',     desc: 'Hlavní budova. Vyrábí drony, sklad surovin, +40 populace. Sama vynáší +10 krystalů a +5 hub každých 15 s (víc s úrovní).' },
       house:    { ...commonBuildings.house,    name: 'Obytný modul',       sprite: 'sf_house',    desc: 'Ubytování: +8 populace.' },
       barracks: { ...commonBuildings.barracks, name: 'Výcviková kapsle',   sprite: 'sf_barracks', desc: 'Cvičí mariňáky a railgunnery.' },
       stable:   { ...commonBuildings.stable,   name: 'Továrna na vozidla', sprite: 'sf_factory',  desc: 'Vyrábí hover tanky.' },
