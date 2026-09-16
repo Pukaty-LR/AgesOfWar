@@ -386,6 +386,10 @@ export class Renderer {
     const spr = buildingSprite(def.sprite, def.w, def.h, g.players[g.me].color, true, 1, 0, this.era);
     const [sx, sy] = this.worldToScreen(p.hover.x, p.hover.y);
     ctx.globalAlpha = 0.6; blit(ctx, spr, sx, sy, z); ctx.globalAlpha = 1;
+    if (def.attack) { // Age of Empires style: show the tower range while placing it
+      const [cx, cy] = this.worldToScreen(p.hover.x + def.w / 2, p.hover.y + def.h / 2); const r = def.attack.range;
+      ctx.strokeStyle = ok ? 'rgba(255,120,90,0.6)' : 'rgba(255,80,80,0.35)'; ctx.lineWidth = 1.5 * z; ctx.setLineDash([5 * z, 5 * z]); ctx.beginPath(); ctx.ellipse(cx, cy, r * TW / 2 * z, r * TH / 2 * z, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    }
   }
 
   drawUnit(ctx, e, ox, oy, z) {
