@@ -2,6 +2,7 @@
 // Coordinates: y up, ground y = 0, the model faces +z at yaw 0; the isometric camera sits at +z above (tilt atan 0.5 like the tiles).
 // Poses drive hips, knees, shoulders, elbows and wrists; weapons hang off the right hand, shields off the left forearm.
 
+import { isPixel } from './style.js';
 const SKIN = [232, 190, 150], IRON = [152, 158, 166], IRON_D = [92, 98, 108], BRONZE = [188, 142, 64], BRONZE_D = [122, 88, 36], STEEL = [222, 226, 234], WOOD = [130, 88, 46], WOOD_D = [86, 56, 28], LEATHER = [110, 74, 40], LEATHER_D = [70, 46, 24], GOLD = [232, 194, 84], HAIR = [74, 46, 24], CYAN = [90, 225, 255];
 const shade = (c, k) => [Math.max(0, Math.min(255, c[0] * k)), Math.max(0, Math.min(255, c[1] * k)), Math.max(0, Math.min(255, c[2] * k)), ...(c.length > 3 ? [c[3]] : [])];
 const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
@@ -155,7 +156,7 @@ const CAM = [0, ST, CT];
 const rgba = (c, k) => c.length > 3 ? `rgba(${(c[0] * k) | 0},${(c[1] * k) | 0},${(c[2] * k) | 0},${c[3]})` : `rgb(${Math.min(255, c[0] * k) | 0},${Math.min(255, c[1] * k) | 0},${Math.min(255, c[2] * k) | 0})`;
 /** draw faces with the feet at (0,0) of ctx; yaw rotates the model; scale = px per model unit */
 export function renderModel(ctx, faces, yaw, scale, opts = {}) {
-  const { ambient = 0.52, outline = 'rgba(20,14,8,0.45)', lineWidth = 0.35 } = opts;
+  const { ambient = 0.52, outline = 'rgba(20,14,8,0.45)', lineWidth = 0.35, cel = 0 } = opts;
   const cy = Math.cos(yaw), sy = Math.sin(yaw);
   const out = new Array(faces.length); let m = 0;
   for (const f of faces) {
@@ -165,7 +166,8 @@ export function renderModel(ctx, faces, yaw, scale, opts = {}) {
     let nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx; const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
     if (nx * CAM[0] + ny * CAM[1] + nz * CAM[2] < 0) { nx = -nx; ny = -ny; nz = -nz; }
     const diff = Math.max(0, nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]);
-    out[m++] = { P, d: d / pts.length, k: ambient + diff * 0.72, color: f.color };
+    let k = ambient + diff * 0.72; if (cel) k = 0.58 + Math.round((Math.min(1.25, Math.max(0.58, k)) - 0.58) / 0.67 * (cel - 1)) / (cel - 1) * 0.67;
+    out[m++] = { P, d: d / pts.length, k, color: f.color };
   }
   out.length = m; out.sort((a, b) => a.d - b.d);
   ctx.lineWidth = lineWidth; ctx.lineJoin = 'round';
@@ -178,6 +180,7 @@ export function humanoid3D(ctx, o) {
   const P = poseFor(o); const faces = humanoidModel(o, P);
   const scale = 2.8 * (o.scale || 1);
   if (!o.rider) { ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(0, 0, 7 * (o.scale || 1), 3.5 * (o.scale || 1), 0, 0, Math.PI * 2); ctx.fill(); }
-  if (o.rider) { ctx.save(); ctx.translate(0, (HIP - 0.6) * CT * scale); renderModel(ctx, faces, yaw, scale); ctx.restore(); } // hips sit on the saddle
-  else renderModel(ctx, faces, yaw, scale);
+  const opts = isPixel() ? { cel: 4, outline: null } : {};
+  if (o.rider) { ctx.save(); ctx.translate(0, (HIP - 0.6) * CT * scale); renderModel(ctx, faces, yaw, scale, opts); ctx.restore(); } // hips sit on the saddle
+  else renderModel(ctx, faces, yaw, scale, opts);
 }

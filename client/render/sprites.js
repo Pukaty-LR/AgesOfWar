@@ -1,6 +1,11 @@
 // Procedural isometric sprites: units, buildings, resources. Everything drawn with canvas primitives and cached.
 import { TEAM_COLORS } from '../../shared/data.js';
 import { humanoid3D } from './model3d.js';
+import { GFX, GFX_STYLES, isPixel } from './style.js';
+import { pixelize } from './pixelize.js';
+/** switch the graphics style ('pixel' | 'model' | 'flat') – drops every baked sprite so it is rebuilt in the new look */
+export function setGfxStyle(style) { if (!GFX_STYLES.includes(style)) style = 'pixel'; if (GFX.style === style) return; GFX.style = style; clearSpriteCache(); }
+export function gfxStyle() { return GFX.style; }
 
 export const TW = 64, TH = 32;   // tile diamond size at zoom 1
 export const S = 2;              // internal render scale (supersampling)
@@ -30,11 +35,12 @@ export function cached(key, w, h, ax, ay, draw) {
   ctx.scale(S, S); ctx.translate(ax, ay);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   draw(ctx);
+  if (isPixel()) pixelize(canvas, S, { colors: w * h > 12000 ? 40 : 28 });
   c = { canvas, ax, ay, w, h };
   cache.set(key, c);
   return c;
 }
-export function blit(ctx, spr, x, y, zoom) { ctx.drawImage(spr.canvas, x - spr.ax * zoom, y - spr.ay * zoom, spr.w * zoom, spr.h * zoom); }
+export function blit(ctx, spr, x, y, zoom) { if (isPixel()) { const zz = Math.max(0.5, Math.round(zoom * 2) / 2); ctx.drawImage(spr.canvas, Math.round(x - spr.ax * zz), Math.round(y - spr.ay * zz), spr.w * zz, spr.h * zz); } else ctx.drawImage(spr.canvas, x - spr.ax * zoom, y - spr.ay * zoom, spr.w * zoom, spr.h * zoom); }
 
 // ---------- primitive helpers (all in zoom-1 pixels) ----------
 function poly(ctx, pts, fill, stroke, lw = 1) {
@@ -76,7 +82,7 @@ const SKIN = [232, 190, 150], SKIN_D = [190, 140, 100], METAL = [200, 205, 215],
 function walkPhase(anim, frame) { return anim === 'walk' ? (frame / 6) * Math.PI * 2 : 0; }
 
 /** Small humanoid, feet at (0,0). dir: screen dir 0..7 – jointed low-poly model baked into the sprite cache (see model3d.js). */
-function humanoid(ctx, o) { humanoid3D(ctx, o); }
+function humanoid(ctx, o) { if (GFX.style === 'flat') humanoidFlat(ctx, o); else humanoid3D(ctx, o); }
 /** previous flat paper-doll drawing, kept for reference / fallback */
 function humanoidFlat(ctx, o) {
   const { dir, anim, frame, team } = o;

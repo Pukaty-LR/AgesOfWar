@@ -1,6 +1,7 @@
 // Isometric renderer: terrain chunks with elevation, water animation, entities, effects, fog of war.
 import { T, ERAS, TEAM_COLORS } from '../../shared/data.js';
 import { TW, TH, S, iso, facingToDir, clearSpriteCache, unitSprite, buildingSprite, treeSprite, mineSprite, decoSprite, blit, rgb, shade, mix, teamRgb, animFrameCount, hexToRgb } from './sprites.js';
+import { isPixel } from './style.js';
 
 const CHUNK = 12;
 const ELEV = 56;            // px per height unit above sea level
@@ -224,7 +225,7 @@ export class Renderer {
     // terrain chunks
     const c0x = Math.max(0, Math.floor(minX / CHUNK)), c1x = Math.min(Math.ceil(w / CHUNK) - 1, Math.floor(maxX / CHUNK));
     const c0y = Math.max(0, Math.floor(minY / CHUNK)), c1y = Math.min(Math.ceil(h / CHUNK) - 1, Math.floor(maxY / CHUNK));
-    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingEnabled = !isPixel(); // pixel art: terrain chunks scale as crisp blocks like the sprites
     for (let cy = c0y; cy <= c1y; cy++) for (let cx = c0x; cx <= c1x; cx++) {
       const ch = this.getChunk(cx, cy);
       const sx = ox + ch.left * z, sy = oy + ch.top * z, sw = ch.cw * z, sh = ch.ch * z;
@@ -255,6 +256,7 @@ export class Renderer {
     for (const ef of this.effects) if (ef.kind === 'corpse' || ef.kind === 'rubble' || ef.kind === 'stump') list.push({ depth: ef.x + ef.y - 0.01, kind: 'fx', ef });
     for (const it of list) { const e = it.e || it.d || it.ef; if (it.kind === 'b') { it.x0 = e.tx; it.y0 = e.ty; it.x1 = e.tx + e.w; it.y1 = e.ty + e.h; } else if (it.kind === 'm') { it.x0 = e.tx; it.y0 = e.ty; it.x1 = e.tx + 2; it.y1 = e.ty + 2; } else if (it.kind === 't') { it.x0 = e.tx; it.y0 = e.ty; it.x1 = e.tx + 1; it.y1 = e.ty + 1; } else { const ex = e.rx ?? e.x, ey = e.ry ?? e.y; it.x0 = ex - 0.3; it.y0 = ey - 0.3; it.x1 = ex + 0.3; it.y1 = ey + 0.3; } }
     list.sort((a, b) => { if (a.x1 <= b.x0 + 0.001 || a.y1 <= b.y0 + 0.001) return -1; if (b.x1 <= a.x0 + 0.001 || b.y1 <= a.y0 + 0.001) return 1; return a.depth - b.depth; });
+    ctx.imageSmoothingEnabled = !isPixel();
     for (const it of list) {
       switch (it.kind) {
         case 'u': this.drawUnit(ctx, it.e, ox, oy, z); break;

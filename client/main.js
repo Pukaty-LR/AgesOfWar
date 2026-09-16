@@ -1,6 +1,6 @@
 // App: menus, lobby, connection, and game orchestration.
 import { ERAS, ERA_ORDER, TEAM_COLORS, MAX_PLAYERS, makeTechTable, RESEARCH } from '../shared/data.js';
-import { unitPortrait, buildingPortrait } from './render/sprites.js';
+import { unitPortrait, buildingPortrait, setGfxStyle } from './render/sprites.js';
 import { generateMap, MAP_STYLES, MAP_SIZES } from '../shared/mapgen.js';
 import { Net } from './net.js';
 import { Audio } from './audio.js';
@@ -14,7 +14,8 @@ const screens = ['menu', 'browser', 'host', 'lobby', 'settings', 'game', 'codex'
 
 class App {
   constructor() {
-    this.settings = Object.assign({ name: '', music: 40, sfx: 80, scroll: 60, edge: true, hp: false }, JSON.parse(localStorage.getItem('aow-settings') || '{}'));
+    this.settings = Object.assign({ name: '', music: 40, sfx: 80, scroll: 60, edge: true, hp: false, gfx: 'pixel' }, JSON.parse(localStorage.getItem('aow-settings') || '{}'));
+    setGfxStyle(this.settings.gfx);
     this.net = new Net(); this.audio = new Audio(); this.ui = new UI(this);
     this.game = new Game($('game'), this.net, this.audio, this.ui);
     this.lobby = null; this.myId = 0; this.hostEra = 'antiquity'; this.quick = false;
@@ -94,6 +95,7 @@ class App {
       const ss = $('scroll-speed' + suf), oe = $('opt-edge' + suf), oh = $('opt-hp' + suf);
       ss.oninput = () => { this.settings.scroll = +ss.value; this.applySettings(); this.save(); };
       oe.onchange = () => { this.settings.edge = oe.checked; this.applySettings(); this.save(); };
+      if (suf === '') { const gs = $('gfx-style'); gs.value = this.settings.gfx; gs.onchange = () => { this.settings.gfx = gs.value; setGfxStyle(gs.value); if (this.game) { this.game.ui.dirty = true; this.game.ui.selectionChanged = true; } this.save(); }; }
       oh.onchange = () => { this.settings.hp = oh.checked; this.applySettings(); this.save(); };
     }
     $('opt-mute2').onchange = () => this.setMuted($('opt-mute2').checked);
