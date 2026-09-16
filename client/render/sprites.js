@@ -35,7 +35,7 @@ export function cached(key, w, h, ax, ay, draw) {
   ctx.scale(S, S); ctx.translate(ax, ay);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   draw(ctx);
-  if (isPixel()) pixelize(canvas, S, { colors: w * h > 12000 ? 40 : 28 });
+  if (isPixel()) pixelize(canvas, S, { colors: w * h > 12000 ? 40 : 22 });
   c = { canvas, ax, ay, w, h };
   cache.set(key, c);
   return c;
@@ -313,7 +313,7 @@ function worldAngleForDir(dir) { const sa = DIR_ANGLE(dir); // screen angle -> w
 
 // ---------- unit sprite registry ----------
 const UNIT_DRAW = {
-  ant_worker: (ctx, o) => humanoid(ctx, { ...o, torso: mix([200, 180, 140], o.team, 0.5), helmet: 'band', weapon: o.anim === 'work' || o.anim === 'attack' ? (o.workKind === 'mine' ? 'pick' : 'axe') : 'axe', legs: [90, 70, 50] }),
+  ant_worker: (ctx, o) => humanoid(ctx, { ...o, torso: mix([176, 142, 96], o.team, 0.35), belt: mix([90, 60, 30], o.team, 0.5), helmet: 'band', weapon: o.anim === 'work' || o.anim === 'attack' ? (o.workKind === 'mine' ? 'pick' : 'axe') : 'axe', legs: [90, 70, 50] }),
   ant_infantry: (ctx, o) => humanoid(ctx, { ...o, armor: o.faction === 'rome' ? 'segmentata' : 'tunic', helmet: o.faction === 'greece' ? 'greek' : (o.faction === 'gaul' ? 'hair' : 'roman'), weapon: o.faction === 'greece' || o.faction === 'gaul' ? 'spear' : 'sword', shield: o.faction === 'rome' ? 'scutum' : (o.faction === 'greece' ? 'round' : 'oval'), sleeves: SKIN, belt: [140, 110, 60] }),
   ant_ranged: (ctx, o) => humanoid(ctx, { ...o, helmet: 'cap', weapon: o.faction === 'gaul' || o.faction === 'carthage' ? 'sling' : 'bow', torso: mix(o.team, [120, 110, 90], 0.25), legs: [80, 60, 40] }),
   ant_cavalry: (ctx, o) => horse(ctx, o, c => humanoid(c, { ...o, rider: true, helmet: o.faction === 'greece' ? 'greek' : 'roman', weapon: 'spear', shield: 'round', anim: o.anim === 'walk' ? 'idle' : o.anim })),
