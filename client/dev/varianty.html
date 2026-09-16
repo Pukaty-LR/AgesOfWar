@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="cs"><head><meta charset="utf-8"><title>Ages of War – varianty grafiky jednotek</title>
+<style>
+body { margin: 0; background: #1a140c; color: #eadfc4; font-family: Georgia, serif; }
+h1 { font-size: 18px; margin: 12px 16px 4px; color: #e2bc4a; letter-spacing: 1px; }
+p.sub { margin: 0 16px 10px; font-size: 12px; color: #b9a98c; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 12px 12px; }
+.card { background: #2a2016; border: 1px solid #5a4630; border-radius: 6px; padding: 8px; }
+.card h2 { font-size: 13px; margin: 0 0 4px; color: #f1d36a; }
+.card .d { font-size: 11px; color: #cdbb95; min-height: 28px; }
+canvas { display: block; background: radial-gradient(#4f7a38, #35552a); border-radius: 4px; width: 100%; image-rendering: pixelated; }
+</style></head><body>
+<h1>Varianty grafiky jednotek – římský legionář (stejná jednotka, šest provedení)</h1>
+<p class="sub">0 = dnešní stav · 1 = paper-doll 2.0 · 2 = kostra + vrstvy (3 fáze chůze) · 3 = zapečené pseudo-3D (vlastní rasterizér, 4 směry) · 4 = skutečné 3D (hladké stínování, stíny) · 5 = ruční pixel-art</p>
+<div class="grid" id="grid"></div>
+<script type="module">
+import { unitSprite } from '../render/sprites.js';
+
+const cards = [
+  ['0 · Dnešní stav', 'Hranoly a elipsy, ploché barvy, žádné světlo.'],
+  ['1 · Paper-doll 2.0', 'Proporce, směrové světlo, obrysy, odlesky, měkký stín.'],
+  ['2 · Kostra + vrstvy', 'Rig s klíčovými pózami; zbroj, plášť a zbraň jako vrstvy. Tři fáze chůze.'],
+  ['3 · Zapečené pseudo-3D', 'Low-poly model → vlastní rasterizér → sprite cache; 4 z 8 směrů.'],
+  ['4 · Skutečné 3D (WebGL)', 'Hladké stínování, rim light, měkký stín, vyšší detail.'],
+  ['5 · Pixel-art', 'Ručně kreslené pixely, vlastní paleta, 32×48.'],
+];
+const grid = document.getElementById('grid'); const C = [];
+for (const [t, d] of cards) { const c = document.createElement('div'); c.className = 'card'; c.innerHTML = `<h2>${t}</h2><div class="d">${d}</div>`; const cv = document.createElement('canvas'); cv.width = 420; cv.height = 300; c.appendChild(cv); grid.appendChild(c); C.push(cv.getContext('2d')); }
+
+// ---------- palette & helpers ----------
+const RED = [178, 34, 34], RED_D = [120, 20, 20], IRON = [150, 155, 162], IRON_D = [90, 95, 104], BRONZE = [186, 140, 62], BRONZE_D = [120, 86, 34], SKIN = [232, 190, 150], SKIN_D = [170, 125, 90], LEATHER = [110, 74, 40], LEATHER_D = [70, 46, 24], GOLD = [230, 190, 80], OUT = '#1a120a';
+const rgb = (c, a = 1) => `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+const shade = (c, k) => c.map(v => Math.max(0, Math.min(255, v * k)));
+function lit(ctx, x0, y0, x1, y1, c) { const g = ctx.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, rgb(shade(c, 1.28))); g.addColorStop(0.45, rgb(c)); g.addColorStop(1, rgb(shade(c, 0.58))); return g; }
+function path(ctx, pts, close = true) { ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); if (close) ctx.closePath(); }
+function fillStroke(ctx, fill, lw = 2) { ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.lineJoin = 'round'; ctx.stroke(); }
+function capsule(ctx, x, y, w, h, c, lw = 2, tilt = 0) { ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, w / 2); ctx.fillStyle = lit(ctx, -w / 2, -h / 2, w / 2, h / 2, c); ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.stroke(); ctx.restore(); }
+function shadow(ctx, x, y, rx, ry) { const g = ctx.createRadialGradient(x, y, 0, x, y, rx); g.addColorStop(0, 'rgba(0,0,0,0.45)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill(); }
+
+// ---------- 0: current game sprite (scaled up) ----------
+{ const ctx = C[0]; const s = unitSprite('ant_infantry', 0, 3, 'idle', 0, { faction: 'rome' }); const k = 4; const sc = s.canvas.width / s.w; ctx.imageSmoothingEnabled = false; shadow(ctx, 210, 250, 44, 18); ctx.drawImage(s.canvas, 210 - s.ax * k, 250 - s.ay * k, s.w * k, s.h * k); }
+
+// ---------- 1: paper-doll 2.0 ----------
+function legionary2(ctx, x, y, S, pose = {}) {
+  const { legL = 0, legR = 0, armSwing = 0, cape = 0.2, bob = 0 } = pose;
+  ctx.save(); ctx.translate(x, y + bob); ctx.scale(S, S);
+  shadow(ctx, 0, 0, 14, 5.5);
+  // cape behind
+  ctx.beginPath(); ctx.moveTo(-3, -30); ctx.quadraticCurveTo(-14 - cape * 20, -18, -9 - cape * 14, 2); ctx.lineTo(4, -2); ctx.quadraticCurveTo(6, -18, 5, -30); ctx.closePath(); fillStroke(ctx, lit(ctx, -14, -30, 6, 2, [140, 20, 24]), 1.6);
+  // legs (back leg first)
+  capsule(ctx, 3.2, -8 + legR * 2, 5.5, 16, SKIN, 1.6, legR * 0.35); capsule(ctx, -3.2, -8 + legL * 2, 5.5, 16, SKIN, 1.6, -legL * 0.35);
+  // sandals
+  capsule(ctx, 3.4 + legR * 2, 1.5, 6.5, 3.2, LEATHER_D, 1.4); capsule(ctx, -3.4 - legL * 2, 1.5, 6.5, 3.2, LEATHER_D, 1.4);
+  // tunic skirt with pteruges
+  ctx.beginPath(); ctx.moveTo(-8, -20); ctx.lineTo(8, -20); ctx.lineTo(9.5, -6); ctx.lineTo(-9.5, -6); ctx.closePath(); fillStroke(ctx, lit(ctx, -9, -20, 9, -6, RED), 1.6);
+  for (let i = -3; i <= 3; i++) { const lx = i * 2.7; ctx.beginPath(); ctx.moveTo(lx - 1.1, -11); ctx.lineTo(lx + 1.1, -11); ctx.lineTo(lx + 1.3, -5.5); ctx.lineTo(lx - 1.3, -5.5); ctx.closePath(); fillStroke(ctx, rgb(shade(LEATHER, i < 0 ? 1.15 : 0.85)), 1.1); }
+  // torso: lorica segmentata (curved iron bands)
+  ctx.beginPath(); ctx.moveTo(-9.5, -33); ctx.quadraticCurveTo(0, -35.5, 9.5, -33); ctx.lineTo(8.5, -19); ctx.quadraticCurveTo(0, -17, -8.5, -19); ctx.closePath(); fillStroke(ctx, lit(ctx, -10, -34, 10, -18, IRON), 1.8);
+  for (let i = 0; i < 5; i++) { const by = -31 + i * 2.8; ctx.beginPath(); ctx.moveTo(-9.3 + i * 0.2, by); ctx.quadraticCurveTo(0, by + 1.8, 9.3 - i * 0.2, by); ctx.strokeStyle = rgb(IRON_D); ctx.lineWidth = 0.9; ctx.stroke(); ctx.beginPath(); ctx.moveTo(-9.3 + i * 0.2, by + 0.9); ctx.quadraticCurveTo(0, by + 2.7, 9.3 - i * 0.2, by + 0.9); ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 0.6; ctx.stroke(); }
+  // shoulder guards
+  capsule(ctx, -9.5, -31.5, 7, 5, IRON, 1.5, 0.35); capsule(ctx, 9.5, -31.5, 7, 5, IRON, 1.5, -0.35);
+  // right arm with gladius (raised slightly)
+  capsule(ctx, 12 + armSwing * 2, -24 + armSwing * 2, 4.8, 13, SKIN, 1.5, -0.5 + armSwing * 0.3);
+  ctx.save(); ctx.translate(15.5 + armSwing * 2, -18 + armSwing * 2); ctx.rotate(-0.9); capsule(ctx, 0, -1.5, 3, 5, LEATHER_D, 1.2); ctx.beginPath(); ctx.moveTo(-1.3, -4); ctx.lineTo(1.3, -4); ctx.lineTo(0.9, -18); ctx.lineTo(0, -20); ctx.lineTo(-0.9, -18); ctx.closePath(); fillStroke(ctx, lit(ctx, -1, -20, 1, -4, [215, 220, 228]), 1.1); ctx.restore();
+  // scutum (left arm behind it)
+  ctx.save(); ctx.translate(-13, -22); ctx.beginPath(); ctx.roundRect(-6.5, -13, 13, 26, 3.2); fillStroke(ctx, lit(ctx, -6, -13, 6, 13, RED), 1.9);
+  ctx.beginPath(); ctx.roundRect(-4.6, -11, 9.2, 22, 2.2); ctx.strokeStyle = rgb(GOLD); ctx.lineWidth = 0.9; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0, 0, 2.2, 2.2, 0, 0, 7); fillStroke(ctx, lit(ctx, -2, -2, 2, 2, BRONZE), 1); // boss
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 2.6, -1.5); ctx.quadraticCurveTo(s * 5.2, -6, s * 2.8, -9); ctx.quadraticCurveTo(s * 4.4, -5, s * 2.6, -1.5); ctx.fillStyle = rgb(GOLD); ctx.fill(); } // wings
+  ctx.beginPath(); ctx.moveTo(-6.5, -13); ctx.lineTo(-2, -13); ctx.lineTo(-2, 13); ctx.lineTo(-6.5, 13); ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fill(); // sheen
+  ctx.restore();
+  // head + galea
+  capsule(ctx, 0, -38, 3.6, 4, SKIN, 1.2); // neck
+  ctx.beginPath(); ctx.ellipse(0, -44, 6.2, 6.8, 0, 0, 7); fillStroke(ctx, lit(ctx, -6, -50, 6, -38, SKIN), 1.6);
+  ctx.fillStyle = rgb(SKIN_D); ctx.beginPath(); ctx.ellipse(-2.2, -43.5, 0.9, 1.1, 0, 0, 7); ctx.ellipse(2.2, -43.5, 0.9, 1.1, 0, 0, 7); ctx.fill(); // eyes
+  ctx.beginPath(); ctx.moveTo(-7.4, -45); ctx.quadraticCurveTo(0, -55.5, 7.4, -45); ctx.lineTo(7.8, -41); ctx.quadraticCurveTo(0, -43.5, -7.8, -41); ctx.closePath(); fillStroke(ctx, lit(ctx, -8, -55, 8, -41, BRONZE), 1.6); // helmet bowl
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 5.8, -42); ctx.lineTo(s * 6.6, -36.5); ctx.lineTo(s * 3.8, -37.5); ctx.closePath(); fillStroke(ctx, rgb(shade(BRONZE, s < 0 ? 1.1 : 0.85)), 1.2); } // cheek guards
+  ctx.beginPath(); ctx.moveTo(-9, -41.5); ctx.quadraticCurveTo(0, -44.5, 9, -41.5); ctx.strokeStyle = rgb(BRONZE_D); ctx.lineWidth = 1.4; ctx.stroke(); // brow band
+  ctx.beginPath(); ctx.moveTo(-2, -51.5); ctx.quadraticCurveTo(0, -60, 2, -51.5); ctx.lineTo(3, -49); ctx.quadraticCurveTo(0, -47, -3, -49); ctx.closePath(); fillStroke(ctx, lit(ctx, -3, -60, 3, -47, RED), 1.3); // crest
+  ctx.beginPath(); ctx.ellipse(-3.2, -49.5, 1.6, 2.6, -0.4, 0, 7); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill(); // highlight
+  ctx.restore();
+}
+{ const ctx = C[1]; legionary2(ctx, 210, 250, 4.4); }
+
+// ---------- 2: rig + layers: three walk phases ----------
+{ const ctx = C[2]; const S = 3.2; const poses = [{ legL: -1, legR: 1, armSwing: 0.6, cape: 0.5, bob: -3 }, { legL: 0, legR: 0, armSwing: 0, cape: 0.15, bob: 0 }, { legL: 1, legR: -1, armSwing: -0.6, cape: 0.5, bob: -3 }];
+  poses.forEach((p, i) => legionary2(ctx, 90 + i * 120, 250, S, p));
+  ctx.fillStyle = '#eadfc4'; ctx.font = '11px Georgia'; ctx.textAlign = 'center'; ['krok 1', 'stoj', 'krok 2'].forEach((t, i) => ctx.fillText(t, 90 + i * 120, 285)); }
+
+// ---------- 3 & 4: tiny software 3D rasteriser ----------
+const V = { add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], norm: a => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; } };
+function box(cx, cy, cz, w, h, d, color, rotY = 0) { const c = Math.cos(rotY), s = Math.sin(rotY); const P = []; for (const [sx, sy, sz] of [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]]) { const x = sx * w / 2, z = sz * d / 2; P.push([cx + x * c - z * s, cy + sy * h / 2, cz + x * s + z * c]); } const F = [[0, 1, 2, 3], [5, 4, 7, 6], [4, 0, 3, 7], [1, 5, 6, 2], [4, 5, 1, 0], [3, 2, 6, 7]]; return F.map(f => ({ pts: f.map(i => P[i]), color })); }
+function cylinder(cx, cy, cz, r, h, color, n = 10, rTop = r) { const faces = []; for (let i = 0; i < n; i++) { const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2; faces.push({ pts: [[cx + Math.cos(a0) * r, cy + h / 2, cz + Math.sin(a0) * r], [cx + Math.cos(a1) * r, cy + h / 2, cz + Math.sin(a1) * r], [cx + Math.cos(a1) * rTop, cy - h / 2, cz + Math.sin(a1) * rTop], [cx + Math.cos(a0) * rTop, cy - h / 2, cz + Math.sin(a0) * rTop]], color }); } faces.push({ pts: [...Array(n)].map((_, i) => { const a = i / n * Math.PI * 2; return [cx + Math.cos(a) * rTop, cy - h / 2, cz + Math.sin(a) * rTop]; }), color }); return faces; }
+function sphere(cx, cy, cz, r, color, n = 8) { const faces = []; for (let i = 0; i < n; i++) for (let j = 0; j < n * 2; j++) { const t0 = i / n * Math.PI, t1 = (i + 1) / n * Math.PI, p0 = j / (n * 2) * Math.PI * 2, p1 = (j + 1) / (n * 2) * Math.PI * 2; const pt = (t, p) => [cx + Math.sin(t) * Math.cos(p) * r, cy - Math.cos(t) * r, cz + Math.sin(t) * Math.sin(p) * r]; faces.push({ pts: [pt(t0, p0), pt(t0, p1), pt(t1, p1), pt(t1, p0)], color }); } return faces; }
+function arcPlate(cx, cy, cz, r, h, a0, a1, thick, color, n = 6) { // curved shield plate (part of a cylinder wall)
+  const F = []; for (let i = 0; i < n; i++) { const t0 = a0 + (a1 - a0) * i / n, t1 = a0 + (a1 - a0) * (i + 1) / n; const o = [Math.cos(t0) * r, Math.sin(t0) * r], p = [Math.cos(t1) * r, Math.sin(t1) * r], o2 = [Math.cos(t0) * (r + thick), Math.sin(t0) * (r + thick)], p2 = [Math.cos(t1) * (r + thick), Math.sin(t1) * (r + thick)];
+    F.push({ pts: [[cx + o[0], cy + h / 2, cz + o[1]], [cx + p[0], cy + h / 2, cz + p[1]], [cx + p[0], cy - h / 2, cz + p[1]], [cx + o[0], cy - h / 2, cz + o[1]]], color }); // inner face
+    F.push({ pts: [[cx + o2[0], cy - h / 2, cz + o2[1]], [cx + p2[0], cy - h / 2, cz + p2[1]], [cx + p2[0], cy + h / 2, cz + p2[1]], [cx + o2[0], cy + h / 2, cz + o2[1]]], color }); // outer face
+    F.push({ pts: [[cx + o[0], cy - h / 2, cz + o[1]], [cx + p[0], cy - h / 2, cz + p[1]], [cx + p2[0], cy - h / 2, cz + p2[1]], [cx + o2[0], cy - h / 2, cz + o2[1]]], color: shade(color, 0.8) }); // top rim
+  } return F; }
+function legionaryModel(walk = 0) { // y grows downward on screen; the unit is ~13 units tall
+  const F = []; const sw = Math.sin(walk);
+  // legs + sandals
+  F.push(...cylinder(-1.3, 6.4, sw * 1.2, 1.05, 6.4, SKIN, 10), ...cylinder(1.3, 6.4, -sw * 1.2, 1.05, 6.4, SKIN, 10));
+  F.push(...box(-1.3, 9.9, 0.4 + sw * 1.2, 2.2, 0.8, 3.2, LEATHER_D), ...box(1.3, 9.9, 0.4 - sw * 1.2, 2.2, 0.8, 3.2, LEATHER_D));
+  // tunic skirt (flared), belt
+  F.push(...cylinder(0, 2.4, 0, 3.1, 3.4, RED, 14, 2.5));
+  F.push(...cylinder(0, 0.6, 0, 2.75, 0.7, LEATHER_D, 14));
+  // lorica: torso with 5 bands
+  F.push(...cylinder(0, -1.6, 0, 2.6, 4.2, IRON, 14, 2.9));
+  for (let i = 0; i < 5; i++) F.push(...cylinder(0, -3.3 + i * 0.85, 0, 2.62 + i * 0.05, 0.28, IRON_D, 14));
+  // shoulder plates + arms
+  F.push(...sphere(-3.0, -3.1, 0, 1.3, IRON, 6), ...sphere(3.0, -3.1, 0, 1.3, IRON, 6));
+  F.push(...cylinder(-3.4, -0.2, 1.2, 0.85, 4.8, SKIN, 8)); // left arm holds the shield forward-left
+  F.push(...cylinder(3.5, -0.4, -0.6, 0.85, 4.6, SKIN, 8)); // right arm
+  // scutum: curved red plate with brass boss, held on the left
+  F.push(...arcPlate(-2.2, 0.2, 2.2, 3.4, 9.2, Math.PI * 0.62, Math.PI * 1.22, 0.35, RED, 7));
+  F.push(...sphere(-5.55, 0.2, 2.2, 0.75, BRONZE, 5));
+  // gladius in the right hand, blade up
+  F.push(...box(3.9, 1.9, -0.9, 0.7, 1.9, 0.7, LEATHER_D), ...box(3.9, 0.5, -0.9, 1.8, 0.35, 0.5, BRONZE_D), ...box(3.9, -2.7, -0.9, 0.5, 6.0, 0.22, [220, 224, 232]));
+  // neck, head, face plate, helmet with brow band, cheek guards and crest
+  F.push(...cylinder(0, -4.4, 0, 0.95, 1.1, SKIN, 8));
+  F.push(...sphere(0, -6.6, 0, 1.9, SKIN, 8));
+  F.push(...sphere(0, -6.9, 0, 2.15, BRONZE, 8).filter(f => f.pts.every(p => p[1] <= -6.6)));
+  F.push(...cylinder(0, -6.55, 0, 2.2, 0.5, BRONZE_D, 14));
+  F.push(...box(-1.9, -5.6, 0.9, 0.6, 1.6, 1.3, BRONZE), ...box(1.9, -5.6, 0.9, 0.6, 1.6, 1.3, BRONZE));
+  F.push(...box(0, -9.3, 0, 0.7, 1.7, 4.2, RED), ...box(0, -8.6, -1.2, 0.5, 0.8, 2.0, RED_D));
+  return F;
+}
+function render3D(ctx, faces, cx, cy, scale, yaw, opts = {}) {
+  const { smooth = false, ambient = 0.35, rim = 0, outline = true, shadow: sh = true } = opts;
+  const cyaw = Math.cos(yaw), syaw = Math.sin(yaw); const tilt = Math.atan(0.5); const ct = Math.cos(tilt), st = Math.sin(tilt);
+  const L = V.norm([-0.5, -1, -0.6]);
+  const proj = p => { const x = p[0] * cyaw - p[2] * syaw, z = p[0] * syaw + p[2] * cyaw; const y = p[1]; return { sx: cx + x * scale, sy: cy + (y * ct + z * st) * scale, depth: z * ct - y * st }; };
+  if (sh) { ctx.save(); ctx.translate(cx, cy + 11 * scale * ct); shadow(ctx, 0, 0, 7 * scale, 3.2 * scale); ctx.restore(); }
+  const out = faces.map(f => { const n = V.norm(V.cross(V.sub(f.pts[1], f.pts[0]), V.sub(f.pts[2], f.pts[0]))); const nr = [n[0] * cyaw - n[2] * syaw, n[1], n[0] * syaw + n[2] * cyaw]; const view = [0, -st, -ct]; const facing = V.dot(nr, [0, -st, ct]); const P = f.pts.map(proj); const d = P.reduce((s, p) => s + p.depth, 0) / P.length; const diff = Math.max(0, V.dot(nr, L)); let k = ambient + diff * 0.85; if (rim) k += rim * Math.pow(1 - Math.abs(V.dot(nr, [0, -st, -ct])), 3); return { P, d, k, facing, color: f.color }; });
+  out.sort((a, b) => a.d - b.d);
+  for (const f of out) { if (f.facing < -0.05) continue; ctx.beginPath(); f.P.forEach((p, i) => i ? ctx.lineTo(p.sx, p.sy) : ctx.moveTo(p.sx, p.sy)); ctx.closePath(); if (smooth) { const g = ctx.createLinearGradient(f.P[0].sx, f.P[0].sy, f.P[2].sx, f.P[2].sy); g.addColorStop(0, rgb(shade(f.color, f.k * 1.12))); g.addColorStop(1, rgb(shade(f.color, f.k * 0.88))); ctx.fillStyle = g; } else ctx.fillStyle = rgb(shade(f.color, f.k)); ctx.fill(); if (outline) { ctx.strokeStyle = 'rgba(20,14,8,0.55)'; ctx.lineWidth = 0.7; ctx.stroke(); } else { ctx.strokeStyle = rgb(shade(f.color, f.k)); ctx.lineWidth = 0.6; ctx.stroke(); } }
+}
+{ const ctx = C[3]; const m = legionaryModel(0); render3D(ctx, m, 150, 150, 9.5, Math.PI * 1.25); [1.0, 1.5, 0.0, 0.5].forEach((k, i) => render3D(ctx, m, 300 + (i % 2) * 70, 110 + Math.floor(i / 2) * 110, 4.2, Math.PI * k)); ctx.fillStyle = '#eadfc4'; ctx.font = '11px Georgia'; ctx.textAlign = 'center'; ctx.fillText('hlavní pohled', 150, 285); ctx.fillText('4 z 8 směrů (z cache)', 335, 285); }
+{ const ctx = C[4]; const m = legionaryModel(0.6); ctx.save(); const g = ctx.createRadialGradient(210, 262, 10, 210, 262, 120); g.addColorStop(0, 'rgba(0,0,0,0.5)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(210 + 40, 262, 110, 26, 0, 0, 7); ctx.fill(); ctx.restore(); render3D(ctx, m, 210, 150, 10.5, Math.PI * 1.25, { smooth: true, ambient: 0.3, rim: 0.45, outline: false, shadow: false }); }
+
+// ---------- 5: pixel-art ----------
+{ const ctx = C[5]; const P = { '.': null, k: '#1a120a', s: '#e8be96', S: '#b07e5a', r: '#c8302e', R: '#7d1613', i: '#b9bec6', I: '#6f757e', b: '#d1a052', B: '#8a6122', g: '#f0d070', w: '#f4f4f8', l: '#6b4a28', L: '#3d2914' };
+  const rows = [
+    '............kkkk............',
+    '...........krrrrk...........',
+    '..........krRrrRrk..........',
+    '..........kkrrrrkk..........',
+    '.........kbbbbbbbbk.........',
+    '........kbbgbbbbbbbk........',
+    '........kbbbbbbbbbbk........',
+    '........kBBBBBBBBBBk........',
+    '........kBkssssssskBk.......',
+    '........kBksksssksskBk......',
+    '.........kkssssssskk........',
+    '..........kSssssSk..........',
+    '...........kSSSSk...........',
+    '........kkkkksssskkkkk......',
+    '......kkiiiiIssIiiiiikk.....',
+    '.....kiiIIiiiiiiiiIIiik.....',
+    '.....kiIkkiIIIIIIiikkIik....',
+    '....kIIk.kiiiiiiiiik.kIIk...',
+    '...krrrk.kIIIIIIIIIk.ksssk..',
+    '..krrrrrk.kiiiiiiiik.ksskwk.',
+    '..krgggrk.kIIIIIIIIk.kssk.wk',
+    '..krgbgrk.kiiiiiiiik..kk..wk',
+    '..krgggrk.krrrrrrrrk......wk',
+    '..krrrrrk.krrrrrrrrk......k.',
+    '..krRrRrk.krRrrrrRrk........',
+    '..krrrrrk.krrrrrrrrk........',
+    '..kRrRrRk.kllllllllk........',
+    '...kkkkk..kLlLlLlLlk........',
+    '..........kssk..kssk........',
+    '..........kssk..kssk........',
+    '..........kSSk..kSSk........',
+    '..........kssk..kssk........',
+    '.........kLLLk.kLLLk........',
+    '.........kkkkk.kkkkk........',
+  ];
+  const px = 7, ox = 210 - rows[0].length * px / 2, oy = 268 - rows.length * px;
+  shadow(ctx, 210, 262, 60, 20);
+  rows.forEach((row, y) => [...row].forEach((ch, x) => { const c = P[ch]; if (!c) return; ctx.fillStyle = c; ctx.fillRect(ox + x * px, oy + y * px, px, px); }));
+}
+</script>
+</body></html>
