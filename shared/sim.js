@@ -851,7 +851,7 @@ export class Sim {
   dealDamage(t, dmg, bonus, attackerOwner, attackerId, attackerRole) {
     if (t.dead || t.hp <= 0 || t.owner === undefined) return;
     // N15: nearby idle allies join the fight instead of waiting until the enemy walks into their own range
-    if (attackerId && (this.tick + t.id) % 10 === 0) { const atk = this.ents.get(attackerId); if (atk && !atk.dead) { const team = this.players[t.owner].team; this.unitsNear(t.x, t.y, 9, e => { if (e.dead || e.owner === undefined || this.players[e.owner].team !== team || e.engage || e.role === 'worker' || e.hidden) return; const d = this.players[e.owner].tech.units[e.type]; if (!d || d.dmg <= 0 || !(e.order.type === 'idle')) return; e.engage = atk.id; e.path = null; if (!e.home) e.home = { x: e.x, y: e.y }; }); } }
+    if (attackerId && !(this.tick - (t.lastAssistTick || -100) < 10)) { t.lastAssistTick = this.tick; const atk = this.ents.get(attackerId); if (atk && !atk.dead) { const team = this.players[t.owner].team; this.unitsNear(t.x, t.y, 9, e => { if (e.dead || e.owner === undefined || this.players[e.owner].team !== team || e.engage || e.role === 'worker' || e.hidden) return; const d = this.players[e.owner].tech.units[e.type]; if (!d || d.dmg <= 0 || !(e.order.type === 'idle')) return; e.engage = atk.id; e.path = null; if (!e.home) e.home = { x: e.x, y: e.y }; }); } }
     const p = this.players[t.owner];
     let armor = 0, mult = 1;
     if (t.kind === 'unit') { const d = p.tech.units[t.type]; armor = this.unitArmor(p, d) + this.buffArmor(t); mult = bonus[t.role] || 1; }
