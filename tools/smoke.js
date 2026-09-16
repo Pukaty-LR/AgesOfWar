@@ -74,5 +74,16 @@ for (const era of Object.keys(ERAS)) {
   }
   console.log(`map fairness: ${maps} maps, worst mine ${worstMine.toFixed(1)}, worst tree ${worstTree.toFixed(1)}`);
 }
+// AI defence: an invaded base recalls the army that is out in the field
+{
+  const s2 = new Sim({ seed: 7, size: 96, eraId: 'antiquity', players: [{ name: 'AI', faction: 'rome', team: 0, color: 0, isAI: true }, { name: 'H', faction: 'gaul', team: 1, color: 1 }, { name: 'N', team: 99, color: 7, neutral: true }], startRes: 'high' });
+  const ai2 = new AIPlayer(s2, 0, 'hard'); for (let i = 0; i < 2500; i++) { if (i % 20 === 0) ai2.update(); s2.step(); }
+  const hall = [...s2.ents.values()].find(e => e.kind === 'building' && e.owner === 0 && e.type === 'hall');
+  const army = [...s2.ents.values()].filter(e => e.kind === 'unit' && e.owner === 0 && e.role !== 'worker' && e.domain !== 'sea');
+  for (const u of army) { u.x = Math.min(s2.w - 2, hall.x + 30); u.y = Math.min(s2.h - 2, hall.y + 30); u.order = { type: 'hold' }; u.path = null; }
+  for (let i = 0; i < 4; i++) s2.spawnUnit(s2.players[1], 'cavalry', hall.x + 3 + i, hall.y + 3);
+  let recalled = false; for (let i = 2500; i < 2900 && !recalled; i++) { if (i % 20 === 0) ai2.update(); s2.step(); if (army.filter(u => u.order.type === 'amove' && Math.hypot(u.order.x - hall.x, u.order.y - hall.y) < 12).length >= Math.max(1, army.length * 0.5)) recalled = true; }
+  check(!s2.gameOver && army.length >= 3 && recalled, 'AI recalls its army to defend the base');
+}
 console.log(failures ? `SMOKE FAILED (${failures})` : 'SMOKE OK');
 process.exit(failures ? 1 : 0);
