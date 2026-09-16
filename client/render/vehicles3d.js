@@ -164,3 +164,67 @@ export function laser3D(ctx, o) {
   if (k === 1 || k === 2) F.push(...cylZ(0, hover + 3.6, 12.0, k === 1 ? 0.45 : 0.25, 13.0, [120, 235, 255, 0.85], 6));
   draw(ctx, F, o, 2.4, 22, 10);
 }
+
+// ---------- tanks ----------
+function tracks(F, x, y, z0, z1, h, color, spin) { const len = z1 - z0; F.push(...box(x, y, (z0 + z1) / 2, 1.3, h, len, color)); for (let i = 0; i < 5; i++) { const z = z0 + 1.0 + i * (len - 2.0) / 4; F.push(...cylX(x, y, z, h * 0.42, 1.4, [60, 60, 62], 8), ...xf(box(0, 0, 0, 1.5, h * 0.7, 0.25, [90, 90, 92]), p => mv(rotX(p, spin + i), x, y, z))); } for (let i = 0; i < 9; i++) F.push(...box(x, y + h / 2 + 0.05, z0 + 0.6 + i * (len - 1.2) / 8, 1.4, 0.18, 0.5, [70, 70, 72])); }
+/** WW2 tank family: kind 'tank' | 'heavy' | 'td' (casemate) */
+export function tank3D(ctx, o, kind = 'tank') {
+  const F = []; const k = atkFrame(o); const spin = phaseOf(o) * 0.5; const body = mix(OLIVE, o.team, 0.35), bodyD = shade(body, 0.75); const sc = kind === 'heavy' ? 1.25 : 1;
+  tracks(F, -2.6, 1.5, -5.2, 5.2, 2.2, [50, 50, 48], spin); tracks(F, 2.6, 1.5, -5.2, 5.2, 2.2, [50, 50, 48], spin);
+  F.push(...prismY([[-3.3, -5.4], [3.3, -5.4], [3.3, 4.2], [2.4, 5.8], [-2.4, 5.8], [-3.3, 4.2]], 2.0, 1.6, bodyD, body)); // hull
+  F.push(...xf(box(0, 0, 0, 5.4, 1.4, 0.3, body), p => mv(rotX(p, -0.75), 0, 4.0, 5.1))); // glacis
+  F.push(...box(0, 4.0, -3.5, 4.4, 0.8, 3.0, body), ...box(-2.0, 3.9, -1.0, 0.5, 0.5, 2.6, bodyD), ...box(2.0, 3.9, 1.0, 0.5, 0.5, 2.6, bodyD)); // engine deck + stowage
+  const recoil = k === 1 ? -1.0 : (k === 2 ? -0.4 : 0);
+  if (kind === 'td') { F.push(...prismY([[-2.9, -3.8], [2.9, -3.8], [2.6, 2.6], [-2.6, 2.6]], 3.6, 1.9, bodyD, body), ...box(0, 4.6, 0.8, 1.2, 1.0, 0.6, o.team)); F.push(...cylZ(0, 4.6, 5.4 + recoil, 0.4, 7.0, IRON_D, 8), ...cylZ(0, 4.6, 9.0 + recoil, 0.55, 0.9, IRON_D, 8)); if (k === 1) F.push(...sph(0, 4.6, 10.2, 1.2, [255, 220, 120], 3)); }
+  else { F.push(...cyl(0, 4.7, -0.4, 2.2, 1.8, body, 8, 1.9), ...box(0, 5.7, -0.4, 1.6, 0.5, 2.2, bodyD), ...box(0, 5.4, 0.8, 1.2, 0.9, 0.5, o.team), ...cyl(0, 6.0, -1.2, 0.6, 0.5, bodyD, 6)); F.push(...cylZ(0, 4.9, 5.0 + recoil, 0.38, 7.6, IRON_D, 8), ...cylZ(0, 4.9, 8.9 + recoil, 0.5, 0.8, IRON_D, 8), ...cylZ(0, 4.9, 1.8 + recoil, 0.6, 1.4, bodyD, 8)); if (k === 1) F.push(...sph(0, 4.9, 10.0, 1.3, [255, 220, 120], 3)); }
+  F.push(...box(-2.9, 5.2, -4.6, 0.12, 2.4, 0.12, IRON_D), ...box(-2.4, 6.1, -4.6, 1.0, 0.6, 0.06, o.team)); // aerial + pennant
+  draw(ctx, F, o, 2.4 * sc, 15 * sc, 7 * sc);
+}
+// ---------- sci-fi ----------
+const glowDisc = (x, y, z, r, a = 0.3) => cyl(x, y, z, r, 0.18, [90, 225, 255, a], 10, r * 0.85);
+export function hoverTank3D(ctx, o, sc = 1) {
+  const F = []; const k = atkFrame(o); const hull = mix(HULL_SF, o.team, 0.3), hullD = shade(hull, 0.65); const hover = 2.0 + Math.sin(((o.frame % 6) / 6) * Math.PI * 2) * 0.3; const heavy = sc > 1.1;
+  F.push(...prismY([[-3.4, -5.2], [3.4, -5.2], [3.8, -1.5], [2.8, 5.6], [-2.8, 5.6], [-3.8, -1.5]], hover, 1.8, hullD, hull), ...prismY([[-3.6, -5.3], [3.6, -5.3], [4.0, -1.5], [3.0, 5.7], [-3.0, 5.7], [-4.0, -1.5]], hover + 0.5, 0.35, o.team)); // hull + team band
+  F.push(...prismY([[-3.0, -5.0], [3.0, -5.0], [2.2, 4.0], [-2.2, 4.0]], hover + 1.8, 0.8, hull)); // upper deck
+  F.push(...glowDisc(-2.0, hover * 0.5, -3.0, 1.6), ...glowDisc(2.0, hover * 0.5, -3.0, 1.6), ...glowDisc(0, hover * 0.5, 3.2, 1.8)); // lift pads
+  F.push(...cylZ(-2.6, hover + 1.4, -5.3, 0.55, 0.9, [60, 66, 78], 8), ...cylZ(2.6, hover + 1.4, -5.3, 0.55, 0.9, [60, 66, 78], 8), ...cylZ(-2.6, hover + 1.4, -5.9, 0.4, 0.3, [120, 230, 255, 0.9], 8), ...cylZ(2.6, hover + 1.4, -5.9, 0.4, 0.3, [120, 230, 255, 0.9], 8)); // engines
+  const recoil = k === 1 ? -0.8 : (k === 2 ? -0.3 : 0);
+  F.push(...cyl(0, hover + 3.2, -0.6, 2.0, 1.3, hull, 8, 1.6), ...box(0, hover + 3.9, -0.6, 1.4, 0.5, 1.6, hullD), ...sph(0, hover + 4.1, -1.6, 0.4, CYAN, 3)); // turret + sensor
+  const barrels = heavy ? [-0.9, 0, 0.9] : [-0.55, 0.55];
+  for (const bx of barrels) { F.push(...cylZ(bx, hover + 3.3, 4.2 + recoil, 0.3, 6.5, [70, 74, 86], 6), ...cylZ(bx, hover + 3.3, 7.6 + recoil, 0.34, 0.5, k === 1 ? [255, 255, 200] : CYAN, 6)); }
+  if (heavy) F.push(...box(0, hover + 2.4, -4.2, 3.6, 1.0, 1.4, hullD), ...cylZ(-1.2, hover + 3.1, -3.6, 0.35, 1.8, [70, 74, 86], 6), ...cylZ(1.2, hover + 3.1, -3.6, 0.35, 1.8, [70, 74, 86], 6)); // rear launcher
+  F.push(...cyl(0, hover * 0.45, 0, 5.4, 0.16, [90, 225, 255, 0.22], 12, 5.0));
+  draw(ctx, F, o, 2.4 * sc, 16 * sc, 7 * sc);
+}
+export function walker3D(ctx, o) {
+  const F = []; const k = atkFrame(o); const ph = phaseOf(o); const body = mix(HULL_SF, o.team, 0.35), bodyD = shade(body, 0.65); const walk = o.anim === 'walk';
+  const bob = walk ? Math.abs(Math.sin(ph * 2)) * 0.25 : 0; const BY = 7.0 + bob;
+  F.push(...prismY([[-2.6, -3.2], [2.6, -3.2], [3.2, 0], [2.6, 3.4], [-2.6, 3.4], [-3.2, 0]], BY - 1.0, 2.4, bodyD, body), ...box(0, BY + 1.6, 0.6, 3.0, 0.6, 3.6, body), ...box(0, BY + 0.9, 3.5, 2.4, 1.2, 0.4, [120, 230, 255, 0.9])); // body + visor
+  const recoil = k === 1 ? -0.7 : 0; F.push(...cyl(0, BY + 2.5, -0.4, 1.3, 1.0, body, 8), ...cylZ(0, BY + 2.6, 3.4 + recoil, 0.35, 5.6, [70, 74, 86], 6), ...cylZ(0, BY + 2.6, 6.4 + recoil, 0.4, 0.5, k === 1 ? [255, 255, 200] : CYAN, 6), ...box(0, BY + 3.2, -1.2, 1.0, 0.4, 1.2, o.team)); // gun
+  // four insect legs: an upper segment pointing outwards and up, a lower segment down to the foot; they sweep back and forth and lift when walking
+  const legs = [[-1, 1, 0], [1, 1, Math.PI], [-1, -1, Math.PI], [1, -1, 0]];
+  for (const [sx, sz, off] of legs) {
+    const sweep = walk ? 0.4 * Math.sin(ph + off) : 0, lift = walk ? Math.max(0, Math.sin(ph + off - 0.5)) * 0.5 : 0;
+    const a1 = 0.55 + lift * 0.4; // upper segment rises outwards
+    const up = [...box(0, 0, 2.1, 0.7, 0.7, 4.2, bodyD), ...sph(0, 0, 4.2, 0.55, body, 3)];
+    const kneeY = Math.sin(a1) * 4.2, kneeZ = Math.cos(a1) * 4.2;
+    const lo = xf([...box(0, -2.4, 0, 0.5, 4.8, 0.5, bodyD), ...box(0, -5.0, 0, 0.9, 0.5, 1.2, [50, 50, 56])], p => mv(rotX(p, 0.2 - lift * 0.5), 0, kneeY, kneeZ));
+    const leg = xf([...xf(up, p => rotX(p, -a1)), ...lo], p => rotY(p, sweep + sz * (sz > 0 ? 0.6 : Math.PI - 0.6) * sx * -1));
+    F.push(...xf(leg, p => mv(p, sx * 2.8, BY - 0.6, sz * 2.6)));
+  }
+  draw(ctx, F, o, 2.3, 18, 8);
+}
+export function mech3D(ctx, o, sc = 1, hero = false) {
+  const F = []; const k = atkFrame(o); const ph = phaseOf(o); const walk = o.anim === 'walk'; const body = hero ? mix([220, 170, 60], o.team, 0.35) : mix([170, 178, 192], o.team, 0.22), bodyD = hero ? shade(body, 0.65) : [66, 72, 86];
+  const bob = walk ? -Math.abs(Math.sin(ph)) * 0.3 : 0; const HY = 7.6 + bob;
+  const leg = (x, off) => { const th = walk ? 0.5 * Math.sin(ph + off) : 0.05; const kn = walk ? 0.2 + 0.5 * Math.max(0, Math.sin(ph + off - 0.4)) : 0.12; const up = [...box(0, -1.9, 0, 1.4, 3.8, 1.5, bodyD), ...sph(0, -3.8, 0, 0.9, body, 3)]; let lo = [...box(0, -2.0, 0.1, 1.2, 3.8, 1.3, bodyD), ...box(0, -4.1, 0.5, 1.8, 0.7, 2.6, [50, 50, 56])]; lo = xf(swing(lo, -kn), p => mv(p, 0, -3.8, 0)); return xf(swing([...up, ...lo], th), p => mv(p, x, HY, 0)); };
+  F.push(...leg(-1.5, 0), ...leg(1.5, Math.PI));
+  F.push(...box(0, HY + 0.6, 0, 3.4, 1.4, 2.4, bodyD), ...prismY([[-2.6, -1.6], [2.6, -1.6], [2.9, 1.9], [-2.9, 1.9]], HY + 1.3, 3.4, bodyD, body), ...box(0, HY + 3.0, 2.0, 2.6, 1.8, 0.35, o.team), ...box(0, HY + 2.0, 2.1, 1.4, 0.6, 0.25, CYAN)); // pelvis + torso + chest plate
+  for (const sx of [-1, 1]) F.push(...box(sx * 3.4, HY + 4.4, 0, 1.8, 1.2, 2.6, body), ...box(sx * 3.4, HY + 5.1, 0, 1.4, 0.3, 2.2, o.team)); // shoulder pads
+  F.push(...box(0, HY + 5.4, 0.3, 2.0, 1.5, 1.9, bodyD), ...box(0, HY + 5.5, 1.3, 1.7, 0.7, 0.25, [120, 230, 255, 0.95])); // head + visor
+  const aim = k >= 0 ? 1.4 : 0.9, recoil = k === 1 ? -0.6 : 0;
+  let armR = [...box(0, -1.6, 0, 1.3, 3.2, 1.3, bodyD), ...cylZ(0, -3.3, 2.6 + recoil, 0.45, 5.0, [70, 74, 86], 6), ...cylZ(0, -3.3, 5.2 + recoil, 0.5, 0.5, k === 1 ? [255, 255, 200] : CYAN, 6), ...box(0, -3.4, 0.4, 1.6, 1.4, 1.8, body)]; armR = xf(armR, p => rotX(p, -aim)); F.push(...xf(armR, p => mv(p, -3.4, HY + 4.2, 0)));
+  let armL = [...box(0, -1.6, 0, 1.3, 3.2, 1.3, bodyD), ...box(0, -3.6, 0, 1.5, 1.5, 1.5, body), ...(hero ? box(0, -3.6, 0.9, 2.6, 2.6, 0.25, [120, 230, 255, 0.45]) : [])]; armL = xf(armL, p => rotX(p, -(k >= 0 ? 0.9 : 0.4))); F.push(...xf(armL, p => mv(p, 3.4, HY + 4.2, 0)));
+  if (hero) F.push(...box(0, HY + 3.0, -2.0, 3.0, 2.6, 1.0, bodyD), ...cyl(-0.9, HY + 1.4, -2.0, 0.45, 0.6, [120, 230, 255, 0.9], 6), ...cyl(0.9, HY + 1.4, -2.0, 0.45, 0.6, [120, 230, 255, 0.9], 6)); // jet pack
+  draw(ctx, F, o, 2.1 * sc, 11 * sc, 5 * sc);
+}
