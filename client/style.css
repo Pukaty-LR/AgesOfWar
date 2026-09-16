@@ -266,3 +266,5 @@ html[lang="cs"] .cmd .lbl { hyphens: manual; }
 .servers td .sub { font-size: 11px; color: var(--hud-dim); }
 
 #game-clock { white-space: nowrap; }
+
+@media (max-width: 1000px) { .res .lbl { display: none; } }
