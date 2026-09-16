@@ -234,7 +234,7 @@ export class UI {
       } else {
         const base = hasWorker && !hasMil ? 4 : 0; // workers: build/gather/repair first, movement on the second row
         btn(base + 0, { label: t('Přesun'), key: 'M', icon: () => actionIcon('move'), desc: t('Přesunout na místo (nebo pravé tlačítko).'), act: () => { game.state.mode = 'move'; } });
-        btn(base + 1, { label: 'Stop', key: 'S', icon: () => actionIcon('stop'), desc: t('Zastavit současný rozkaz.'), act: () => game.orderStop() });
+        btn(base + 1, { label: t('Stop'), key: 'S', icon: () => actionIcon('stop'), desc: t('Zastavit současný rozkaz.'), act: () => game.orderStop() });
         btn(base + 2, { label: t('Držet'), key: 'H', icon: () => actionIcon('hold'), desc: t('Držet pozici, nepronásledovat.'), act: () => game.orderHold() });
         if (hasMil || hasWorker) btn(base + 3, { label: t('Útok'), key: 'A', icon: () => actionIcon('amove'), desc: t('Útočný pochod: útočí na vše cestou. Klik na nepřítele = útok na cíl.'), act: () => { game.state.mode = 'amove'; }, active: () => game.state.mode === 'amove' });
         if (hasWorker) {

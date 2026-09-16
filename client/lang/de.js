@@ -28,7 +28,7 @@ export default {
   'AI lehká': 'KI leicht', 'AI střední': 'KI mittel', 'AI těžká': 'KI schwer', 'AI nemožná': 'KI unmöglich', 'Náhodná': 'Zufällig', 'Tým ': 'Team ', 'Zrušit připravenost': 'Nicht bereit', 'Cena': 'Kosten', 'Dosah': 'Reichweite', 'Rychlost': 'Tempo', 'Stavba': 'Bau', 'Kapacita': 'Kapazität',
   'Hra uložena jako „%1".': 'Spiel gespeichert als „%1“.', 'Hra začíná za %1…': 'Spiel beginnt in %1…', 'Smazat uloženou hru „%1“?': 'Spielstand „%1“ löschen?', 'Probíhá (%1 min)': 'Läuft (%1 min)',
   'Úroveň': 'Stufe', 'Náklad': 'Ladung', 'Zbývá': 'Verbleibend', 'Vylepšení budovy': 'Gebäudeausbau', 'Výzkum: ': 'Forschung: ', ' (vyřazen)': ' (ausgeschieden)',
-  'Vyložit': 'Ausladen', 'Hlídkovat': 'Patrouillieren', 'Zpět': 'Zurück', 'Přesun': 'Bewegen', 'Stop': 'Stopp', 'Držet': 'Halten', 'Těžit ': 'Sammeln: ', 'Stavět': 'Bauen', 'Opravit': 'Reparieren',
+  'Vyložit': 'Ausladen', 'Hlídkovat': 'Patrouillieren', 'Zpět': 'Zurück', 'Přesun': 'Bewegen', 'Stop': 'Stopp', 'Držet': 'Halten', 'Těžit ': 'Abbau: ', 'Stavět': 'Bauen', 'Opravit': 'Reparieren',
   'Zrušit stavbu': 'Bau abbrechen', 'Zazdít': 'Zumauern', 'Udělat bránu': 'Tor bauen', 'Místo srazu': 'Sammelpunkt', 'Zrušit': 'Abbrechen', 'Zbourat': 'Abreißen', 'Vylepšit': 'Ausbauen', 'Vylepšit (%1)': 'Ausbauen (%1)',
   'Nepřítel byl rozdrcen.': 'Der Feind wurde zerschlagen.', 'Byli jsme vyřazeni, ostatní bojují dál.': 'Wir sind ausgeschieden, die anderen kämpfen weiter.', 'Naše říše padla.': 'Unser Reich ist gefallen.',
   '<span class="winner">VÍTĚZ</span>': '<span class="winner">SIEGER</span>', 'Délka hry': 'Spieldauer', 'Nedostatek surovin.': 'Nicht genug Rohstoffe.',

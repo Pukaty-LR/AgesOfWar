@@ -28,7 +28,7 @@ export default {
   'AI lehká': 'ИИ лёгкий', 'AI střední': 'ИИ средний', 'AI těžká': 'ИИ тяжёлый', 'AI nemožná': 'ИИ невозможный', 'Náhodná': 'Случайная', 'Tým ': 'Команда ', 'Zrušit připravenost': 'Не готов', 'Cena': 'Цена', 'Dosah': 'Дальность', 'Rychlost': 'Скорость', 'Stavba': 'Стройка', 'Kapacita': 'Вместимость',
   'Hra uložena jako „%1".': 'Игра сохранена как «%1».', 'Hra začíná za %1…': 'Игра начнётся через %1…', 'Smazat uloženou hru „%1“?': 'Удалить сохранение «%1»?', 'Probíhá (%1 min)': 'Идёт (%1 мин)',
   'Úroveň': 'Уровень', 'Náklad': 'Груз', 'Zbývá': 'Осталось', 'Vylepšení budovy': 'Улучшение здания', 'Výzkum: ': 'Исследование: ', ' (vyřazen)': ' (выбыл)',
-  'Vyložit': 'Выгрузить', 'Hlídkovat': 'Патруль', 'Zpět': 'Назад', 'Přesun': 'Идти', 'Stop': 'Стоп', 'Držet': 'Держать', 'Těžit ': 'Добывать: ', 'Stavět': 'Строить', 'Opravit': 'Чинить',
+  'Vyložit': 'Выгрузить', 'Hlídkovat': 'Патруль', 'Zpět': 'Назад', 'Přesun': 'Идти', 'Stop': 'Стоп', 'Držet': 'Держать', 'Těžit ': 'Добыть ', 'Stavět': 'Строить', 'Opravit': 'Чинить',
   'Zrušit stavbu': 'Отменить стройку', 'Zazdít': 'Заложить', 'Udělat bránu': 'Сделать ворота', 'Místo srazu': 'Точка сбора', 'Zrušit': 'Отмена', 'Zbourat': 'Снести', 'Vylepšit': 'Улучшить', 'Vylepšit (%1)': 'Улучшить (%1)',
   'Nepřítel byl rozdrcen.': 'Враг разгромлен.', 'Byli jsme vyřazeni, ostatní bojují dál.': 'Мы выбыли, остальные продолжают бой.', 'Naše říše padla.': 'Наша империя пала.',
   '<span class="winner">VÍTĚZ</span>': '<span class="winner">ПОБЕДИТЕЛЬ</span>', 'Délka hry': 'Длительность', 'Nedostatek surovin.': 'Недостаточно ресурсов.',

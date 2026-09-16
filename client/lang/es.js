@@ -28,7 +28,7 @@ export default {
   'AI lehká': 'IA fácil', 'AI střední': 'IA media', 'AI těžká': 'IA difícil', 'AI nemožná': 'IA imposible', 'Náhodná': 'Aleatoria', 'Tým ': 'Equipo ', 'Zrušit připravenost': 'No listo', 'Cena': 'Coste', 'Dosah': 'Alcance', 'Rychlost': 'Velocidad', 'Stavba': 'Construcción', 'Kapacita': 'Capacidad',
   'Hra uložena jako „%1".': 'Partida guardada como «%1».', 'Hra začíná za %1…': 'La partida empieza en %1…', 'Smazat uloženou hru „%1“?': '¿Borrar la partida guardada «%1»?', 'Probíhá (%1 min)': 'En curso (%1 min)',
   'Úroveň': 'Nivel', 'Náklad': 'Carga', 'Zbývá': 'Restante', 'Vylepšení budovy': 'Mejora del edificio', 'Výzkum: ': 'Investigación: ', ' (vyřazen)': ' (eliminado)',
-  'Vyložit': 'Descargar', 'Hlídkovat': 'Patrullar', 'Zpět': 'Atrás', 'Přesun': 'Mover', 'Stop': 'Parar', 'Držet': 'Mantener', 'Těžit ': 'Recolectar ', 'Stavět': 'Construir', 'Opravit': 'Reparar',
+  'Vyložit': 'Descargar', 'Hlídkovat': 'Patrullar', 'Zpět': 'Atrás', 'Přesun': 'Mover', 'Stop': 'Parar', 'Držet': 'Mantener', 'Těžit ': 'Recoger ', 'Stavět': 'Construir', 'Opravit': 'Reparar',
   'Zrušit stavbu': 'Cancelar construcción', 'Zazdít': 'Tapiar', 'Udělat bránu': 'Hacer puerta', 'Místo srazu': 'Punto de reunión', 'Zrušit': 'Cancelar', 'Zbourat': 'Demoler', 'Vylepšit': 'Mejorar', 'Vylepšit (%1)': 'Mejorar (%1)',
   'Nepřítel byl rozdrcen.': 'El enemigo ha sido aplastado.', 'Byli jsme vyřazeni, ostatní bojují dál.': 'Fuimos eliminados, los demás siguen luchando.', 'Naše říše padla.': 'Nuestro imperio ha caído.',
   '<span class="winner">VÍTĚZ</span>': '<span class="winner">GANADOR</span>', 'Délka hry': 'Duración', 'Nedostatek surovin.': 'Recursos insuficientes.',
