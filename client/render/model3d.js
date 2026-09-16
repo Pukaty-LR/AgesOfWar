@@ -3,25 +3,31 @@
 // Poses drive hips, knees, shoulders, elbows and wrists; weapons hang off the right hand, shields off the left forearm.
 
 import { isPixel } from './style.js';
-const SKIN = [232, 190, 150], IRON = [152, 158, 166], IRON_D = [92, 98, 108], BRONZE = [188, 142, 64], BRONZE_D = [122, 88, 36], STEEL = [222, 226, 234], WOOD = [130, 88, 46], WOOD_D = [86, 56, 28], LEATHER = [110, 74, 40], LEATHER_D = [70, 46, 24], GOLD = [232, 194, 84], HAIR = [74, 46, 24], CYAN = [90, 225, 255];
-const shade = (c, k) => [Math.max(0, Math.min(255, c[0] * k)), Math.max(0, Math.min(255, c[1] * k)), Math.max(0, Math.min(255, c[2] * k)), ...(c.length > 3 ? [c[3]] : [])];
-const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+export const SKIN = [232, 190, 150], IRON = [152, 158, 166], IRON_D = [92, 98, 108], BRONZE = [188, 142, 64], BRONZE_D = [122, 88, 36], STEEL = [222, 226, 234], WOOD = [130, 88, 46], WOOD_D = [86, 56, 28], LEATHER = [110, 74, 40], LEATHER_D = [70, 46, 24], GOLD = [232, 194, 84], HAIR = [74, 46, 24], CYAN = [90, 225, 255];
+export const shade = (c, k) => [Math.max(0, Math.min(255, c[0] * k)), Math.max(0, Math.min(255, c[1] * k)), Math.max(0, Math.min(255, c[2] * k)), ...(c.length > 3 ? [c[3]] : [])];
+export const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 const lerp = (a, b, t) => a + (b - a) * t;
 const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
 // ---------- geometry ----------
-const rotX = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0], p[1] * c - p[2] * s, p[1] * s + p[2] * c]; };
-const rotY = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c + p[2] * s, p[1], -p[0] * s + p[2] * c]; };
-const rotZ = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c, p[2]]; };
-const mv = (p, x, y, z) => [p[0] + x, p[1] + y, p[2] + z];
-const xf = (faces, fn) => { for (const f of faces) f.pts = f.pts.map(fn); return faces; };
+export const rotX = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0], p[1] * c - p[2] * s, p[1] * s + p[2] * c]; };
+export const rotY = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c + p[2] * s, p[1], -p[0] * s + p[2] * c]; };
+export const rotZ = (p, a) => { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c, p[2]]; };
+export const mv = (p, x, y, z) => [p[0] + x, p[1] + y, p[2] + z];
+export const xf = (faces, fn) => { for (const f of faces) f.pts = f.pts.map(fn); return faces; };
 /** positive = forward (+z) for a part hanging down from its joint */
-const swing = (faces, a) => xf(faces, p => rotX(p, -a));
-function box(cx, cy, cz, w, h, d, color) { const P = []; for (const [sx, sy, sz] of [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]]) P.push([cx + sx * w / 2, cy + sy * h / 2, cz + sz * d / 2]); return [[0, 1, 2, 3], [5, 4, 7, 6], [4, 0, 3, 7], [1, 5, 6, 2], [4, 5, 1, 0], [3, 2, 6, 7]].map(f => ({ pts: f.map(i => P[i]), color })); }
-function cyl(cx, cy, cz, r, h, color, n = 7, rTop = r, caps = true) { const F = []; const ring = (rr, y) => { const a = []; for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2; a.push([cx + Math.cos(t) * rr, y, cz + Math.sin(t) * rr]); } return a; }; const B = ring(r, cy - h / 2), T = ring(rTop, cy + h / 2); for (let i = 0; i < n; i++) { const j = (i + 1) % n; F.push({ pts: [B[i], B[j], T[j], T[i]], color }); } if (caps) { F.push({ pts: T, color }); F.push({ pts: B.slice().reverse(), color }); } return F; }
-function sph(cx, cy, cz, r, color, n = 5, keep = null) { const F = []; for (let i = 0; i < n; i++) for (let j = 0; j < n * 2; j++) { const t0 = i / n * Math.PI, t1 = (i + 1) / n * Math.PI, p0 = j / (n * 2) * Math.PI * 2, p1 = (j + 1) / (n * 2) * Math.PI * 2; const pt = (t, p) => [cx + Math.sin(t) * Math.cos(p) * r, cy + Math.cos(t) * r, cz + Math.sin(t) * Math.sin(p) * r]; const f = { pts: [pt(t0, p0), pt(t0, p1), pt(t1, p1), pt(t1, p0)], color }; if (!keep || f.pts.every(keep)) F.push(f); } return F; }
+export const swing = (faces, a) => xf(faces, p => rotX(p, -a));
+export function box(cx, cy, cz, w, h, d, color) { const P = []; for (const [sx, sy, sz] of [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]]) P.push([cx + sx * w / 2, cy + sy * h / 2, cz + sz * d / 2]); return [[0, 1, 2, 3], [5, 4, 7, 6], [4, 0, 3, 7], [1, 5, 6, 2], [4, 5, 1, 0], [3, 2, 6, 7]].map(f => ({ pts: f.map(i => P[i]), color })); }
+export function cyl(cx, cy, cz, r, h, color, n = 7, rTop = r, caps = true) { const F = []; const ring = (rr, y) => { const a = []; for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2; a.push([cx + Math.cos(t) * rr, y, cz + Math.sin(t) * rr]); } return a; }; const B = ring(r, cy - h / 2), T = ring(rTop, cy + h / 2); for (let i = 0; i < n; i++) { const j = (i + 1) % n; F.push({ pts: [B[i], B[j], T[j], T[i]], color }); } if (caps) { F.push({ pts: T, color }); F.push({ pts: B.slice().reverse(), color }); } return F; }
+export function sph(cx, cy, cz, r, color, n = 5, keep = null) { const F = []; for (let i = 0; i < n; i++) for (let j = 0; j < n * 2; j++) { const t0 = i / n * Math.PI, t1 = (i + 1) / n * Math.PI, p0 = j / (n * 2) * Math.PI * 2, p1 = (j + 1) / (n * 2) * Math.PI * 2; const pt = (t, p) => [cx + Math.sin(t) * Math.cos(p) * r, cy + Math.cos(t) * r, cz + Math.sin(t) * Math.sin(p) * r]; const f = { pts: [pt(t0, p0), pt(t0, p1), pt(t1, p1), pt(t1, p0)], color }; if (!keep || f.pts.every(keep)) F.push(f); } return F; }
 /** curved plate: part of a vertical cylinder wall of radius r around (cx,*,cz), angles a0..a1 in the xz plane */
-function arcPlate(cx, cy, cz, r, h, a0, a1, thick, color, n = 6, rim = null) { const F = []; for (let i = 0; i < n; i++) { const t0 = a0 + (a1 - a0) * i / n, t1 = a0 + (a1 - a0) * (i + 1) / n; const o = [Math.cos(t0) * r, Math.sin(t0) * r], p = [Math.cos(t1) * r, Math.sin(t1) * r], o2 = [Math.cos(t0) * (r + thick), Math.sin(t0) * (r + thick)], p2 = [Math.cos(t1) * (r + thick), Math.sin(t1) * (r + thick)]; const c2 = rim && (i === 0 || i === n - 1) ? rim : color; F.push({ pts: [[cx + o2[0], cy - h / 2, cz + o2[1]], [cx + p2[0], cy - h / 2, cz + p2[1]], [cx + p2[0], cy + h / 2, cz + p2[1]], [cx + o2[0], cy + h / 2, cz + o2[1]]], color: c2 }); F.push({ pts: [[cx + o[0], cy + h / 2, cz + o[1]], [cx + p[0], cy + h / 2, cz + p[1]], [cx + p[0], cy - h / 2, cz + p[1]], [cx + o[0], cy - h / 2, cz + o[1]]], color: shade(color, 0.7) }); F.push({ pts: [[cx + o[0], cy + h / 2, cz + o[1]], [cx + o2[0], cy + h / 2, cz + o2[1]], [cx + p2[0], cy + h / 2, cz + p2[1]], [cx + p[0], cy + h / 2, cz + p[1]]], color: rim || color }); F.push({ pts: [[cx + o[0], cy - h / 2, cz + o[1]], [cx + p[0], cy - h / 2, cz + p[1]], [cx + p2[0], cy - h / 2, cz + p2[1]], [cx + o2[0], cy - h / 2, cz + o2[1]]], color: rim || color }); } return F; }
+export function arcPlate(cx, cy, cz, r, h, a0, a1, thick, color, n = 6, rim = null) { const F = []; for (let i = 0; i < n; i++) { const t0 = a0 + (a1 - a0) * i / n, t1 = a0 + (a1 - a0) * (i + 1) / n; const o = [Math.cos(t0) * r, Math.sin(t0) * r], p = [Math.cos(t1) * r, Math.sin(t1) * r], o2 = [Math.cos(t0) * (r + thick), Math.sin(t0) * (r + thick)], p2 = [Math.cos(t1) * (r + thick), Math.sin(t1) * (r + thick)]; const c2 = rim && (i === 0 || i === n - 1) ? rim : color; F.push({ pts: [[cx + o2[0], cy - h / 2, cz + o2[1]], [cx + p2[0], cy - h / 2, cz + p2[1]], [cx + p2[0], cy + h / 2, cz + p2[1]], [cx + o2[0], cy + h / 2, cz + o2[1]]], color: c2 }); F.push({ pts: [[cx + o[0], cy + h / 2, cz + o[1]], [cx + p[0], cy + h / 2, cz + p[1]], [cx + p[0], cy - h / 2, cz + p[1]], [cx + o[0], cy - h / 2, cz + o[1]]], color: shade(color, 0.7) }); F.push({ pts: [[cx + o[0], cy + h / 2, cz + o[1]], [cx + o2[0], cy + h / 2, cz + o2[1]], [cx + p2[0], cy + h / 2, cz + p2[1]], [cx + p[0], cy + h / 2, cz + p[1]]], color: rim || color }); F.push({ pts: [[cx + o[0], cy - h / 2, cz + o[1]], [cx + p[0], cy - h / 2, cz + p[1]], [cx + p2[0], cy - h / 2, cz + p2[1]], [cx + o2[0], cy - h / 2, cz + o2[1]]], color: rim || color }); } return F; }
+/** outline [[x,z],...] extruded from y0 to y0+h: side quads + top/bottom caps */
+export function prismY(outline, y0, h, color, topColor = null) { const F = []; const n = outline.length; for (let i = 0; i < n; i++) { const a = outline[i], b = outline[(i + 1) % n]; F.push({ pts: [[a[0], y0, a[1]], [b[0], y0, b[1]], [b[0], y0 + h, b[1]], [a[0], y0 + h, a[1]]], color }); } F.push({ pts: outline.map(p => [p[0], y0 + h, p[1]]), color: topColor || color }); F.push({ pts: outline.slice().reverse().map(p => [p[0], y0, p[1]]), color }); return F; }
+/** cylinder lying along the z axis (barrels, logs, hulls) */
+export function cylZ(cx, cy, cz, r, len, color, n = 7, rFront = r) { return xf(cyl(0, 0, 0, r, len, color, n, rFront), p => mv(rotX(p, Math.PI / 2), cx, cy, cz)); }
+/** cylinder lying along the x axis (axles, wheels) */
+export function cylX(cx, cy, cz, r, len, color, n = 8) { return xf(cyl(0, 0, 0, r, len, color, n), p => mv(rotZ(p, Math.PI / 2), cx, cy, cz)); }
 /** flat disc with its axis along x (a shield face), centred at the origin */
 function discX(r, thick, color, n = 10, rim = null) { const F = cyl(0, 0, 0, r, thick, color, n); for (const f of F) f.pts = f.pts.map(p => rotZ(p, Math.PI / 2)); if (rim) for (let i = 0; i < n; i++) F[i].color = rim; return F; }
 
@@ -44,7 +50,7 @@ function poseDie(t) { const k = ease(Math.min(1, t * 1.15)); return { bob: -k * 
 function poseRider(P) { return { ...P, legL: { thigh: 1.15, knee: 1.35 }, legR: { thigh: 1.15, knee: 1.35 }, bob: 0, lean: 0.02 }; }
 const GUNS = new Set(['rifle', 'mg', 'plasmaRifle', 'rail', 'rocket', 'flamer']);
 const SWINGERS = new Set(['axe', 'pick', 'wrench', 'shovel', 'sling']);
-function poseFor(o) { const { anim, frame } = o; const n = { idle: 4, walk: 6, attack: 4, work: 4, die: 4 }[anim] || 4; const t = ((frame % n) + 0.5) / n; const wp = o.weapon;
+export function poseFor(o) { const { anim, frame } = o; const n = { idle: 4, walk: 6, attack: 4, work: 4, die: 4 }[anim] || 4; const t = ((frame % n) + 0.5) / n; const wp = o.weapon;
   let P;
   if (anim === 'die') return poseDie(t);
   if (anim === 'walk') P = poseWalk(t);
@@ -54,7 +60,7 @@ function poseFor(o) { const { anim, frame } = o; const n = { idle: 4, walk: 6, a
   return o.rider ? poseRider(P) : P; }
 
 // ---------- model ----------
-const HIP = 6.7, SHOULDER = 10.4, SHX = 1.75;
+export const HIP = 6.7, SHOULDER = 10.4, SHX = 1.75;
 function weaponFaces(kind, A, team, o) { // built in the hand frame: hand at origin, forearm continues towards -y
   const F = []; const th = A.thrust || 0, sw = A.swing || 0;
   const vertical = Math.PI + 0.3, forward = Math.PI / 2;
@@ -153,7 +159,7 @@ export function humanoidModel(o, P) {
 }
 
 // ---------- rasteriser ----------
-const TILT = Math.atan(0.5), CT = Math.cos(TILT), ST = Math.sin(TILT);
+export const TILT = Math.atan(0.5), CT = Math.cos(TILT), ST = Math.sin(TILT);
 const LIGHT = (() => { const v = [-0.55, 0.9, 0.75]; const l = Math.hypot(...v); return v.map(x => x / l); })();
 const CAM = [0, ST, CT];
 const rgba = (c, k) => c.length > 3 ? `rgba(${(c[0] * k) | 0},${(c[1] * k) | 0},${(c[2] * k) | 0},${c[3]})` : `rgb(${Math.min(255, c[0] * k) | 0},${Math.min(255, c[1] * k) | 0},${Math.min(255, c[2] * k) | 0})`;

@@ -32,7 +32,7 @@ export function pixelize(canvas, S, opts = {}) {
     const j = y * lw + x;
     if (cls[j] === 2) { const c = idx[j] >= 0 ? pal[idx[j]] : [rgb[j * 3], rgb[j * 3 + 1], rgb[j * 3 + 2]]; put(x, y, c[0], c[1], c[2], 255); continue; }
     if (outline) { const solid = (x > 0 && cls[j - 1] === 2) || (x < lw - 1 && cls[j + 1] === 2) || (y > 0 && cls[j - lw] === 2) || (y < lh - 1 && cls[j + lw] === 2); if (solid) { put(x, y, OUTLINE[0], OUTLINE[1], OUTLINE[2], 255); continue; } }
-    if (cls[j] === 1) put(x, y, rgb[j * 3] * 0.5 | 0, rgb[j * 3 + 1] * 0.5 | 0, rgb[j * 3 + 2] * 0.5 | 0, Math.min(120, shadowA[j] + 20));
+    if (cls[j] === 1) { const lum = rgb[j * 3] * 0.3 + rgb[j * 3 + 1] * 0.59 + rgb[j * 3 + 2] * 0.11; if (lum > 80) put(x, y, rgb[j * 3], rgb[j * 3 + 1], rgb[j * 3 + 2], Math.min(200, shadowA[j] + 30)); /* glow / water */ else put(x, y, rgb[j * 3] * 0.5 | 0, rgb[j * 3 + 1] * 0.5 | 0, rgb[j * 3 + 2] * 0.5 | 0, Math.min(120, shadowA[j] + 20)); }
   }
   ctx.putImageData(out, 0, 0);
 }
