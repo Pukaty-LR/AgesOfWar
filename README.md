@@ -78,3 +78,19 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - `client/` – menu, lobby, HUD, síť, procedurální izometrická grafika (`render/`) a zvuk (`audio.js`).
 - `client/i18n.js` + `client/lang/*.js` – lokalizace (klíče = české zdrojové řetězce; chybějící překlad spadne na angličtinu, pak na češtinu).
 - `npm test` – regresní test (`tools/smoke.js`: všechny éry × styly map se 4 AI a pokrytí příkazů), `tools/headless.js` – AI vs AI simulace bez prohlížeče (`node tools/headless.js ww2 7200`), `tools/tiertest.js` – test tierů, hrdiny a bran.
+
+## Hraní přes internet (s kamarády)
+
+Nejrychlejší cesta bez účtů: spusť  Tunnel password (verejna IP): 176.114.240.7
+
+your url is: https://lucky-tables-read.loca.lt (nebo ručně  a v druhém okně ). Tunel vypíše veřejnou adresu typu , tu pošli kamarádům. Při první návštěvě zadají „tunnel password“ – to je tvoje veřejná IP (skript ji vypíše, jinak Not Found). Klient se připojuje WebSocketem na stejnou adresu (wss), takže lobby, chat i hra fungují beze změny. Adresa se při každém spuštění tunelu mění;  si vyžádá pevný název, pokud je volný.
+
+Trvalé nasazení: server je obyčejná Node aplikace (Unknown command: "start"
+
+
+Did you mean one of these?
+  npm star # Mark your favorite packages
+  npm stars # View packages marked as favorites
+  npm start # Start a package
+To see a list of supported npm commands, run:
+  npm help, port z proměnné ), takže jde nahrát na Render/Railway/Fly – přiložený  popisuje bezplatnou webovou službu: repozitář dej na GitHub, na render.com zvol „New → Blueprint“ a vyber repozitář.
