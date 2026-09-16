@@ -437,6 +437,13 @@ export class Sim {
         }
         break;
       }
+      case 'tribute': { // AoE/WC3: hand resources to an ally
+        const to = this.players[c.to]; const gp = Math.max(0, Math.min(Math.floor(+c.p) || 0, Math.floor(p.res.p))), gs = Math.max(0, Math.min(Math.floor(+c.s) || 0, Math.floor(p.res.s)));
+        if (!to || to.id === pid || to.neutral || p.neutral || to.team !== p.team || !to.alive || gp + gs <= 0) break;
+        p.res.p -= gp; p.res.s -= gs; to.res.p += gp; to.res.s += gs; p.stats.tributeSent = (p.stats.tributeSent || 0) + gp + gs;
+        this.events.push({ t: 'tribute', from: pid, to: to.id, p: gp, s: gs });
+        break;
+      }
       case 'chat': break;
     }
   }

@@ -105,6 +105,7 @@ export class Game {
   unloadAt(wx, wy) { const ids = this.transportsSelected(); if (!ids.length) return; this.send({ t: 'unload', ids, x: wx, y: wy, queue: this.state.shift }); this.audio.sfx('ack', 0.7); this.renderer.addEffect({ kind: 'marker', x: wx, y: wy, color: 'rgba(120,200,255,0.9)' }); }
   unloadHere() { const ids = this.transportsSelected(); if (!ids.length) return; this.send({ t: 'unload', ids }); this.audio.sfx('ack', 0.7); }
   useAbility() { const ids = this.selectedIds(e => e.k === 'u' && e.o === this.me && this.unitDef(e).ability); if (!ids.length) return; this.send({ t: 'ability', ids }); }
+  tribute(to, res, n) { const p = this.players[this.me]; if (!p || (res === 'p' ? p.res.p : p.res.s) < n) { this.ui.alert(t('Nedostatek surovin.'), true); return; } this.send({ t: 'tribute', to, p: res === 'p' ? n : 0, s: res === 's' ? n : 0 }); this.audio.sfx('click'); }
   research(bid, rid) { this.send({ t: 'research', id: bid, rid }); this.audio.sfx('click'); }
   pingMap(wx, wy) { this.net.send({ t: 'mping', x: wx, y: wy }); }
   toggleGate() { const ids = this.selectedIds(e => e.k === 'b' && e.o === this.me && (e.t === 'wall' || e.t === 'gate')); if (!ids.length) return; this.send({ t: 'gate', ids }); this.audio.sfx('placed', 0.5); }
@@ -185,6 +186,7 @@ export class Game {
       case 'alert': if (ev.owner === this.me) { this.lastAlert = { x: ev.x, y: ev.y, t: performance.now() }; this.ui.alert(ev.k === 'building' ? t('Naše budova je pod útokem!') : t('Naše jednotky jsou pod útokem!'), true); this.audio.sfx('alarm', 0.6); this.ui.minimapPing(ev.x, ev.y); } break;
       case 'eliminated': { const p = this.players[ev.owner]; this.ui.chat('', tf(t('%1 byl vyřazen ze hry.'), p?.name), true); if (ev.owner !== this.me) this.audio.sfx('horn', 0.6); else if (!this.gameOver) { this.audio.sfx('defeat', 1); this.eliminated = true; setTimeout(() => { if (!this.gameOver) this.ui.showEnd(this, false, true); }, 1200); } break; }
       case 'chat': this.ui.chat(ev.from, ev.text, false, ev.color); break;
+      case 'tribute': { const rn = ERAS[this.era].resources; const parts = [ev.p ? `${ev.p} ${rn.p.name.toLowerCase()}` : '', ev.s ? `${ev.s} ${rn.s.name.toLowerCase()}` : ''].filter(Boolean).join(t(' a ')); if (ev.to === this.me) { this.ui.alert(tf(t('%1 ti poslal %2.'), this.players[ev.from].name, parts), false); this.ui.chat('', tf(t('%1 ti poslal %2.'), this.players[ev.from].name, parts), true); this.audio.sfx('ack', 0.7); } else if (ev.from === this.me) this.ui.alert(tf(t('Poslal jsi %1 hráči %2.'), parts, this.players[ev.to].name), false); break; }
       case 'board': this.soundAt('splash', ev.x, ev.y, 0.5); break;
       case 'unload': this.soundAt('splash', ev.x, ev.y, 0.7); if (mine) this.ui.alert(t('Jednotky vyloděny.'), false); break;
       case 'heal': if (R.isVisibleTile(ev.x, ev.y)) R.spawnParticles(5, ev.x, ev.y, 10, { colors: [[140, 255, 170], [220, 255, 230]], speed: 0.6, vz: 22, life: 0.7, size: 1.6, gravity: -10, drag: 0.97 }); break;
