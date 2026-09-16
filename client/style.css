@@ -264,3 +264,5 @@ html[lang="cs"] .cmd .lbl { hyphens: manual; }
 .lang-switch.inline { position: static; flex-wrap: wrap; flex: 1; }
 
 .servers td .sub { font-size: 11px; color: var(--hud-dim); }
+
+#game-clock { white-space: nowrap; }
