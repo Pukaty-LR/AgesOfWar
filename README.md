@@ -74,4 +74,5 @@ nebo na Windows poklepej na `start.bat`. Pak otevři **http://localhost:8080**.
 - `server/index.js` – HTTP + WebSocket server, lobby, herní místnosti, autoritativní simulace (20 tick/s, delta snapshoty 10×/s).
 - `shared/` – herní data (éry, frakce, jednotky, budovy, tiery), generátor mapy, pathfinding (A*), simulace, AI.
 - `client/` – menu, lobby, HUD, síť, procedurální izometrická grafika (`render/`) a zvuk (`audio.js`).
+- `client/i18n.js` + `client/lang/*.js` – lokalizace (klíče = české zdrojové řetězce; chybějící překlad spadne na angličtinu, pak na češtinu).
 - `npm test` – regresní test (`tools/smoke.js`: všechny éry × styly map se 4 AI a pokrytí příkazů), `tools/headless.js` – AI vs AI simulace bez prohlížeče (`node tools/headless.js ww2 7200`), `tools/tiertest.js` – test tierů, hrdiny a bran.
