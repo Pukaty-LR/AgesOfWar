@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="cs"><head><meta charset="utf-8"><title>Ages of War – přehled budov, stromů a dolů</title>
+<style>
+body { margin: 0; background: #2d4a26; color: #eadfc4; font: 12px Georgia, serif; }
+h1 { font-size: 15px; margin: 8px 12px; color: #e2bc4a; }
+.row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; padding: 6px 12px; border-bottom: 1px solid rgba(0,0,0,0.25); }
+.row .name { width: 140px; color: #f1d36a; font-size: 11px; }
+.cell { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #cdbb95; }
+</style></head><body>
+<h1>Budovy × úrovně, hradby, stromy, doly, dekorace – živě z herního rendereru · ?era=antiquity|ww2|scifi · ?zoom=2</h1>
+<div id="root"></div>
+<script type="module">
+import { buildingSprite, treeSprite, mineSprite, decoSprite } from '../render/sprites.js';
+import { ERAS, makeTechTable } from '../../shared/data.js';
+const q = new URLSearchParams(location.search); const Z = +(q.get('zoom') || 2); const eras = q.get('era') ? [q.get('era')] : Object.keys(ERAS);
+const root = document.getElementById('root');
+function cell(row, spr, label) { const c = document.createElement('canvas'); c.width = spr.w * Z; c.height = spr.h * Z; const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.drawImage(spr.canvas, 0, 0, spr.w * Z, spr.h * Z); const d = document.createElement('div'); d.className = 'cell'; d.appendChild(c); const l = document.createElement('div'); l.textContent = label; d.appendChild(l); row.appendChild(d); }
+function rowOf(name) { const row = document.createElement('div'); row.className = 'row'; const nm = document.createElement('div'); nm.className = 'name'; nm.textContent = name; row.appendChild(nm); root.appendChild(row); return row; }
+for (const era of eras) {
+  const tech = makeTechTable(era, ERAS[era].factions[0].id);
+  for (const [type, b] of Object.entries(tech.buildings)) {
+    const row = rowOf(`${era} · ${type}`);
+    const levels = 1 + (b.upgrades || []).length;
+    if (type === 'wall' || type === 'gate') { for (const mask of [0, 5, 10, 15, 3, 1]) cell(row, buildingSprite(b.sprite, b.w, b.h, 0, true, 1, mask, era, 1), 'mask ' + mask); continue; }
+    for (let lv = 1; lv <= levels; lv++) cell(row, buildingSprite(b.sprite, b.w, b.h, 0, true, 1, 0, era, lv), 'L' + lv);
+    cell(row, buildingSprite(b.sprite, b.w, b.h, 0, false, 0.5, 0, era, 1), 'stavba 50 %');
+  }
+  const rt = rowOf(`${era} · stromy`); for (let v = 0; v < 4; v++) cell(rt, treeSprite(v, era, 0, false), 'v' + v); cell(rt, treeSprite(0, era, 0, true), 'věčný');
+  const rm = rowOf(`${era} · doly`); cell(rm, mineSprite(era, 0, false), 'plný'); cell(rm, mineSprite(era, 0.6, false), '60 % vytěžen'); cell(rm, mineSprite(era, 0, true), 'věčný');
+  const rd = rowOf(`${era} · dekorace`); for (let k = 0; k < 3; k++) for (const v of [0.1, 0.5, 0.9]) cell(rd, decoSprite(k, v, era), `k${k}`);
+}
+window.__sheet = () => { const rows = [...document.querySelectorAll('.row')]; let W = 0, H = 0; const sizes = rows.map(r => { const cs = [...r.querySelectorAll('canvas')]; const w = 150 + cs.reduce((s, c) => s + c.width + 6, 0), h = Math.max(...cs.map(c => c.height)) + 16; W = Math.max(W, w); H += h; return { cs, h }; }); const out = document.createElement('canvas'); out.width = W; out.height = H; const c = out.getContext('2d'); c.imageSmoothingEnabled = false; c.fillStyle = '#2d4a26'; c.fillRect(0, 0, W, H); c.fillStyle = '#f1d36a'; c.font = '11px Georgia'; let y = 0; rows.forEach((r, i) => { const { cs, h } = sizes[i]; c.fillText(r.querySelector('.name').textContent, 4, y + h / 2); let x = 150; for (const cv of cs) { c.drawImage(cv, x, y + h - 16 - cv.height); x += cv.width + 6; } y += h; }); return out.toDataURL('image/png'); };
+</script>
+</body></html>

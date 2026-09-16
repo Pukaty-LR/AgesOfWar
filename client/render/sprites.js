@@ -38,7 +38,7 @@ export function cached(key, w, h, ax, ay, draw) {
   ctx.scale(S, S); ctx.translate(ax, ay);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   draw(ctx);
-  if (isPixel()) pixelize(canvas, S, { colors: w * h > 12000 ? 40 : 22 });
+  if (isPixel()) pixelize(canvas, S, { colors: w * h > 12000 ? 48 : (w * h > 3000 ? 36 : 22) }); // bigger multi-part sprites keep more colours
   c = { canvas, ax, ay, w, h };
   cache.set(key, c);
   return c;
