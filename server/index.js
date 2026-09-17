@@ -17,12 +17,23 @@ const SAVES = path.join(ROOT, 'saves');
 const PORT = +(process.env.PORT || 8080);
 // --public (or AOW_PUBLIC=1): open the server to the internet through a Cloudflare quick tunnel and remember its address
 let publicUrl = process.env.PUBLIC_URL || '';
+/** keep the permanent GitHub Pages link (docs/current.json) pointing at the address that is running right now */
+function publishAddress(url) {
+  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+  try { fs.writeFileSync(path.join(root, 'docs', 'current.json'), JSON.stringify({ url, since: new Date().toISOString() }) + '\n'); } catch (e) { return; }
+  const git = args => new Promise(res => { const p = spawn('git', args, { cwd: root, windowsHide: true, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }); let out = ''; p.stdout.on('data', d => out += d); p.stderr.on('data', d => out += d); p.on('exit', code => res({ code, out })); p.on('error', () => res({ code: -1, out: 'no git' })); });
+  (async () => {
+    const r1 = await git(['add', 'docs/current.json']); if (r1.code !== 0) return;
+    const r2 = await git(['-c', 'user.name=Ages of War server', '-c', 'user.email=server@agesofwar.local', 'commit', '-q', '-m', 'Current public address: ' + url]); if (r2.code !== 0) return;
+    const r3 = await git(['push', '-q']); console.log(r3.code === 0 ? '[tunnel] permanent link updated (GitHub Pages)' : '[tunnel] could not update the permanent link: ' + r3.out.trim().slice(0, 160));
+  })();
+}
 function startTunnel() {
   const exe = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'bin', process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared');
   if (!fs.existsSync(exe)) { console.log('[tunnel] bin/cloudflared not found – run start-public.bat once to download it'); return; }
   const run = () => {
     const p = spawn(exe, ['tunnel', '--url', `http://localhost:${PORT}`], { windowsHide: true });
-    const onLine = d => { const m = String(d).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/); if (m && m[0] !== publicUrl) { publicUrl = m[0]; console.log(`[tunnel] public address: ${publicUrl}`); for (const c of clients.values()) send(c.ws, { t: 'publicUrl', url: publicUrl }); } };
+    const onLine = d => { const m = String(d).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/); if (m && m[0] !== publicUrl) { publicUrl = m[0]; console.log(`[tunnel] public address: ${publicUrl}`); for (const c of clients.values()) send(c.ws, { t: 'publicUrl', url: publicUrl }); publishAddress(publicUrl); } };
     p.stderr.on('data', onLine); p.stdout.on('data', onLine);
     p.on('exit', code => { console.log('[tunnel] exited', code, '– restarting in 10 s'); publicUrl = ''; setTimeout(run, 10000); });
   };

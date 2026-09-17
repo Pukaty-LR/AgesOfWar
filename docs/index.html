@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="cs"><head><meta charset="utf-8"><title>Ages of War</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #1a140c; color: #eadfc4; font-family: Georgia, serif; text-align: center; }
+.box { padding: 32px 40px; border: 1px solid #5a4630; border-radius: 10px; background: #2a2016; max-width: 520px; }
+h1 { color: #e2bc4a; letter-spacing: 2px; margin: 0 0 12px; }
+a { color: #f1d36a; }
+.small { color: #b9a98c; font-size: 13px; margin-top: 14px; }
+</style></head><body>
+<div class="box">
+  <h1>AGES of WAR</h1>
+  <p id="msg">Hledám běžící server…</p>
+  <p class="small">Tahle adresa je stálá – vždy tě pošle na aktuálně běžící hru.</p>
+</div>
+<script>
+(async () => {
+  const msg = document.getElementById('msg');
+  try {
+    const r = await fetch('current.json?t=' + Date.now(), { cache: 'no-store' });
+    const cur = await r.json();
+    if (cur && cur.url) {
+      msg.innerHTML = 'Přesměrovávám na <a href="' + cur.url + '">' + cur.url + '</a>…';
+      // check that the server is really up before sending the player there (a stale tunnel address would just fail)
+      const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 8000);
+      try { await fetch(cur.url + '/?ping=' + Date.now(), { mode: 'no-cors', signal: ctrl.signal }); } catch (e) { msg.innerHTML = 'Server právě neběží (naposledy: <a href="' + cur.url + '">' + cur.url + '</a>, ' + (cur.since ? new Date(cur.since).toLocaleString() : '') + '). Zkus to později.'; return; }
+      location.replace(cur.url);
+    } else msg.textContent = 'Server právě neběží. Zkus to později.';
+  } catch (e) { msg.textContent = 'Server právě neběží. Zkus to později.'; }
+})();
+</script>
+</body></html>
