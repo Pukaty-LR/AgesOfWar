@@ -18,7 +18,7 @@ export class Sim {
     this.era = ERAS[eraId];
     this.tick = 0;
     this.nextId = 1;
-    this.ents = new Map();
+    this.ents = new Map(); this.byKind = {}; this.filledCells = [];
     this.events = [];
     this.removed = [];
     this.gameOver = null;
@@ -111,10 +111,13 @@ export class Sim {
   }
 
   // ---------- entities ----------
-  add(e) { e.id = this.nextId++; e.dirty = true; this.ents.set(e.id, e); return e; }
+  add(e) { e.id = this.nextId++; e.dirty = true; this.ents.set(e.id, e); (this.byKind[e.kind] || (this.byKind[e.kind] = new Set())).add(e); return e; }
+  /** all live entities of one kind (unit, building, tree, mine, proj) */
+  kindSet(k) { return this.byKind[k] || (this.byKind[k] = new Set()); }
+  unitsAndBuildings() { return [...this.kindSet('unit'), ...this.kindSet('building')]; }
   remove(e) {
     if (!this.ents.has(e.id)) return;
-    this.ents.delete(e.id);
+    this.ents.delete(e.id); { const bk = this.byKind[e.kind]; if (bk) bk.delete(e); }
     this.removed.push(e.id);
     if (e.kind === 'building' || e.kind === 'tree' || e.kind === 'mine') this.unblock(e.tx, e.ty, e.w, e.h, e.id);
   }
@@ -169,7 +172,7 @@ export class Sim {
     });
     this.block(tx, ty, def.w, def.h, e.id);
     // Push out units standing inside
-    for (const u of this.ents.values()) {
+    for (const u of this.kindSet('unit')) {
       if (u.kind !== 'unit') continue;
       if (u.x >= tx && u.x < tx + def.w && u.y >= ty && u.y < ty + def.h) {
         const t = this.findSpawnTile(e, u.domain);
@@ -221,12 +224,12 @@ export class Sim {
 
   // ---------- spatial ----------
   rebuildCells() {
-    for (const c of this.cells) c.length = 0;
+    for (const c of this.filledCells) c.length = 0; this.filledCells.length = 0;
     const cs = this.cellSize;
-    for (const e of this.ents.values()) {
+    for (const e of this.kindSet('unit')) {
       if (e.kind !== 'unit' || e.hidden) continue;
       const cx = Math.min(this.gw - 1, Math.max(0, (e.x / cs) | 0)), cy = Math.min(this.gh - 1, Math.max(0, (e.y / cs) | 0));
-      this.cells[cy * this.gw + cx].push(e);
+      const cell = this.cells[cy * this.gw + cx]; if (!cell.length) this.filledCells.push(cell); cell.push(e);
     }
   }
   unitsNear(x, y, r, fn) {
@@ -255,7 +258,7 @@ export class Sim {
       if (d <= range && d < bestD) { best = e; bestD = d; }
     });
     if (includeBuildings) {
-      for (const e of this.ents.values()) {
+      for (const e of this.kindSet('building')) {
         if (e.kind !== 'building' || e.dead || this.players[e.owner].team === p.team) continue;
         const d = this.distToEntity(u.x, u.y, e) + (preferUnits ? 2.5 : 0) + (e.type === 'wall' ? 4 : 0);
         if (d <= range && d < bestD) { best = e; bestD = d; }
@@ -497,7 +500,7 @@ export class Sim {
   unitArmor(p, def) { let a = def.armor; for (const [rid, rd] of Object.entries(RESEARCH)) { const l = p.research[rid] || 0; if (!l || !rd.roles.includes(def.role)) continue; if (rd.armorAdd) a += rd.armorAdd * l; } return a; }
   auraMult(u) {
     let m = 1; const p = this.players[u.owner];
-    for (const e of this.ents.values()) {
+    for (const e of this.kindSet('unit')) {
       if (e.kind !== 'unit' || e.dead || e.owner === undefined || this.players[e.owner].team !== p.team) continue;
       const d = this.players[e.owner].tech.units[e.type]; if (!d.aura) continue;
       const dist = Math.hypot(e.x - u.x, e.y - u.y);
@@ -508,7 +511,7 @@ export class Sim {
   }
   buffArmor(u) {
     const p = this.players[u.owner]; let a = 0;
-    for (const e of this.ents.values()) {
+    for (const e of this.kindSet('unit')) {
       if (e.kind !== 'unit' || e.dead || e.owner === undefined || this.players[e.owner].team !== p.team) continue;
       const d = this.players[e.owner].tech.units[e.type]; if (!d.ability || !(e.buffUntil > this.tick)) continue;
       if (Math.hypot(e.x - u.x, e.y - u.y) <= d.ability.range) a = Math.max(a, d.ability.armor || 0);
@@ -550,7 +553,7 @@ export class Sim {
   // ---------- main step ----------
   step() {
     this.tick++;
-    this.pathBudget = 60;
+    this.pathBudget = 60; this.pathTimeLeft = 6; // at most 60 searches and ~6 ms of A* per tick; the rest of the units keep their old path or wait a tick
     this.rebuildCells();
     for (const e of Array.from(this.ents.values())) {
       if (e.dead) continue;
@@ -565,7 +568,7 @@ export class Sim {
   /** Per-team explored map (tile level), kept on the server so fog memory survives reconnects and saves. */
   updateExplored() {
     const w = this.w, h = this.h; if (!this.explored) this.explored = {};
-    for (const e of this.ents.values()) {
+    for (const e of this.unitsAndBuildings()) {
       if (e.dead || (e.kind !== 'unit' && e.kind !== 'building')) continue;
       const p = this.players[e.owner]; if (!p || p.neutral) continue;
       let arr = this.explored[p.team]; if (!arr) arr = this.explored[p.team] = new Uint8Array(w * h);
@@ -738,11 +741,12 @@ export class Sim {
     if (goalTest && goalTest(u.x | 0, u.y | 0) && d <= arriveDist) return false;
     if (!u.path || (u.path.length === 0)) {
       if (u.path && u.path.length === 0) { return false; }
-      if (this.pathBudget <= 0) { return true; } // wait for next tick
-      this.pathBudget--;
+      if (this.pathBudget <= 0 || this.pathTimeLeft <= 0) { return true; } // wait for next tick
+      this.pathBudget--; const tPath = (typeof performance !== 'undefined' ? performance.now() : Date.now());
       const pass = this.passFor(u.domain, this.teamOf(u));
       const gt = goalTest || ((tx, ty) => tx === (x | 0) && ty === (y | 0));
-      let raw = astar(pass, this.w, this.h, u.x | 0, u.y | 0, gt, hx | 0, hy | 0, 9000);
+      let raw = astar(pass, this.w, this.h, u.x | 0, u.y | 0, gt, hx | 0, hy | 0, this.w >= 400 ? 14000 : 9000);
+      this.pathTimeLeft -= (typeof performance !== 'undefined' ? performance.now() : Date.now()) - tPath;
       if (raw === null) { u.path = []; return false; }
       raw = smoothPath(pass, this.w, this.h, u.x | 0, u.y | 0, raw);
       u.path = raw.map(t => ({ x: t.x + 0.5, y: t.y + 0.5 }));
@@ -834,7 +838,7 @@ export class Sim {
     if (pr.splash) {
       const hit = new Set();
       this.unitsNear(pr.x, pr.y, pr.splash, e => { if (e.owner !== undefined && this.players[e.owner].team !== this.players[pr.owner].team) hit.add(e); });
-      for (const e of this.ents.values()) if (e.kind === 'building' && !e.dead && this.players[e.owner].team !== this.players[pr.owner].team && this.distToEntity(pr.x, pr.y, e) <= pr.splash) hit.add(e);
+      for (const e of this.kindSet('building')) if (e.kind === 'building' && !e.dead && this.players[e.owner].team !== this.players[pr.owner].team && this.distToEntity(pr.x, pr.y, e) <= pr.splash) hit.add(e);
       for (const e of hit) {
         const dd = this.distToEntity(pr.x, pr.y, e);
         const f = e.id === pr.targetId ? 1 : Math.max(0.35, 1 - dd / pr.splash);
@@ -911,14 +915,14 @@ export class Sim {
     for (const q of b.queue) { const cost = this.queueCost(p, b, q); p.res.p += cost.p; p.res.s += cost.s; }
     b.queue = [];
     this.remove(b);
-    for (const u of this.ents.values()) if (u.kind === 'unit' && u.order.type === 'build' && u.order.targetId === b.id) this.nextOrder(u);
+    for (const u of this.kindSet('unit')) if (u.kind === 'unit' && u.order.type === 'build' && u.order.targetId === b.id) this.nextOrder(u);
     this.recountPop(p);
   }
 
   // ---------- gathering ----------
   nearestDropoff(u) {
     let best = null, bd = Infinity;
-    for (const e of this.ents.values()) {
+    for (const e of this.kindSet('building')) {
       if (e.kind !== 'building' || e.owner !== u.owner || !e.built || e.dead) continue;
       if (!this.players[u.owner].tech.buildings[e.type].dropoff) continue;
       const d = Math.hypot(e.x - u.x, e.y - u.y); if (d < bd) { bd = d; best = e; }
@@ -927,7 +931,7 @@ export class Sim {
   }
   nearestNode(u, kind, maxD = 14) {
     let best = null, bd = Infinity;
-    for (const e of this.ents.values()) {
+    for (const e of this.kindSet(kind)) {
       if (e.kind !== kind || e.dead || e.amount <= 0) continue;
       const d = Math.hypot(e.x - u.x, e.y - u.y); if (d < bd && d <= maxD) { bd = d; best = e; }
     }
@@ -1044,13 +1048,13 @@ export class Sim {
   /** nearest unfinished own building (same type / walls preferred) to continue with after a build */
   nextSite(u, last) {
     let best = null, bd = Infinity;
-    for (const e of this.ents.values()) { if (e.kind !== 'building' || e.owner !== u.owner || e.built || e.dead || e === last) continue; let d = Math.hypot(e.x - u.x, e.y - u.y); if (last && (e.type === last.type || (last.type === 'gate' && e.type === 'wall'))) d -= 6; if (d < bd && d < 22) { bd = d; best = e; } }
+    for (const e of this.kindSet('building')) { if (e.kind !== 'building' || e.owner !== u.owner || e.built || e.dead || e === last) continue; let d = Math.hypot(e.x - u.x, e.y - u.y); if (last && (e.type === last.type || (last.type === 'gate' && e.type === 'wall'))) d -= 6; if (d < bd && d < 22) { bd = d; best = e; } }
     return best;
   }
   /** nearest damaged own building nobody is repairing yet (one worker per building) */
   nextRepair(u, radius) {
     let best = null, bd = Infinity;
-    for (const e of this.ents.values()) { if (e.kind !== 'building' || e.owner !== u.owner || !e.built || e.dead || e.hp >= e.maxHp) continue; const d = Math.hypot(e.x - u.x, e.y - u.y); if (d > radius || d >= bd) continue; let taken = false; for (const o of this.ents.values()) if (o !== u && o.kind === 'unit' && o.owner === u.owner && o.order.type === 'build' && o.order.targetId === e.id) { taken = true; break; } if (!taken) { bd = d; best = e; } }
+    for (const e of this.kindSet('building')) { if (e.kind !== 'building' || e.owner !== u.owner || !e.built || e.dead || e.hp >= e.maxHp) continue; const d = Math.hypot(e.x - u.x, e.y - u.y); if (d > radius || d >= bd) continue; let taken = false; for (const o of this.ents.values()) if (o !== u && o.kind === 'unit' && o.owner === u.owner && o.order.type === 'build' && o.order.targetId === e.id) { taken = true; break; } if (!taken) { bd = d; best = e; } }
     return best;
   }
 
@@ -1130,7 +1134,7 @@ export class Sim {
     for (const p of this.players) {
       if (!p.alive || p.neutral) continue;
       let hasBuilding = false;
-      for (const e of this.ents.values()) if (e.kind === 'building' && e.owner === p.id && e.type !== 'wall' && e.type !== 'gate' && !e.dead) { hasBuilding = true; break; }
+      for (const e of this.kindSet('building')) if (e.kind === 'building' && e.owner === p.id && e.type !== 'wall' && e.type !== 'gate' && !e.dead) { hasBuilding = true; break; }
       if (!hasBuilding) {
         p.alive = false; p.dirty = true;
         this.events.push({ t: 'eliminated', owner: p.id });
@@ -1158,7 +1162,7 @@ export class Sim {
     // drop the freshly generated world and restore the saved one
     for (const e of Array.from(sim.ents.values())) sim.remove(e);
     sim.removed = []; sim.events = [];
-    for (const e of data.ents) { e.dirty = true; e.path = null; sim.ents.set(e.id, e); if (e.kind === 'building' || e.kind === 'tree' || e.kind === 'mine') sim.block(e.tx, e.ty, e.w, e.h, e.id); }
+    for (const e of data.ents) { e.dirty = true; e.path = null; sim.ents.set(e.id, e); (sim.byKind[e.kind] || (sim.byKind[e.kind] = new Set())).add(e); if (e.kind === 'building' || e.kind === 'tree' || e.kind === 'mine') sim.block(e.tx, e.ty, e.w, e.h, e.id); }
     // gates need a second pass so team passability sees the built gate entities
     for (const e of sim.ents.values()) if (e.kind === 'building' && e.type === 'gate') sim.block(e.tx, e.ty, 1, 1, e.id);
     data.players.forEach((p, i) => { const q = sim.players[i]; q.res = p.res; q.alive = p.alive; q.stats = p.stats; q.research = p.research || q.research; q.lastAlert = p.lastAlert || -1000; q.hist = p.hist || []; });

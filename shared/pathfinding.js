@@ -1,25 +1,19 @@
 // Grid A* with binary heap, goal predicate, octile heuristic and string-pulling smoothing.
 
-class Heap {
-  constructor() { this.a = []; }
-  get size() { return this.a.length; }
-  push(node) {
-    const a = this.a; a.push(node);
-    let i = a.length - 1;
-    while (i > 0) { const p = (i - 1) >> 1; if (a[p].f <= a[i].f) break; [a[p], a[i]] = [a[i], a[p]]; i = p; }
+class Heap { // min-heap of (index, key) pairs on typed arrays – no per-node objects, no GC pressure
+  constructor(cap = 4096) { this.idx = new Int32Array(cap); this.key = new Float64Array(cap); this.n = 0; }
+  get size() { return this.n; }
+  push(i, f) {
+    if (this.n === this.idx.length) { const ni = new Int32Array(this.n * 2), nk = new Float64Array(this.n * 2); ni.set(this.idx); nk.set(this.key); this.idx = ni; this.key = nk; }
+    const idx = this.idx, key = this.key; let c = this.n++;
+    while (c > 0) { const par = (c - 1) >> 1; if (key[par] <= f) break; idx[c] = idx[par]; key[c] = key[par]; c = par; }
+    idx[c] = i; key[c] = f;
   }
   pop() {
-    const a = this.a; const top = a[0]; const last = a.pop();
-    if (a.length) {
-      a[0] = last; let i = 0; const n = a.length;
-      for (;;) {
-        const l = 2 * i + 1, r = l + 1; let m = i;
-        if (l < n && a[l].f < a[m].f) m = l;
-        if (r < n && a[r].f < a[m].f) m = r;
-        if (m === i) break; [a[m], a[i]] = [a[i], a[m]]; i = m;
-      }
-    }
-    return top;
+    const idx = this.idx, key = this.key; const top = idx[0]; const n = --this.n; if (n === 0) return top;
+    const li = idx[n], lk = key[n]; let c = 0;
+    for (;;) { let m = 2 * c + 1; if (m >= n) break; if (m + 1 < n && key[m + 1] < key[m]) m++; if (key[m] >= lk) break; idx[c] = idx[m]; key[c] = key[m]; c = m; }
+    idx[c] = li; key[c] = lk; return top;
   }
 }
 
@@ -42,16 +36,15 @@ export function astar(pass, w, h, sx, sy, goalTest, hx, hy, maxNodes = 12000) {
   const gen = ++SCR.gen; if (gen === 0xffffffff) { SCR.stamp.fill(0); SCR.gen = 1; }
   const g = SCR.g, parent = SCR.parent, closed = SCR.closed, stamp = SCR.stamp;
   const touch = i => { if (stamp[i] !== gen) { stamp[i] = gen; g[i] = Infinity; parent[i] = -1; closed[i] = 0; } };
-  const heap = new Heap();
+  const heap = SCR.heap || (SCR.heap = new Heap(8192)); heap.n = 0;
   const heur = (x, y) => { const dx = Math.abs(x - hx), dy = Math.abs(y - hy); return Math.max(dx, dy) + (SQRT2 - 1) * Math.min(dx, dy); };
   touch(startI); g[startI] = 0;
-  heap.push({ i: startI, f: heur(sx, sy) });
+  heap.push(startI, heur(sx, sy));
   let best = startI, bestH = heur(sx, sy);
   let expanded = 0;
   let found = -1;
   while (heap.size) {
-    const cur = heap.pop();
-    const i = cur.i;
+    const i = heap.pop();
     if (closed[i]) continue;
     closed[i] = 1;
     const x = i % w, y = (i / w) | 0;
@@ -67,7 +60,7 @@ export function astar(pass, w, h, sx, sy, goalTest, hx, hy, maxNodes = 12000) {
       if (!pass[j]) continue; touch(j); if (closed[j]) continue;
       if (ox && oy) { if (!pass[y * w + nx] || !pass[ny * w + x]) continue; }
       const ng = g[i] + (ox && oy ? SQRT2 : 1);
-      if (ng < g[j]) { g[j] = ng; parent[j] = i; heap.push({ i: j, f: ng + heur(nx, ny) }); }
+      if (ng < g[j]) { g[j] = ng; parent[j] = i; heap.push(j, ng + heur(nx, ny)); }
     }
   }
   const end = found >= 0 ? found : best;
