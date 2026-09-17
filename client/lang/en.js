@@ -245,7 +245,7 @@ export default {
   'Hradba: %1 segmentů · %2 %3 / %4 %5%6': 'Wall: %1 segments · %2 %3 / %4 %5%6', ' – nedostatek surovin': ' – not enough resources',
   'Radnice vylepšena na úroveň %1': 'Town hall upgraded to level %1',
   'Nemáš hrdinu.': 'You have no hero.', 'F1 = celá armáda · F2 = hrdina · . = nečinný dělník': 'F1 = whole army · F2 = hero · . = idle worker',
-  'DRŽÍ STŘED': 'HOLDS THE CENTRE', 'Grafika': 'Graphics', 'Pixel art': 'Pixel art', 'Kloubové 3D': 'Jointed 3D', 'Původní ploché': 'Original flat', 'Tribut': 'Tribute', 'Poslat spojenci suroviny (Shift = 500)': 'Send resources to an ally (Shift = 500)', '%1 ti poslal %2.': '%1 sent you %2.', 'Poslal jsi %1 hráči %2.': 'You sent %1 to %2.', ' a ': ' and ',
+  'DRŽÍ STŘED': 'HOLDS THE CENTRE', 'Adresa pro kamarády:': 'Address for friends:', 'Kopírovat': 'Copy', 'Zkopírováno': 'Copied', 'Grafika': 'Graphics', 'Pixel art': 'Pixel art', 'Kloubové 3D': 'Jointed 3D', 'Původní ploché': 'Original flat', 'Tribut': 'Tribute', 'Poslat spojenci suroviny (Shift = 500)': 'Send resources to an ally (Shift = 500)', '%1 ti poslal %2.': '%1 sent you %2.', 'Poslal jsi %1 hráči %2.': 'You sent %1 to %2.', ' a ': ' and ',
   'Uprostřed mapy je nevyčerpatelná zlatá žíla a prastaré stromy – kdo drží střed, nikdy nevyhladoví (F3 ukáže, kdo ho drží).': 'The map centre holds an endless gold vein and ancient trees – whoever holds the centre never runs dry (F3 shows who holds it).',
   '%1 úroveň %2': '%1 level %2', ' Léčí %1 HP/s v okruhu %2.': ' Heals %1 HP/s within %2.', ' Aura +%1 % útok v okruhu %2.': ' Aura +%1 % attack within %2.', ' Vylepšení – %1.': ' Upgrades – %1.',
   ' Bonus proti: ': ' Bonus vs: ', ' pop': ' pop',

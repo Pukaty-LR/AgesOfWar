@@ -5,6 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
+import { spawn } from 'node:child_process';
 import { Sim } from '../shared/sim.js';
 import { AIPlayer } from '../shared/ai.js';
 import { ERAS, TICK_RATE, NET_RATE, MAX_PLAYERS, TEAM_COLORS, MAP_SIZE } from '../shared/data.js';
@@ -14,6 +15,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const SAVES = path.join(ROOT, 'saves');
 const PORT = +(process.env.PORT || 8080);
+// --public (or AOW_PUBLIC=1): open the server to the internet through a Cloudflare quick tunnel and remember its address
+let publicUrl = process.env.PUBLIC_URL || '';
+function startTunnel() {
+  const exe = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'bin', process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared');
+  if (!fs.existsSync(exe)) { console.log('[tunnel] bin/cloudflared not found – run start-public.bat once to download it'); return; }
+  const run = () => {
+    const p = spawn(exe, ['tunnel', '--url', `http://localhost:${PORT}`], { windowsHide: true });
+    const onLine = d => { const m = String(d).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/); if (m && m[0] !== publicUrl) { publicUrl = m[0]; console.log(`[tunnel] public address: ${publicUrl}`); for (const c of clients.values()) send(c.ws, { t: 'publicUrl', url: publicUrl }); } };
+    p.stderr.on('data', onLine); p.stdout.on('data', onLine);
+    p.on('exit', code => { console.log('[tunnel] exited', code, '– restarting in 10 s'); publicUrl = ''; setTimeout(run, 10000); });
+  };
+  run();
+}
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 
@@ -149,7 +163,7 @@ function stopGame(l) {
 wss.on('connection', (ws, req) => {
   const c = { id: nextClientId++, ws, name: 'Hráč', lobby: null, addr: req.socket.remoteAddress };
   clients.set(c.id, c);
-  send(ws, { t: 'welcome', id: c.id, eras: Object.fromEntries(Object.entries(ERAS).map(([k, e]) => [k, { id: e.id, name: e.name, available: e.available }])) });
+  send(ws, { t: 'welcome', id: c.id, publicUrl, eras: Object.fromEntries(Object.entries(ERAS).map(([k, e]) => [k, { id: e.id, name: e.name, available: e.available }])) });
   send(ws, { t: 'lobbies', list: [...lobbies.values()].map(lobbySummary) });
 
   ws.on('message', raw => {
@@ -362,6 +376,7 @@ wss.on('connection', (ws, req) => {
 
 process.on('uncaughtException', err => console.error('uncaught', err));
 process.on('unhandledRejection', err => console.error('unhandled', err));
+if (process.argv.includes('--public') || process.env.AOW_PUBLIC === '1') startTunnel();
 server.listen(PORT, () => {
   const ips = [];
   for (const [name, ifs] of Object.entries(os.networkInterfaces())) for (const i of ifs) if (i.family === 'IPv4' && !i.internal) ips.push(i.address);

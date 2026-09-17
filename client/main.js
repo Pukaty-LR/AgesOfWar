@@ -27,6 +27,8 @@ class App {
     document.addEventListener('keydown', wake, { once: true });
   }
   save() { localStorage.setItem('aow-settings', JSON.stringify(this.settings)); }
+  /** the host's public address (Cloudflare tunnel started with --public) – shown in the menu so it can be sent to friends */
+  showPublicUrl(url) { const box = $('public-url'); if (!box) return; const shown = url && !location.host.includes('trycloudflare') && !location.host.includes('onrender') ? url : ''; box.classList.toggle('hidden', !shown); if (!shown) return; const a = $('public-url-link'); a.href = shown; a.textContent = shown; const b = $('public-url-copy'); b.onclick = () => { navigator.clipboard?.writeText(shown); b.textContent = t('Zkopírováno'); setTimeout(() => { b.textContent = t('Kopírovat'); }, 1500); }; }
   menuMusic() { if (this.screen === 'game' || !this.audio.ctx) return; const era = ERAS[this.hostEra] || ERAS.antiquity; if (!this.audio.running || this.audio.style !== era.music) { this.audio.era = this.hostEra; this.audio.setIntensity(0); this.audio.startMusic(era.music); } }
   show(name) { if (name === 'game' && this.bgRenderer) { for (const c of this.bgRenderer.chunks.values()) c.canvas.width = 0; this.bgRenderer.chunks.clear(); } for (const s of screens) $('screen-' + s).classList.toggle('hidden', s !== name); $('bg').style.display = name === 'game' ? 'none' : 'block'; this.screen = name; if (name === 'game') this.game.renderer.resize(); }
   toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(this.toastT); this.toastT = setTimeout(() => t.classList.add('hidden'), 3500); }
@@ -124,7 +126,8 @@ class App {
   bindNet() {
     const n = this.net;
     n.on('status', s => { const el = $('conn-status'); if (s.state === 'open') { el.textContent = t('Připojeno k serveru ') + s.url.replace(/^ws:\/\//, ''); el.className = 'conn-status ok'; n.send({ t: 'hello', name: this.settings.name || t('Hráč'), token: this.token() }); } else if (s.state === 'closed' || s.state === 'error') { el.textContent = t('Server nedostupný – zkouším znovu…'); el.className = 'conn-status err'; if (this.screen === 'lobby' || this.screen === 'browser') { this.show('menu'); this.lobby = null; } if (this.screen === 'game') this.toast(t('Spojení se serverem bylo přerušeno.')); } else { el.textContent = t('Připojuji se…'); el.className = 'conn-status'; } });
-    n.on('welcome', m => { this.myId = m.id; });
+    n.on('welcome', m => { this.myId = m.id; this.showPublicUrl(m.publicUrl); });
+    n.on('publicUrl', m => this.showPublicUrl(m.url));
     n.on('error', m => this.toast(tsys(m.msg)));
     n.on('lobbies', m => this.renderServerList(m.list));
     n.on('lobby', m => { this.lobby = m.lobby; if (this.screen !== 'lobby' && this.screen !== 'game') { this.show('lobby'); $('lobby-chat').innerHTML = ''; } this.renderLobby();
