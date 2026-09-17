@@ -605,12 +605,14 @@ export class Renderer {
       if (sx >= cx - hw && sx <= cx + hw && sy >= top && sy <= bottom) { const d = Math.hypot(wx0 - e.x, wy0 - e.y); if (d < bestD) { bestD = d; best = e; } }
     }
     if (best) return best;
-    // trees/mines by world tile
+    // trees/mines: the tree drawn on top wins when several overlap
+    best = null; bestD = -Infinity;
     const [wx, wy] = this.screenToWorld(sx, sy);
     for (const e of g.ents.values()) {
-      if (e.k === 't') { const [tx, ty] = this.worldToScreen(e.x, e.y + 0.35); if (sx > tx - 14 * this.cam.zoom && sx < tx + 14 * this.cam.zoom && sy > ty - 60 * this.cam.zoom && sy < ty + 4) return e; }
-      if (e.k === 'm') { if (wx >= e.tx - 0.3 && wx < e.tx + 2.3 && wy >= e.ty - 0.3 && wy < e.ty + 2.3) return e; const [mx, my] = this.worldToScreen(e.x, e.y); if (Math.abs(sx - mx) < 50 * this.cam.zoom && sy > my - 70 * this.cam.zoom && sy < my + 10) return e; }
+      if (e.k === 't') { const [tx, ty] = this.worldToScreen(e.x, e.y + 0.35); const spr = treeSprite(e.v, this.era, 0, !!e.big); const zz = this.cam.zoom; if (sx >= tx - spr.ax * zz + 2 && sx <= tx + (spr.w - spr.ax) * zz - 2 && sy >= ty - spr.ay * zz + 2 && sy <= ty + (spr.h - spr.ay) * zz) { const depth = e.x + e.y; if (!best || depth > bestD) { best = e; bestD = depth; } } continue; }
+      if (e.k === 'm') { if (wx >= e.tx - 0.3 && wx < e.tx + 2.3 && wy >= e.ty - 0.3 && wy < e.ty + 2.3) return e; const [mx, my] = this.worldToScreen(e.x, e.y); if (Math.abs(sx - mx) < 50 * this.cam.zoom && sy > my - 70 * this.cam.zoom && sy < my + 10) { if (!best) { best = e; bestD = -Infinity; } } }
     }
+    if (best) return best;
     return null;
   }
   unitsInRect(x0, y0, x1, y1) {

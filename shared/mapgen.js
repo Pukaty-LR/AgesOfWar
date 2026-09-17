@@ -43,7 +43,14 @@ export const MAP_STYLES = {
   plains: { name: 'Pláně', desc: 'Skoro bez vody, rychlé pozemní boje.' },
   lakes: { name: 'Jezera', desc: 'Mnoho jezer, žádné centrální moře.' },
 };
-export const MAP_SIZES = { small: { name: 'Malá', size: 72 }, medium: { name: 'Střední', size: 96 }, large: { name: 'Velká', size: 128 } };
+export const MAP_SIZES = { small: { name: 'Malá', size: 72 }, medium: { name: 'Střední', size: 96 }, large: { name: 'Velká', size: 128 }, huge: { name: 'Obrovská', size: 192 }, giant: { name: 'Gigantická', size: 256 }, mega: { name: 'Kontinentální', size: 384 } };
+/** endless-resource hotspots: the centre, plus quadrant / edge-midpoint spots on big maps (a single centre would decide every big game) */
+export function hotspotsFor(w, h, spawns) {
+  const pts = [{ x: Math.floor(w / 2), y: Math.floor(h / 2) }];
+  const rel = w >= 300 ? [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75], [0.5, 0.22], [0.5, 0.78], [0.22, 0.5], [0.78, 0.5]] : (w >= 120 ? [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]] : []);
+  for (const [fx, fy] of rel) { let p = { x: Math.floor(w * fx), y: Math.floor(h * fy) }; for (let k = 0; k < 6; k++) { const near = spawns.find(sp => Math.hypot(sp.x - p.x, sp.y - p.y) < 18); if (!near) break; p = { x: Math.floor(p.x + (w / 2 - p.x) * 0.25), y: Math.floor(p.y + (h / 2 - p.y) * 0.25) }; } if (!spawns.some(sp => Math.hypot(sp.x - p.x, sp.y - p.y) < 16) && !pts.some(q => Math.hypot(q.x - p.x, q.y - p.y) < 20)) pts.push(p); }
+  return pts;
+}
 
 export function generateMap(seed, size, numPlayers, style = 'continent') {
   const rng = mulberry32(seed);
@@ -91,8 +98,8 @@ export function generateMap(seed, size, numPlayers, style = 'continent') {
     moisture[i] = noise2(x / 9 + 50, y / 9 + 50, 3);
   }
   // Base plateaus: guarantee land around spawns (and a plateau in the middle for the endless resources).
-  const centre = { x: Math.floor(w / 2), y: Math.floor(h / 2) };
-  for (const s of [...spawns, centre]) {
+  const centre = { x: Math.floor(w / 2), y: Math.floor(h / 2) }; const hotspots = hotspotsFor(w, h, spawns);
+  for (const s of [...spawns, ...hotspots]) {
     for (let y = -11; y <= 11; y++) for (let x = -11; x <= 11; x++) {
       const tx = s.x + x, ty = s.y + y;
       if (tx < 0 || ty < 0 || tx >= w || ty >= h) continue;
@@ -153,7 +160,7 @@ export function generateMap(seed, size, numPlayers, style = 'continent') {
     }
   }
   for (let i = 1; i < spawns.length; i++) if (!reachable(spawns[0], spawns[i])) carve(spawns[0], spawns[i]);
-  if (!reachable(spawns[0], centre)) carve(spawns[0], centre); // the centre must be reachable by land too
+  for (const hs of hotspots) if (!reachable(spawns[0], hs)) carve(spawns[0], hs); // every endless hotspot must be reachable by land too
 
   // Shore sand: land tiles adjacent to water become sand
   for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
@@ -209,22 +216,23 @@ export function generateMap(seed, size, numPlayers, style = 'continent') {
     return false;
   }
   for (const s of spawns) {
-    placeMine(s.x, s.y, 6, 8, 14000);
+    placeMine(s.x, s.y, 6, 8, 70000);
     placeForest(s.x, s.y, 7, 10, 28);
     placeForest(s.x, s.y, 8, 12, 22);
   }
   // Neutral mines & forests
-  const neutralMines = Math.max(2, numPlayers);
+  const areaK = (w * h) / (96 * 96); // 1 on a medium map – neutral mines and forests scale with the area so big maps are not empty
+  const neutralMines = Math.max(2, numPlayers, Math.round(areaK * 3));
   for (let i = 0; i < neutralMines; i++) {
     for (let tries = 0; tries < 100; tries++) {
       const tx = 6 + Math.floor(rng() * (w - 12)), ty = 6 + Math.floor(rng() * (h - 12));
       let ok = true; for (const s of spawns) if (Math.hypot(s.x - tx, s.y - ty) < 18) ok = false;
       for (const m of mines) if (Math.hypot(m.tx - tx, m.ty - ty) < 14) ok = false;
       if (!ok) continue;
-      if (free(tx - 1, ty - 1, 4, 4)) { occupy(tx - 1, ty - 1, 4, 4); mines.push({ tx, ty, amount: 9000 }); break; }
+      if (free(tx - 1, ty - 1, 4, 4)) { occupy(tx - 1, ty - 1, 4, 4); mines.push({ tx, ty, amount: 45000 }); break; }
     }
   }
-  const nForests = 6 + numPlayers * 2;
+  const nForests = Math.round(6 * areaK) + numPlayers * 2;
   for (let i = 0; i < nForests; i++) {
     const tx = 4 + rng() * (w - 8), ty = 4 + rng() * (h - 8);
     let ok = true; for (const s of spawns) if (Math.hypot(s.x - tx, s.y - ty) < 13) ok = false;
@@ -264,7 +272,7 @@ export function generateMap(seed, size, numPlayers, style = 'continent') {
   }
 
   // centre of the map: endless resources placed last so the tree-thinning pass cannot remove them (visually distinct, guarded by creeps) - whoever holds the middle never runs dry
-  { const cx = Math.floor(w / 2), cy = Math.floor(h / 2); let done = false;
+  for (const hs of hotspots) { const cx = hs.x, cy = hs.y; let done = false;
     for (let r = 0; r < 16 && !done; r++) for (let oy = -r; oy <= r && !done; oy++) for (let ox = -r; ox <= r && !done; ox++) {
       const mx = cx + ox, my = cy + oy; if (Math.abs(ox) !== r && Math.abs(oy) !== r) continue;
       if (!free(mx - 1, my - 1, 4, 4)) continue; let land = true; for (let yy = my - 1; yy <= my + 2 && land; yy++) for (let xx = mx - 1; xx <= mx + 2; xx++) { if (xx < 0 || yy < 0 || xx >= w || yy >= h || !isLand(tiles[yy * w + xx])) { land = false; break; } }
