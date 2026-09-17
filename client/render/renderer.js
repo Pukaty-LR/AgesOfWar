@@ -36,7 +36,9 @@ export class Renderer {
     // rock: raise every vertex touching a rock tile so cliffs stand clearly above the terrain around them
     { const R = (x, y) => x >= 0 && y >= 0 && x < w && y < h && map.tiles[y * w + x] === T.ROCK; for (let y = 0; y <= h; y++) for (let x = 0; x <= w; x++) { const n = R(x - 1, y - 1) + R(x, y - 1) + R(x - 1, y) + R(x, y); if (n) this.vh[y * (w + 1) + x] += 0.035 * n; } }
     this.visible = new Uint8Array(w * h); this.explored = new Uint8Array(w * h);
+    const FR = this.FR = w >= 400 ? 1 : (w >= 180 ? 2 : 3); // fog cells per tile: coarser on big maps so fog updates and draws stay cheap
     this.fw = w * FR; this.fh = h * FR; this.visF = new Uint8Array(this.fw * this.fh); this.expF = new Uint8Array(this.fw * this.fh);
+    this.buildOverview();
     this.fogRaw = document.createElement('canvas'); this.fogRaw.width = this.fw; this.fogRaw.height = this.fh; this.fogRawCtx = this.fogRaw.getContext('2d'); this.fogImg = this.fogRawCtx.createImageData(this.fw, this.fh);
     this.fogCanvas = document.createElement('canvas'); this.fogCanvas.width = this.fw; this.fogCanvas.height = this.fh; this.fogCtx = this.fogCanvas.getContext('2d');
     this.fogCtx.fillStyle = 'rgb(6,5,8)'; this.fogCtx.fillRect(0, 0, this.fw, this.fh);
@@ -170,7 +172,14 @@ export class Renderer {
   prebuild() { const nx = Math.ceil(this.map.w / CHUNK), ny = Math.ceil(this.map.h / CHUNK); const ccx = Math.floor(this.cam.x / CHUNK), ccy = Math.floor(this.cam.y / CHUNK); for (let cy = Math.max(0, ccy - 1); cy <= Math.min(ny - 1, ccy + 1); cy++) for (let cx = Math.max(0, ccx - 1); cx <= Math.min(nx - 1, ccx + 1); cx++) this.getChunk(cx, cy); }
 
   // ---------- fog ----------
+  /** 1 px per tile picture of the whole map – drawn under chunks that are not baked yet, so scrolling never shows holes */
+  buildOverview() {
+    const m = this.map, pal = this.eraDef.palette; const c = document.createElement('canvas'); c.width = m.w; c.height = m.h; const ctx = c.getContext('2d'); const img = ctx.createImageData(m.w, m.h); const d = img.data;
+    for (let i = 0; i < m.w * m.h; i++) { const t = m.tiles[i]; let col; switch (t) { case T.GRASS: col = pal.grass; break; case T.ROCK: col = pal.rock; break; case T.DIRT: col = pal.dirt; break; case T.SAND: col = pal.sand; break; case T.SHALLOW: col = pal.water; break; case T.WATER: col = pal.deep; break; default: col = pal.rock; } const k = 0.85 + (m.height[i] || 0) * 0.3; d[i * 4] = col[0] * k; d[i * 4 + 1] = col[1] * k; d[i * 4 + 2] = col[2] * k; d[i * 4 + 3] = 255; }
+    ctx.putImageData(img, 0, 0); this.overview = c;
+  }
   updateFog(ents, myTeam, players) {
+    const FR = this.FR || 3;
     const w = this.map.w, h = this.map.h, fw = this.fw, fh = this.fh; const vis = this.visF; vis.fill(0);
     const mark = (x, y, r) => { const R = r * FR, R2 = R * R; const cx = x * FR, cy = y * FR; const x0 = Math.max(0, (cx - R) | 0), x1 = Math.min(fw - 1, (cx + R) | 0), y0 = Math.max(0, (cy - R) | 0), y1 = Math.min(fh - 1, (cy + R) | 0); for (let ty = y0; ty <= y1; ty++) { const dy = ty + 0.5 - cy; const row = ty * fw; for (let tx = x0; tx <= x1; tx++) { const dx = tx + 0.5 - cx; if (dx * dx + dy * dy <= R2) vis[row + tx] = 1; } } };
     for (const e of ents.values()) {
@@ -228,12 +237,21 @@ export class Renderer {
     const c0x = Math.max(0, Math.floor(minX / CHUNK)), c1x = Math.min(Math.ceil(w / CHUNK) - 1, Math.floor(maxX / CHUNK));
     const c0y = Math.max(0, Math.floor(minY / CHUNK)), c1y = Math.min(Math.ceil(h / CHUNK) - 1, Math.floor(maxY / CHUNK));
     ctx.imageSmoothingEnabled = !isPixel(); // pixel art: terrain chunks scale as crisp blocks like the sprites
+    this.view = { minX, maxX, minY, maxY };
     const lod = z < 0.75 ? 1 : 0; const visible = [];
     for (let cy = c0y; cy <= c1y; cy++) for (let cx = c0x; cx <= c1x; cx++) { const b = this.chunkBounds(cx, cy); if (ox + b.right * z < 0 || oy + b.bottom * z < 0 || ox + b.left * z > this.W || oy + b.top * z > this.H) continue; visible.push([cx, cy]); }
-    this.chunkCap = Math.min(lod ? 200 : 80, Math.max(40, Math.ceil(visible.length * 1.5))); // never evict what the current view needs
+    this.chunkCap = Math.min(lod ? 240 : 100, Math.max(40, Math.ceil(visible.length * 1.8))); // never evict what the current view needs (plus the prebuilt ring)
+    const tBudget = performance.now() + (this.chunks.size ? 5 : 40); let missing = false; const pending = [];
     for (const [cx, cy] of visible) {
-      const ch = this.getChunk(cx, cy, lod);
+      const key = lod * 1000000 + cy * 1000 + cx; let ch = this.chunks.get(key);
+      if (!ch) { if (performance.now() < tBudget) ch = this.getChunk(cx, cy, lod); else { missing = true; pending.push([cx, cy]); continue; } } else ch.last = this.chunkTick = (this.chunkTick || 0) + 1;
       ctx.drawImage(ch.canvas, ox + ch.left * z, oy + ch.top * z, ch.cw * z, ch.ch * z);
+    }
+    if (missing && this.overview) { // cheap stand-in for chunks that are still being baked: the whole-map overview drawn in iso space, clipped to the missing chunk rectangles
+      ctx.save(); ctx.beginPath(); for (const [cx, cy] of pending) { const b = this.chunkBounds(cx, cy); ctx.rect(ox + b.left * z, oy + b.top * z, (b.right - b.left) * z, (b.bottom - b.top) * z); } ctx.clip();
+      ctx.translate(ox, oy); ctx.scale(z, z); ctx.transform(TW / 2, TH / 2, -TW / 2, TH / 2, 0, 0); ctx.imageSmoothingEnabled = true; ctx.drawImage(this.overview, 0, 0, this.map.w, this.map.h); ctx.restore(); ctx.imageSmoothingEnabled = !isPixel();
+    } else if (!missing && performance.now() < tBudget + 3) { // idle: bake one chunk just outside the view so scrolling finds it ready
+      outer: for (let cy = c0y - 1; cy <= c1y + 1; cy++) for (let cx = c0x - 1; cx <= c1x + 1; cx++) { if (cx < 0 || cy < 0 || cx > Math.ceil(w / CHUNK) - 1 || cy > Math.ceil(h / CHUNK) - 1) continue; if (cy >= c0y && cy <= c1y && cx >= c0x && cx <= c1x) continue; const key = lod * 1000000 + cy * 1000 + cx; if (!this.chunks.has(key)) { this.getChunk(cx, cy, lod); break outer; } }
     }
     // water animation
     this.drawWater(ctx, minX, maxX, minY, maxY, ox, oy, z);
@@ -546,8 +564,10 @@ export class Renderer {
     ctx.save();
     ctx.translate(ox, oy); ctx.scale(z, z);
     ctx.transform(TW / 2, TH / 2, -TW / 2, TH / 2, 0, 0); // world tile units -> iso px
-    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(this.fogCanvas, 0, 0, this.fw, this.fh, 0, 0, this.map.w, this.map.h);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'medium';
+    const v = this.view; const FR = this.FR || 3; // only the part of the fog that can be on screen – the whole-map draw was the biggest raster cost when zoomed out on big maps
+    if (v) { const x0 = Math.max(0, v.minX - 2), y0 = Math.max(0, v.minY - 2), x1 = Math.min(this.map.w, v.maxX + 2), y1 = Math.min(this.map.h, v.maxY + 2); ctx.drawImage(this.fogCanvas, x0 * FR, y0 * FR, (x1 - x0) * FR, (y1 - y0) * FR, x0, y0, x1 - x0, y1 - y0); }
+    else ctx.drawImage(this.fogCanvas, 0, 0, this.fw, this.fh, 0, 0, this.map.w, this.map.h);
     ctx.restore();
   }
   drawOverlays(ctx, state, ox, oy, z, list) {

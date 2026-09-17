@@ -34,7 +34,9 @@ export class Game {
     const g = msg.game;
     document.getElementById('loading').classList.remove('hidden');
     { const tips = ['Shift + klik na tlačítko výcviku zařadí 5 jednotek najednou.', 'Ctrl nebo Alt + 1–9 uloží skupinu, 1–9 ji vybere, dvojí stisk na ni přesune kameru.', 'Útok z kopce dolů dává +25 % poškození, do kopce −25 %.', 'Věže lze vylepšit až na třetí úroveň (klávesa U): víc útoku, dosahu i pancíře.', 'Radnice úrovně 4 odemkne hrdinu – jeho aura posiluje spojence a sbírá zkušenosti.', 'Nepřátelské budovy, které jsi jednou viděl, zůstávají pod mlhou zakreslené.', 'Místo srazu (Y) na dole nebo lese pošle nové dělníky rovnou těžit.', 'Vybraný segment hradby lze klávesou G změnit na bránu – projdou jí jen tvoje jednotky.', 'Léčitelé z radnice úrovně 2 sami léčí zraněné spojence v okolí.', 'Tab přepíná podskupinu ve smíšeném výběru, F1 vybere celou armádu.', 'Domácí důl se jednou vytěží – včas expanduj k dalšímu, hlídají ho neutrální hlídači.', 'Hru proti AI lze uložit v menu (Esc); každé 3 minuty se ukládá i automaticky.', 'Uprostřed mapy je nevyčerpatelná zlatá žíla a prastaré stromy – kdo drží střed, nikdy nevyhladoví (F3 ukáže, kdo ho drží).']; document.getElementById('loading-text').textContent = t('Tip: ') + t(tips[Math.floor(Math.random() * tips.length)]); }
-    this.era = g.era; this.eraDef = ERAS[g.era]; this.map = g.map; this.map.tiles = Uint8Array.from(g.map.tiles); this.map.height = Float32Array.from(g.map.height);
+    this.era = g.era; this.eraDef = ERAS[g.era]; this.map = g.map;
+    if (g.map.tilesB64) { const b = atob(g.map.tilesB64); const t = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) t[i] = b.charCodeAt(i); this.map.tiles = t; const hb = atob(g.map.heightB64); const hu = new Uint8Array(hb.length); for (let i = 0; i < hb.length; i++) hu[i] = hb.charCodeAt(i); const hq = new Uint16Array(hu.buffer); const hf = new Float32Array(hq.length); for (let i = 0; i < hq.length; i++) hf[i] = hq[i] / 20000; this.map.height = hf; delete this.map.tilesB64; delete this.map.heightB64; }
+    else { this.map.tiles = Uint8Array.from(g.map.tiles); this.map.height = Float32Array.from(g.map.height); }
     this.players = g.players; this.me = g.me; this.myTeam = this.players[this.me].team;
     this.tech = makeTechTable(this.era, this.players[this.me].faction);
     this.techs = this.players.map(p => makeTechTable(this.era, p.faction));
@@ -435,7 +437,7 @@ export class Game {
       e.rx = nx; e.ry = ny;
       if (e.k === 'u') { let df = (e.f - e.rf); while (df > Math.PI) df -= Math.PI * 2; while (df < -Math.PI) df += Math.PI * 2; e.rf += df * Math.min(1, dt * 14); }
     }
-    if (now - this.lastFogAt > 150) { this.lastFogAt = now; this.renderer.updateFog(this.ents, this.myTeam, this.players); this.updateMemory(); }
+    if (now - this.lastFogAt > (this.map.w >= 400 ? 300 : (this.map.w >= 180 ? 220 : 150))) { this.lastFogAt = now; this.renderer.updateFog(this.ents, this.myTeam, this.players); this.updateMemory(); }
     this.combatHeat = Math.max(0, this.combatHeat - dt * 0.08); this.audio.setIntensity(this.combatHeat);
     this.renderer.showHp = this.settings.showHp;
     this.renderer.draw(dt, this.state);

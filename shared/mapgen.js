@@ -43,11 +43,11 @@ export const MAP_STYLES = {
   plains: { name: 'Pláně', desc: 'Skoro bez vody, rychlé pozemní boje.' },
   lakes: { name: 'Jezera', desc: 'Mnoho jezer, žádné centrální moře.' },
 };
-export const MAP_SIZES = { small: { name: 'Malá', size: 72 }, medium: { name: 'Střední', size: 96 }, large: { name: 'Velká', size: 128 }, huge: { name: 'Obrovská', size: 192 }, giant: { name: 'Gigantická', size: 256 }, mega: { name: 'Kontinentální', size: 384 } };
+export const MAP_SIZES = { small: { name: 'Malá', size: 72 }, medium: { name: 'Střední', size: 96 }, large: { name: 'Velká', size: 128 }, huge: { name: 'Obrovská', size: 192 }, giant: { name: 'Gigantická', size: 256 }, mega: { name: 'Kontinentální', size: 500 }, world: { name: 'Svět', size: 1000 } };
 /** endless-resource hotspots: the centre, plus quadrant / edge-midpoint spots on big maps (a single centre would decide every big game) */
 export function hotspotsFor(w, h, spawns) {
   const pts = [{ x: Math.floor(w / 2), y: Math.floor(h / 2) }];
-  const rel = w >= 300 ? [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75], [0.5, 0.22], [0.5, 0.78], [0.22, 0.5], [0.78, 0.5]] : (w >= 120 ? [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]] : []);
+  const n = w >= 700 ? 5 : (w >= 400 ? 4 : (w >= 300 ? 3 : (w >= 120 ? 2 : 0))); const rel = []; for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) rel.push([(i + 0.5) / n, (j + 0.5) / n]); // grid of hotspots, the centre is always one of them
   for (const [fx, fy] of rel) { let p = { x: Math.floor(w * fx), y: Math.floor(h * fy) }; for (let k = 0; k < 6; k++) { const near = spawns.find(sp => Math.hypot(sp.x - p.x, sp.y - p.y) < 18); if (!near) break; p = { x: Math.floor(p.x + (w / 2 - p.x) * 0.25), y: Math.floor(p.y + (h / 2 - p.y) * 0.25) }; } if (!spawns.some(sp => Math.hypot(sp.x - p.x, sp.y - p.y) < 16) && !pts.some(q => Math.hypot(q.x - p.x, q.y - p.y) < 20)) pts.push(p); }
   return pts;
 }
@@ -263,7 +263,7 @@ export function generateMap(seed, size, numPlayers, style = 'continent') {
   }
   // Decoration: rocks/bushes (non-blocking) for the client
   const deco = [];
-  for (let i = 0; i < w * h * 0.012; i++) {
+  for (let i = 0; i < Math.min(w * h * 0.012, 60000); i++) { // decorations are capped so the map payload stays small on huge maps
     const tx = Math.floor(rng() * w), ty = Math.floor(rng() * h);
     const t = tiles[ty * w + tx];
     if (occupied[ty * w + tx]) continue;

@@ -275,6 +275,6 @@ export default {
   'Skoro bez vody, rychlé pozemní boje.': 'Almost no water, fast land battles.',
   'Jezera': 'Lakes',
   'Mnoho jezer, žádné centrální moře.': 'Many lakes, no central sea.',
-  'Malá': 'Small', 'Obrovská': 'Huge', 'Gigantická': 'Gigantic', 'Kontinentální': 'Continental',
+  'Malá': 'Small', 'Obrovská': 'Huge', 'Gigantická': 'Gigantic', 'Kontinentální': 'Continental', 'Svět': 'World',
   'Velká': 'Large',
 };

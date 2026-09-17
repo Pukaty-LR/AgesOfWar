@@ -1203,6 +1203,7 @@ export class Sim {
   }
   mapData() {
     const m = this.map;
-    return { w: m.w, h: m.h, tiles: Array.from(m.tiles), height: Array.from(m.height, v => +v.toFixed(3)), spawns: m.spawns, deco: m.deco, seed: m.seed };
+    const tiles = Uint8Array.from(m.tiles); const hq = new Uint16Array(m.w * m.h); for (let i = 0; i < hq.length; i++) hq[i] = Math.max(0, Math.min(65535, Math.round(m.height[i] * 20000)));
+    return { w: m.w, h: m.h, tilesB64: Buffer.from(tiles).toString('base64'), heightB64: Buffer.from(hq.buffer).toString('base64'), spawns: m.spawns, deco: m.deco, seed: m.seed };
   }
 }
