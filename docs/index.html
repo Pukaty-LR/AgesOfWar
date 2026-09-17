@@ -19,6 +19,10 @@ a { color: #f1d36a; }
   try {
     const r = await fetch('current.json?t=' + Date.now(), { cache: 'no-store' });
     const cur = await r.json();
+    if (cur && cur.url && cur.permanent) { // hosted 24/7 – go straight there (a sleeping free instance wakes up in under a minute)
+      msg.innerHTML = 'Přesměrovávám na <a href="' + cur.url + '">' + cur.url + '</a>… Pokud server spal, první načtení trvá až minutu.';
+      location.replace(cur.url); return;
+    }
     if (cur && cur.url) {
       msg.innerHTML = 'Přesměrovávám na <a href="' + cur.url + '">' + cur.url + '</a>…';
       // check that the server is really up before sending the player there (a stale tunnel address would just fail)

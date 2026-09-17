@@ -20,6 +20,7 @@ let publicUrl = process.env.PUBLIC_URL || '';
 /** keep the permanent GitHub Pages link (docs/current.json) pointing at the address that is running right now */
 function publishAddress(url) {
   const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+  try { const cur = JSON.parse(fs.readFileSync(path.join(root, 'docs', 'current.json'), 'utf8')); if (cur.permanent) { console.log('[tunnel] permanent link points at the hosted server (' + cur.url + '), leaving it alone'); return; } } catch (e) { /* no file yet */ }
   try { fs.writeFileSync(path.join(root, 'docs', 'current.json'), JSON.stringify({ url, since: new Date().toISOString() }) + '\n'); } catch (e) { return; }
   const git = args => new Promise(res => { const p = spawn('git', args, { cwd: root, windowsHide: true, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }); let out = ''; p.stdout.on('data', d => out += d); p.stderr.on('data', d => out += d); p.on('exit', code => res({ code, out })); p.on('error', () => res({ code: -1, out: 'no git' })); });
   (async () => {
